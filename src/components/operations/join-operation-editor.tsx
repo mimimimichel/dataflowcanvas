@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { PipelineNode, JoinOperation as JoinOperationType, JoinType } from '@/lib/pipeline-data';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup } from '@/components/ui/select';
 import { Label } from '../ui/label';
 
 interface JoinOperationEditorProps {
@@ -26,18 +26,41 @@ const JoinOperationEditor: React.FC<JoinOperationEditorProps> = ({ operationSett
     });
   };
   
-   const handleConditionChange = (key: keyof JoinOperationType['settings']['condition'], value: any) => {
+   const handleConditionChange = (key: 'leftField' | 'rightField', value: string) => {
+    // The value is expected to be in "nodeId:fieldName" format, but we only need the fieldName.
+    const fieldName = value.split(':')[1] || value;
     onUpdate({
       ...operationSettings,
       settings: {
         ...operationSettings.settings,
         condition: {
             ...operationSettings.settings.condition,
-            [key]: value
+            [key]: fieldName
         }
       },
     });
   };
+
+  const renderFieldOptions = () => (
+    <>
+        <SelectGroup>
+            <Label className="px-2 py-1.5 text-xs font-semibold">{leftNode.name}</Label>
+            {(leftNode.outputFields || []).map(field => (
+                <SelectItem key={`${leftNode.id}:${field.name}`} value={`${leftNode.id}:${field.name}`}>
+                {field.name}
+                </SelectItem>
+            ))}
+        </SelectGroup>
+        <SelectGroup>
+            <Label className="px-2 py-1.5 text-xs font-semibold">{rightNode.name}</Label>
+            {(rightNode.outputFields || []).map(field => (
+                <SelectItem key={`${rightNode.id}:${field.name}`} value={`${rightNode.id}:${field.name}`}>
+                {field.name}
+                </SelectItem>
+            ))}
+        </SelectGroup>
+    </>
+  );
 
   return (
     <div className="space-y-4">
@@ -60,40 +83,32 @@ const JoinOperationEditor: React.FC<JoinOperationEditorProps> = ({ operationSett
         </Select>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="grid w-full items-center gap-1.5">
-          <Label>Left Field ({leftNode.name})</Label>
+       <Label>Join Condition</Label>
+      <div className="flex items-center gap-2">
+        <div className="flex-1 grid w-full items-center gap-1.5">
           <Select
-            value={operationSettings.settings.condition.leftField}
+            value={operationSettings.settings.condition.leftField ? `any:${operationSettings.settings.condition.leftField}` : ''}
             onValueChange={(value) => handleConditionChange('leftField', value)}
           >
             <SelectTrigger className="flex-1 h-9">
               <SelectValue placeholder="Select field" />
             </SelectTrigger>
             <SelectContent>
-              {leftNode.outputFields?.map(field => (
-                <SelectItem key={field.name} value={field.name}>
-                  {field.name}
-                </SelectItem>
-              ))}
+                {renderFieldOptions()}
             </SelectContent>
           </Select>
         </div>
-        <div className="grid w-full items-center gap-1.5">
-          <Label>Right Field ({rightNode.name})</Label>
+        <span className="font-mono">=</span>
+        <div className="flex-1 grid w-full items-center gap-1.5">
           <Select
-            value={operationSettings.settings.condition.rightField}
+            value={operationSettings.settings.condition.rightField ? `any:${operationSettings.settings.condition.rightField}` : ''}
             onValueChange={(value) => handleConditionChange('rightField', value)}
           >
             <SelectTrigger className="flex-1 h-9">
               <SelectValue placeholder="Select field" />
             </SelectTrigger>
             <SelectContent>
-              {rightNode.outputFields?.map(field => (
-                <SelectItem key={field.name} value={field.name}>
-                  {field.name}
-                </SelectItem>
-              ))}
+                {renderFieldOptions()}
             </SelectContent>
           </Select>
         </div>
