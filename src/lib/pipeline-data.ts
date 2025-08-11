@@ -320,153 +320,83 @@ export const transformations = {
         { name: 'Passe-plat (No-op)', icon: ArrowRightLeft, operationType: 'no_op', description: "A pass-through transformation that doesn't modify the data." },
     ],
     advanced: [
-        {
-            name: "TRANSFORMATIONS DE NETTOYAGE (Data Cleaning)",
-            items: [
-                { name: 'Déduplication', icon: Trash2, operationType: 'deduplication' },
-                { name: 'Gestion des valeurs manquantes', icon: Replace, operationType: 'handle_missing_values' },
-                { name: 'Normalisation des formats', icon: Settings, operationType: 'normalize_formats' },
-                { name: 'Correction des erreurs typographiques', icon: SpellCheck, operationType: 'fix_typos' },
-                { name: 'Validation et contrôle qualité', icon: CheckSquare, operationType: 'quality_control' },
-                { name: 'Standardisation des chaînes', icon: CaseSensitive, operationType: 'standardize_strings' },
-            ]
-        },
-        {
-            name: "TRANSFORMATIONS STRUCTURELLES",
-            items: [
-                { name: 'Pivot/Unpivot', icon: UnfoldVertical, operationType: 'pivot_unpivot' },
-                { name: 'Split/Merge colonnes', icon: Columns, operationType: 'split_merge_columns' },
-                { name: 'Transposition', icon: ArrowRightLeft, operationType: 'transpose' },
-                { name: 'Dénormalisation/Normalisation', icon: GitCommit, operationType: 'denormalize' },
-                { name: 'Nested to flat', icon: FileJson, operationType: 'nested_to_flat' },
-                { name: 'Array operations', icon: Rows, operationType: 'array_operations' },
-            ]
-        },
-        {
-            name: "TRANSFORMATIONS D'AGRÉGATION",
-            items: [
-                { name: 'Agrégations numériques', icon: Sigma, operationType: 'numeric_aggregation' },
-                { name: 'Window functions', icon: Rows, operationType: 'window_functions' },
-                { name: 'Binning', icon: BoxSelect, operationType: 'binning' },
-                { name: 'Percentiles et quantiles', icon: BarChart3, operationType: 'percentiles' },
-                { name: 'Agrégations temporelles', icon: Clock, operationType: 'temporal_aggregation' },
-            ]
-        },
-        {
-            name: "JOINTURES ET UNIONS",
-            items: [
-                { name: 'Self joins', icon: GitPullRequest, operationType: 'self_join' },
-                { name: 'Fuzzy matching', icon: Bot, operationType: 'fuzzy_matching' },
-                { name: 'Intersect/Except', icon: Unplug, operationType: 'intersect_except' },
-                { name: 'Lookup enrichment', icon: Search, operationType: 'lookup_enrichment' },
-            ]
-        },
-        {
-            name: "FILTRAGE ET SÉLECTION",
-            items: [
-                { name: 'Filtres temporels', icon: CalendarDays, operationType: 'temporal_filter' },
-                { name: 'Filtres par expression régulière', icon: Pilcrow, operationType: 'regex_filter' },
-                { name: 'Top N/Bottom N', icon: SortAsc, operationType: 'top_n' },
-                { name: 'Échantillonnage', icon: Shuffle, operationType: 'sampling' },
-                { name: 'Distinct/Unique', icon: GitCommit, operationType: 'distinct' },
-            ]
-        },
-        {
-            name: "TRANSFORMATIONS DE CALCUL",
-            items: [
-                { name: 'Opérations arithmétiques', icon: FunctionSquare, operationType: 'arithmetic' },
-                { name: 'Fonctions mathématiques', icon: Sigma, operationType: 'math_functions' },
-                { name: 'Calculs conditionnels', icon: Milestone, operationType: 'conditional_calculation' },
-                { name: 'Calculs de colonnes dérivées', icon: Plus, operationType: 'derived_columns' },
-                { name: 'Conversions d\'unités', icon: Replace, operationType: 'unit_conversion' },
-                { name: 'Formules personnalisées', icon: Pencil, operationType: 'custom_formula' },
-            ]
-        },
-        {
-            name: "TRANSFORMATIONS TEMPORELLES",
-            items: [
-                { name: 'Extraction de composants', icon: Timer, operationType: 'date_part_extraction' },
-                { name: 'Calculs de durée', icon: Clock, operationType: 'duration_calculation' },
-                { name: 'Formatage de dates', icon: CalendarDays, operationType: 'date_formatting' },
-                { name: 'Décalages temporels', icon: ArrowRightLeft, operationType: 'time_shifting' },
-                { name: 'Agrégations roulantes', icon: Rows, operationType: 'rolling_aggregations' },
-                { name: 'Gestion des fuseaux horaires', icon: Globe, operationType: 'timezone_handling' },
-            ]
-        },
-        {
-            name: "TRANSFORMATIONS DE TEXTE",
-            items: [
-                { name: 'Manipulation de chaînes', icon: FileText, operationType: 'string_manipulation' },
-                { name: 'Recherche et extraction', icon: Search, operationType: 'text_search_extract' },
-                { name: 'Analyse de sentiment', icon: Bot, operationType: 'sentiment_analysis' },
-                { name: 'Tokenisation', icon: WholeWord, operationType: 'tokenization' },
-                { name: 'Normalisation linguistique', icon: SpellCheck, operationType: 'linguistic_normalization' },
-                { name: 'Détection de langue', icon: Globe, operationType: 'language_detection' },
-            ]
-        },
-        {
-            name: "ENCODAGE ET CATÉGORISATION",
-            items: [
-                { name: 'One-hot encoding', icon: Hash, operationType: 'one_hot_encoding' },
-                { name: 'Label encoding', icon: Pilcrow, operationType: 'label_encoding' },
-                { name: 'Binning numérique', icon: BoxSelect, operationType: 'numeric_binning' },
-                { name: 'Feature scaling', icon: Sigma, operationType: 'feature_scaling' },
-                { name: 'Hachage', icon: Fingerprint, operationType: 'hashing' },
-                { name: 'Mapping personnalisé', icon: GitCompare, operationType: 'custom_mapping' },
-            ]
-        },
-        {
-            name: "ENRICHISSEMENT EXTERNE",
-            items: [
-                { name: 'Géocoding', icon: Globe, operationType: 'geocoding' },
-                { name: 'API calls', icon: Unplug, operationType: 'api_calls' },
-                { name: 'Lookup tables', icon: Search, operationType: 'lookup_tables' },
-                { name: 'Master data matching', icon: GitCompare, operationType: 'master_data_matching' },
-                { name: 'Scoring et classification', icon: Bot, operationType: 'scoring_classification' },
-                { name: 'Validation externe', icon: CheckSquare, operationType: 'external_validation' },
-            ]
-        },
-        {
-            name: "TRANSFORMATIONS DE SÉCURITÉ",
-            items: [
-                { name: 'Anonymisation', icon: Fingerprint, operationType: 'anonymization' },
-                { name: 'Pseudonymisation', icon: Replace, operationType: 'pseudonymization' },
-                { name: 'Masquage de données', icon: EyeOff, operationType: 'data_masking' },
-                { name: 'Chiffrement/Déchiffrement', icon: KeyRound, operationType: 'encryption' },
-                { name: 'Tokenisation', icon: Lock, operationType: 'security_tokenization' },
-                { name: 'Audit trail', icon: ClipboardList, operationType: 'audit_trail' },
-            ]
-        },
-        {
-            name: "TRANSFORMATIONS CONDITIONNELLES",
-            items: [
-                { name: 'Routage conditionnel', icon: GitBranch, operationType: 'conditional_routing' },
-                { name: 'Transformations multi-branches', icon: Milestone, operationType: 'multi_branch' },
-                { name: 'Validation avec exceptions', icon: CheckSquare, operationType: 'validation_with_exceptions' },
-                { name: 'Switch/Case statements', icon: CaseSensitive, operationType: 'switch_case' },
-                { name: 'Transformations en cascade', icon: Rows, operationType: 'cascading_transforms' },
-            ]
-        },
-        {
-            name: "TRANSFORMATIONS DE FORMAT",
-            items: [
-                { name: 'Conversion de types', icon: Replace, operationType: 'type_conversion' },
-                { name: 'Parsing de formats', icon: FileJson, operationType: 'format_parsing' },
-                { name: 'Sérialisation', icon: Code, operationType: 'serialization' },
-                { name: 'Compression/Décompression', icon: DatabaseBackup, operationType: 'compression' },
-                { name: 'Conversion d\'encodage', icon: Pilcrow, operationType: 'encoding_conversion' },
-            ]
-        },
-        {
-            name: "TRANSFORMATIONS STATISTIQUES",
-            items: [
-                { name: 'Z-score, outlier detection', icon: TestTube, operationType: 'outlier_detection' },
-                { name: 'Distributions et histogrammes', icon: BarChart3, operationType: 'histogram' },
-                { name: 'Corrélations et covariances', icon: Blend, operationType: 'correlation' },
-                { name: 'Tests statistiques automatisés', icon: Bot, operationType: 'statistical_tests' },
-                { name: 'Sampling strategies', icon: Shuffle, operationType: 'sampling_strategies' },
-                { name: 'Data profiling', icon: Database, operationType: 'data_profiling' },
-            ]
-        }
+        { name: 'Déduplication', icon: Trash2, operationType: 'deduplication' },
+        { name: 'Gestion des valeurs manquantes', icon: Replace, operationType: 'handle_missing_values' },
+        { name: 'Normalisation des formats', icon: Settings, operationType: 'normalize_formats' },
+        { name: 'Correction des erreurs typographiques', icon: SpellCheck, operationType: 'fix_typos' },
+        { name: 'Validation et contrôle qualité', icon: CheckSquare, operationType: 'quality_control' },
+        { name: 'Standardisation des chaînes', icon: CaseSensitive, operationType: 'standardize_strings' },
+        { name: 'Pivot/Unpivot', icon: UnfoldVertical, operationType: 'pivot_unpivot' },
+        { name: 'Split/Merge colonnes', icon: Columns, operationType: 'split_merge_columns' },
+        { name: 'Transposition', icon: ArrowRightLeft, operationType: 'transpose' },
+        { name: 'Dénormalisation/Normalisation', icon: GitCommit, operationType: 'denormalize' },
+        { name: 'Nested to flat', icon: FileJson, operationType: 'nested_to_flat' },
+        { name: 'Array operations', icon: Rows, operationType: 'array_operations' },
+        { name: 'Agrégations numériques', icon: Sigma, operationType: 'numeric_aggregation' },
+        { name: 'Window functions', icon: Rows, operationType: 'window_functions' },
+        { name: 'Binning', icon: BoxSelect, operationType: 'binning' },
+        { name: 'Percentiles et quantiles', icon: BarChart3, operationType: 'percentiles' },
+        { name: 'Agrégations temporelles', icon: Clock, operationType: 'temporal_aggregation' },
+        { name: 'Self joins', icon: GitPullRequest, operationType: 'self_join' },
+        { name: 'Fuzzy matching', icon: Bot, operationType: 'fuzzy_matching' },
+        { name: 'Intersect/Except', icon: Unplug, operationType: 'intersect_except' },
+        { name: 'Lookup enrichment', icon: Search, operationType: 'lookup_enrichment' },
+        { name: 'Filtres temporels', icon: CalendarDays, operationType: 'temporal_filter' },
+        { name: 'Filtres par expression régulière', icon: Pilcrow, operationType: 'regex_filter' },
+        { name: 'Top N/Bottom N', icon: SortAsc, operationType: 'top_n' },
+        { name: 'Échantillonnage', icon: Shuffle, operationType: 'sampling' },
+        { name: 'Distinct/Unique', icon: GitCommit, operationType: 'distinct' },
+        { name: 'Opérations arithmétiques', icon: FunctionSquare, operationType: 'arithmetic' },
+        { name: 'Fonctions mathématiques', icon: Sigma, operationType: 'math_functions' },
+        { name: 'Calculs conditionnels', icon: Milestone, operationType: 'conditional_calculation' },
+        { name: 'Calculs de colonnes dérivées', icon: Plus, operationType: 'derived_columns' },
+        { name: 'Conversions d\'unités', icon: Replace, operationType: 'unit_conversion' },
+        { name: 'Formules personnalisées', icon: Pencil, operationType: 'custom_formula' },
+        { name: 'Extraction de composants', icon: Timer, operationType: 'date_part_extraction' },
+        { name: 'Calculs de durée', icon: Clock, operationType: 'duration_calculation' },
+        { name: 'Formatage de dates', icon: CalendarDays, operationType: 'date_formatting' },
+        { name: 'Décalages temporels', icon: ArrowRightLeft, operationType: 'time_shifting' },
+        { name: 'Agrégations roulantes', icon: Rows, operationType: 'rolling_aggregations' },
+        { name: 'Gestion des fuseaux horaires', icon: Globe, operationType: 'timezone_handling' },
+        { name: 'Manipulation de chaînes', icon: FileText, operationType: 'string_manipulation' },
+        { name: 'Recherche et extraction', icon: Search, operationType: 'text_search_extract' },
+        { name: 'Analyse de sentiment', icon: Bot, operationType: 'sentiment_analysis' },
+        { name: 'Tokenisation', icon: WholeWord, operationType: 'tokenization' },
+        { name: 'Normalisation linguistique', icon: SpellCheck, operationType: 'linguistic_normalization' },
+        { name: 'Détection de langue', icon: Globe, operationType: 'language_detection' },
+        { name: 'One-hot encoding', icon: Hash, operationType: 'one_hot_encoding' },
+        { name: 'Label encoding', icon: Pilcrow, operationType: 'label_encoding' },
+        { name: 'Binning numérique', icon: BoxSelect, operationType: 'numeric_binning' },
+        { name: 'Feature scaling', icon: Sigma, operationType: 'feature_scaling' },
+        { name: 'Hachage', icon: Fingerprint, operationType: 'hashing' },
+        { name: 'Mapping personnalisé', icon: GitCompare, operationType: 'custom_mapping' },
+        { name: 'Géocoding', icon: Globe, operationType: 'geocoding' },
+        { name: 'API calls', icon: Unplug, operationType: 'api_calls' },
+        { name: 'Lookup tables', icon: Search, operationType: 'lookup_tables' },
+        { name: 'Master data matching', icon: GitCompare, operationType: 'master_data_matching' },
+        { name: 'Scoring et classification', icon: Bot, operationType: 'scoring_classification' },
+        { name: 'Validation externe', icon: CheckSquare, operationType: 'external_validation' },
+        { name: 'Anonymisation', icon: Fingerprint, operationType: 'anonymization' },
+        { name: 'Pseudonymisation', icon: Replace, operationType: 'pseudonymization' },
+        { name: 'Masquage de données', icon: EyeOff, operationType: 'data_masking' },
+        { name: 'Chiffrement/Déchiffrement', icon: KeyRound, operationType: 'encryption' },
+        { name: 'Tokenisation', icon: Lock, operationType: 'security_tokenization' },
+        { name: 'Audit trail', icon: ClipboardList, operationType: 'audit_trail' },
+        { name: 'Routage conditionnel', icon: GitBranch, operationType: 'conditional_routing' },
+        { name: 'Transformations multi-branches', icon: Milestone, operationType: 'multi_branch' },
+        { name: 'Validation avec exceptions', icon: CheckSquare, operationType: 'validation_with_exceptions' },
+        { name: 'Switch/Case statements', icon: CaseSensitive, operationType: 'switch_case' },
+        { name: 'Transformations en cascade', icon: Rows, operationType: 'cascading_transforms' },
+        { name: 'Conversion de types', icon: Replace, operationType: 'type_conversion' },
+        { name: 'Parsing de formats', icon: FileJson, operationType: 'format_parsing' },
+        { name: 'Sérialisation', icon: Code, operationType: 'serialization' },
+        { name: 'Compression/Décompression', icon: DatabaseBackup, operationType: 'compression' },
+        { name: 'Conversion d\'encodage', icon: Pilcrow, operationType: 'encoding_conversion' },
+        { name: 'Z-score, outlier detection', icon: TestTube, operationType: 'outlier_detection' },
+        { name: 'Distributions et histogrammes', icon: BarChart3, operationType: 'histogram' },
+        { name: 'Corrélations et covariances', icon: Blend, operationType: 'correlation' },
+        { name: 'Tests statistiques automatisés', icon: Bot, operationType: 'statistical_tests' },
+        { name: 'Sampling strategies', icon: Shuffle, operationType: 'sampling_strategies' },
+        { name: 'Data profiling', icon: Database, operationType: 'data_profiling' },
     ]
 };
