@@ -7,7 +7,7 @@ import TransformationsCatalogue from '@/components/sidebar/transformations-catal
 import NodeConfigurationPanel from '@/components/sidebar/node-configuration-panel';
 import Node from '@/components/data-flow/node';
 import Connector from '@/components/data-flow/connector';
-import { nodes as initialNodes, connectors as initialConnectors, PipelineNode, TransformationItem, Connector as ConnectorType, Field } from '@/lib/pipeline-data';
+import { nodes as initialNodes, connectors as initialConnectors, PipelineNode, TransformationItem, Connector as ConnectorType, Field, Operation } from '@/lib/pipeline-data';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import ConnectionFieldsModal from '@/components/data-flow/connection-fields-modal';
@@ -253,6 +253,16 @@ export default function DataFlowCanvas() {
     }));
   };
   
+    const handleUpdateOperation = (nodeId: string, operation: Operation) => {
+        setNodes(prevNodes => prevNodes.map(n => {
+            if (n.id === nodeId) {
+                // Here you could add logic to update outputFields based on the operation
+                return { ...n, operation };
+            }
+            return n;
+        }));
+    };
+  
   const handleDeleteNode = (nodeId: string) => {
     const nodeToDelete = nodes.find(n => n.id === nodeId);
     if (!nodeToDelete) return;
@@ -320,8 +330,8 @@ export default function DataFlowCanvas() {
     nodes.forEach(node => {
       minX = Math.min(minX, node.position.x);
       minY = Math.min(minY, node.position.y);
-      maxX = Math.max(maxX, node.position.x + 208); // node width
-      maxY = Math.max(maxY, node.position.y + 160);  // max node height
+      maxX = Math.max(maxX, node.position.x + 256); // node width (w-64)
+      maxY = Math.max(maxY, node.position.y + 200);  // max node height approx
     });
     
     const padding = 200;
@@ -424,6 +434,7 @@ export default function DataFlowCanvas() {
                   onPortMouseDown={(e) => handlePortMouseDown(e, node.id)}
                   onAddNode={handleAddNode}
                   isSelected={selectedNodeId === node.id}
+                  onUpdateOperation={handleUpdateOperation}
                 />
               ))}
             </div>

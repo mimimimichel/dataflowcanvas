@@ -16,6 +16,23 @@ export interface Field {
   type: string;
 }
 
+export type OperationType = 'filter';
+
+export interface BaseOperation {
+    type: OperationType;
+}
+
+export interface FilterOperation extends BaseOperation {
+    type: 'filter';
+    settings: {
+        field: string;
+        operator: string;
+        value: string | number | boolean;
+    }
+}
+
+export type Operation = FilterOperation; // | JoinOperation | ...
+
 export interface PipelineNode {
   id: string;
   name: string;
@@ -23,7 +40,8 @@ export interface PipelineNode {
   position: { x: number; y: number };
   inputFields?: Field[];
   outputFields?: Field[];
-  rule?: string;
+  rule?: string; // Kept for advanced mode, but UI will prefer operations
+  operation?: Operation;
 }
 
 export const nodes: PipelineNode[] = [
@@ -46,6 +64,14 @@ export const nodes: PipelineNode[] = [
     type: 'transformation', 
     position: { x: 350, y: 50 },
     rule: "SELECT * FROM input WHERE is_active = true",
+    operation: {
+        type: 'filter',
+        settings: {
+            field: 'is_active',
+            operator: '==',
+            value: true
+        }
+    },
     inputFields: [
       { name: 'id', type: 'integer' },
       { name: 'first_name', type: 'string' },
@@ -134,15 +160,16 @@ export interface TransformationItem {
     icon: Icon;
     type: NodeType;
     category?: string;
+    description?: string;
 }
 
 export const transformations = {
     sources: [
-        { name: 'Database Source', icon: Database },
-        { name: 'File Source', icon: FileText }
+        { name: 'Database Source', icon: Database, description: "Connect to a SQL database." },
+        { name: 'File Source', icon: FileText, description: "Use a file (CSV, JSON, etc.) as a source." }
     ],
-    dataset: { name: 'Intermediate Dataset', icon: Layers },
-    destination: { name: 'Data Warehouse', icon: DatabaseZap },
+    dataset: { name: 'Intermediate Dataset', icon: Layers, description: "Store intermediate results of a pipeline." },
+    destination: { name: 'Data Warehouse', icon: DatabaseZap, description: "Load data into a data warehouse." },
     categories: [
         {
             name: "TRANSFORMATIONS DE NETTOYAGE (Data Cleaning)",
@@ -158,7 +185,7 @@ export const transformations = {
         {
             name: "TRANSFORMATIONS STRUCTURELLES",
             items: [
-                { name: 'Passe-plat (No-op)', icon: ArrowRightLeft },
+                { name: 'Passe-plat (No-op)', icon: ArrowRightLeft, description: "A pass-through transformation that doesn't modify the data." },
                 { name: 'Pivot/Unpivot', icon: UnfoldVertical },
                 { name: 'Split/Merge colonnes', icon: Columns },
                 { name: 'Transposition', icon: ArrowRightLeft },

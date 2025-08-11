@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal } from 'lucide-react';
 import Port from './port';
-import { TransformationItem, PipelineNode, Field } from '@/lib/pipeline-data';
+import { TransformationItem, PipelineNode, Field, Operation } from '@/lib/pipeline-data';
+import FilterOperation from '@/components/operations/filter-operation';
 
 export type NodeType = 'source' | 'transformation' | 'destination' | 'dataset';
 
@@ -19,6 +20,7 @@ interface NodeProps extends PipelineNode {
   onPortMouseDown: (event: React.MouseEvent) => void;
   onAddNode: (item: TransformationItem, position: { x: number; y: number }) => void;
   isSelected: boolean;
+  onUpdateOperation: (nodeId: string, operation: Operation) => void;
 }
 
 const typeConfig: Record<NodeType, { icon: Icon; color: string; }> = {
@@ -33,7 +35,7 @@ const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
         return <p className="text-xs text-muted-foreground text-center p-2">No fields defined</p>;
     }
     return (
-        <div className="p-2 bg-muted rounded-md">
+        <div className="p-2 bg-muted rounded-md max-h-48">
             <div className="space-y-1">
                 {fields.map(field => (
                     <div key={field.name} className="flex justify-between items-center text-xs">
@@ -46,7 +48,7 @@ const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
     );
 };
 
-const Node: React.FC<NodeProps> = ({ id, name, type, position, rule, inputFields, outputFields, onSelect, onConfigOpen, onMouseDown, onMouseUp, onPortMouseDown, isSelected }) => {
+const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputFields, outputFields, onSelect, onConfigOpen, onMouseDown, onMouseUp, onPortMouseDown, isSelected, onUpdateOperation }) => {
   const TypeIcon = typeConfig[type].icon;
   const [isExpanded, setIsExpanded] = useState(false);
   
@@ -64,7 +66,13 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, rule, inputFields
   const renderOverview = () => {
     switch(type) {
         case 'transformation':
-            return <div className="p-2 text-xs font-mono bg-muted rounded-md overflow-hidden whitespace-pre-wrap break-all">{rule || 'No rule defined'}</div>;
+            if (!operation) return <div className="p-2 text-xs font-mono bg-muted rounded-md">No operation configured</div>;
+            switch(operation.type) {
+                case 'filter':
+                    return <FilterOperation operation={operation} inputFields={inputFields || []} onUpdate={(op) => onUpdateOperation(id, op)} />;
+                default:
+                    return <div className="p-2 text-xs font-mono bg-muted rounded-md">Unsupported operation</div>;
+            }
         case 'source':
             return <SchemaOverview fields={outputFields || []} />;
         case 'destination':
@@ -87,7 +95,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, rule, inputFields
       <Card
         onClick={handleNodeClick}
         className={cn(
-          'w-52 shadow-lg hover:shadow-xl transition-all duration-300 border-2 relative flex flex-col justify-between cursor-pointer',
+          'w-64 shadow-lg hover:shadow-xl transition-all duration-300 border-2 relative flex flex-col justify-between cursor-pointer',
           isSelected ? 'border-primary shadow-2xl' : 'border-transparent',
           isExpanded ? 'h-auto' : 'h-20'
         )}
