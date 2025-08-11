@@ -25,7 +25,9 @@ export default function DataFlowCanvas() {
     setSelectedNodeId(id);
   };
   
-  const handleAddNode = (item: TransformationItem, position: {x: number, y: number}) => {
+  const handleAddNode = useCallback((item: TransformationItem, position: {x: number, y: number}) => {
+    if (!mainRef.current) return;
+    const canvasRect = mainRef.current.getBoundingClientRect();
     const newNode: PipelineNode = {
       id: `${item.type}-${Date.now()}`,
       name: item.name,
@@ -33,29 +35,31 @@ export default function DataFlowCanvas() {
       status: 'healthy',
       quality: 100,
       position: {
-        x: position.x - pan.x - 256, // Adjust for sidebar and pan
-        y: position.y - pan.y - 64, // Adjust for header and pan
+        x: position.x - canvasRect.left - pan.x,
+        y: position.y - canvasRect.top - pan.y,
       },
     };
     setNodes((prev) => [...prev, newNode]);
-  };
+  }, [pan]);
   
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.target !== mainRef.current) return;
+    if (e.target !== e.currentTarget) return;
     setIsPanning(true);
     panStartRef.current = { x: e.clientX, y: e.clientY };
+    e.currentTarget.style.cursor = 'grabbing';
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isPanning) return;
+    if (!isPanning || !mainRef.current) return;
     const dx = e.clientX - panStartRef.current.x;
     const dy = e.clientY - panStartRef.current.y;
     setPan(prev => ({ x: prev.x + dx, y: prev.y + dy }));
     panStartRef.current = { x: e.clientX, y: e.clientY };
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = (e: React.MouseEvent) => {
     setIsPanning(false);
+    e.currentTarget.style.cursor = 'grab';
   };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -66,7 +70,7 @@ export default function DataFlowCanvas() {
       const position = { x: e.clientX, y: e.clientY };
       handleAddNode(item, position);
     }
-  }, [pan]);
+  }, [handleAddNode]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -84,7 +88,7 @@ export default function DataFlowCanvas() {
           <TransformationsCatalogue onAddNode={handleAddNode} />
           <main
             ref={mainRef}
-            className="flex-1 relative overflow-hidden cursor-grab active:cursor-grabbing"
+            className="flex-1 relative overflow-hidden cursor-grab"
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
