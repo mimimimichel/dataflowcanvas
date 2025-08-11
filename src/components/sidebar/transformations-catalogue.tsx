@@ -36,7 +36,7 @@ const CatalogueSection: React.FC<{title: string, items: TransformationItem[], it
           <p className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 group-data-[collapsible=icon]:hidden">{title}</p>
           <SidebarMenu>
           {items.map((item) => (
-              <SidebarMenuItem key={item.name}>
+              <SidebarMenuItem key={item.operationType || item.name}>
                   <DraggableSidebarMenuButton item={{...item, type: itemType}}>
                       <item.icon className="h-4 w-4" />
                       <span className="group-data-[collapsible=icon]:hidden">{item.name}</span>
@@ -69,7 +69,7 @@ const AdvancedTransformations: React.FC<{
                               <AccordionContent className="p-0 pl-2">
                                  <SidebarMenu>
                                       {category.items.map((item) => (
-                                          <SidebarMenuItem key={item.name}>
+                                          <SidebarMenuItem key={item.operationType || item.name}>
                                               <DraggableSidebarMenuButton item={{...item, type: 'transformation'}}>
                                                   <item.icon className="h-4 w-4" />
                                                   <span>{item.name}</span>
