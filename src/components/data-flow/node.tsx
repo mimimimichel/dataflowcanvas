@@ -131,7 +131,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
             <p className="text-sm font-medium leading-tight text-left break-words flex-1">{name}</p>
         </div>
 
-        {(system || location) && (type === 'source' || type === 'dataset') && (
+        {(system || location) && (type === 'source' || type === 'dataset' || type === 'destination') && (
             <div className="px-2 pb-2 space-y-1">
                 {system && (
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">

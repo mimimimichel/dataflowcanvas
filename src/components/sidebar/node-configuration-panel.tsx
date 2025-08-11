@@ -289,7 +289,18 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
       case 'destination':
         return (
           <>
-            <h3 className="text-md font-medium mb-2">Input Schema</h3>
+            <div className="space-y-4">
+              <div className="grid w-full items-center gap-1.5">
+                <Label htmlFor="system">System</Label>
+                <Input type="text" id="system" placeholder="e.g., BigQuery, Snowflake" value={displayNode.system || ''} onChange={(e) => handleUpdate('system', e.target.value)} />
+              </div>
+              <div className="grid w-full items-center gap-1.5">
+                <Label htmlFor="location">Location</Label>
+                <Input type="text" id="location" placeholder="e.g., analytics-project.dataset.table" value={displayNode.location || ''} onChange={(e) => handleUpdate('location', e.target.value)} />
+              </div>
+              <Separator/>
+            </div>
+            <h3 className="text-md font-medium mb-2 mt-4">Input Schema</h3>
             <SchemaEditor fields={displayNode.inputFields || []} onFieldsChange={(fields) => handleUpdate('inputFields', fields)} isEditable={false} />
           </>
         );
