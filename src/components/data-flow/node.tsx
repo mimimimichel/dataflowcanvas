@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal, GitCompare, Group as GroupIcon } from 'lucide-react';
+import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal, GitCompare, Group as GroupIcon, ChevronDown } from 'lucide-react';
 import Port from './port';
 import { TransformationItem, PipelineNode, Field, Operation } from '@/lib/pipeline-data';
 import FilterOperation from '@/components/operations/filter-operation';
@@ -65,15 +65,14 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
   const TypeIcon = getIconForOperation(operation);
   const [isExpanded, setIsExpanded] = useState(false);
   
-  const handleNodeClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsExpanded(prev => !prev);
-    onSelect();
-  }
-
   const handleConfigClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onConfigOpen();
+  }
+
+  const handleToggleExpand = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsExpanded(prev => !prev);
   }
   
   const renderOverview = () => {
@@ -110,7 +109,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
       data-node-id={id}
     >
       <Card
-        onClick={handleNodeClick}
+        onClick={onSelect}
         className={cn(
           'w-64 shadow-lg hover:shadow-xl transition-all duration-300 border-2 relative flex flex-col justify-between cursor-pointer',
           isSelected ? 'border-primary shadow-2xl' : 'border-transparent',
@@ -147,10 +146,21 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
         <Button 
             variant="ghost" 
             size="icon" 
-            className="absolute top-0 right-0 h-7 w-7 opacity-0 group-hover:opacity-100"
+            className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100"
             onClick={handleConfigClick}
         >
             <SlidersHorizontal className="w-4 h-4" />
+        </Button>
+        <Button 
+            variant="ghost" 
+            size="icon" 
+            className={cn(
+                "absolute bottom-1 right-1 h-7 w-7",
+                isExpanded ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            )}
+            onClick={handleToggleExpand}
+        >
+            <ChevronDown className={cn("w-4 h-4 transition-transform", isExpanded && "rotate-180")} />
         </Button>
       </Card>
     </div>
