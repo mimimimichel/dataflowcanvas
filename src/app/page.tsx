@@ -23,6 +23,7 @@ export default function DataFlowCanvas() {
   const [nodes, setNodes] = useState<PipelineNode[]>(initialNodes);
   const [connectors, setConnectors] = useState<ConnectorType[]>(initialConnectors);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedConnector, setSelectedConnector] = useState<ConnectorType | null>(null);
   const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -42,10 +43,17 @@ export default function DataFlowCanvas() {
 
   const handleNodeClick = (id: string) => {
     setSelectedNodeId(id);
+    setSelectedConnector(null);
+  };
+  
+  const handleConnectorClick = (connector: ConnectorType) => {
+    setSelectedConnector(connector);
+    setSelectedNodeId(null);
   };
 
   const handleNodeConfigClick = (nodeId: string) => {
     setSelectedNodeId(nodeId);
+    setSelectedConnector(null);
     setIsConfigPanelOpen(true);
   }
   
@@ -98,12 +106,14 @@ export default function DataFlowCanvas() {
   
   const handleMouseDown = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (target.closest('[data-node-id]') || target.closest('[data-port="true"]') || target.closest('[data-config-button="true"]')) {
+    if (target.closest('[data-node-id]') || target.closest('[data-port="true"]') || target.closest('[data-config-button="true"]') || target.closest('[data-connector="true"]')) {
       return;
     }
     isPanningRef.current = true;
     panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
     if (canvasRef.current) canvasRef.current.style.cursor = 'grabbing';
+    setSelectedNodeId(null);
+    setSelectedConnector(null);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -254,13 +264,14 @@ export default function DataFlowCanvas() {
     setConnectors(prev => prev.filter(c => c.from !== nodeId && c.to !== nodeId));
     
     relatedConnectors.forEach(conn => {
-        if (conn.from === nodeId) { // Deleting a node, update downstream nodes
+        if (conn.from === nodeId) { // Deleting a source node, update downstream nodes
             const downstreamNode = nodes.find(n => n.id === conn.to);
             if (downstreamNode && downstreamNode.inputFields) {
                  const sourceFields = nodeToDelete.outputFields?.map(f => f.name) || [];
                  setNodes(prev => prev.map(n => {
                      if (n.id === conn.to) {
-                         return {...n, inputFields: n.inputFields?.filter(f => !sourceFields.includes(f.name))};
+                         const remainingFields = n.inputFields?.filter(f => !sourceFields.includes(f.name))
+                         return {...n, inputFields: remainingFields, outputFields: n.type === 'dataset' ? remainingFields : n.outputFields };
                      }
                      return n;
                  }));
@@ -273,6 +284,23 @@ export default function DataFlowCanvas() {
       setIsConfigPanelOpen(false);
     }
   };
+
+  const handleDeleteConnector = (connector: ConnectorType) => {
+    setConnectors(prev => prev.filter(c => !(c.from === connector.from && c.to === connector.to)));
+
+    const fromNode = nodes.find(n => n.id === connector.from);
+    const fromNodeFields = fromNode?.outputFields?.map(f => f.name) || [];
+    
+    setNodes(prev => prev.map(n => {
+      if (n.id === connector.to) {
+        const remainingFields = n.inputFields?.filter(f => !fromNodeFields.includes(f.name));
+        return {...n, inputFields: remainingFields, outputFields: n.type === 'dataset' ? remainingFields : n.outputFields};
+      }
+      return n;
+    }));
+    
+    setSelectedConnector(null);
+  }
   
   const selectedNode = useMemo(() => {
     if (!selectedNodeId) return undefined;
@@ -280,14 +308,16 @@ export default function DataFlowCanvas() {
   }, [nodes, selectedNodeId]);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !canvasRef.current) return;
+    if (!canvasRef.current) return;
     
     if (nodes.length === 0) {
       setSvgDimensions({ width: '100%', height: '100%', top: 0, left: 0 });
       return;
     }
     
+    const canvasRect = canvasRef.current.getBoundingClientRect();
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    
     nodes.forEach(node => {
       minX = Math.min(minX, node.position.x);
       minY = Math.min(minY, node.position.y);
@@ -295,33 +325,35 @@ export default function DataFlowCanvas() {
       maxY = Math.max(maxY, node.position.y + 96);  // node height
     });
     
-    const padding = 100;
+    const padding = 200;
     const finalMinX = minX - padding;
     const finalMinY = minY - padding;
     const width = maxX - minX + (padding * 2);
     const height = maxY - minY + (padding * 2);
     
-    const canvasRect = canvasRef.current.getBoundingClientRect();
-
     setSvgDimensions({ 
       left: finalMinX,
       top: finalMinY,
       width: Math.max(width, canvasRect.width / zoom), 
       height: Math.max(height, canvasRect.height / zoom)
     });
-  }, [nodes, zoom]);
+  }, [nodes, zoom, pan]);
   
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeId && !isConfigPanelOpen) {
-        handleDeleteNode(selectedNodeId);
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedNodeId && !isConfigPanelOpen) {
+          handleDeleteNode(selectedNodeId);
+        } else if (selectedConnector) {
+          handleDeleteConnector(selectedConnector);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedNodeId, isConfigPanelOpen, handleDeleteNode]);
+  }, [selectedNodeId, selectedConnector, isConfigPanelOpen, handleDeleteNode, handleDeleteConnector]);
 
   const connectionModalSourceNode = nodes.find(n => n.id === connectionForFields?.fromNodeId);
 
@@ -330,7 +362,7 @@ export default function DataFlowCanvas() {
       <div className="flex h-screen w-full flex-col bg-background font-body">
         <Header />
         <div className="flex flex-1 overflow-hidden">
-          <TransformationsCatalogue onAddNode={handleAddNode} />
+          <TransformationsCatalogue />
           <main
             className="flex-1 relative overflow-hidden cursor-grab"
             onDrop={handleDrop}
@@ -364,6 +396,8 @@ export default function DataFlowCanvas() {
                         key={`${connector.from}-${connector.to}-${index}`} 
                         from={{ x: fromNode.position.x - svgDimensions.left, y: fromNode.position.y - svgDimensions.top }} 
                         to={{ x: toNode.position.x - svgDimensions.left, y: toNode.position.y - svgDimensions.top }}
+                        isSelected={selectedConnector?.from === connector.from && selectedConnector?.to === connector.to}
+                        onClick={() => handleConnectorClick(connector)}
                       />
                     );
                   })}
@@ -389,6 +423,7 @@ export default function DataFlowCanvas() {
                   onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
                   onMouseUp={(e) => handleNodeMouseUp(e, node.id)}
                   onPortMouseDown={(e) => handlePortMouseDown(e, node.id)}
+                  onAddNode={handleAddNode}
                   isSelected={selectedNodeId === node.id}
                 />
               ))}
@@ -415,3 +450,5 @@ export default function DataFlowCanvas() {
     </SidebarProvider>
   );
 }
+
+    

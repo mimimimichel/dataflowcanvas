@@ -2,11 +2,12 @@
 'use client';
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal } from 'lucide-react';
 import Port from './port';
 import { Button } from '@/components/ui/button';
+import { TransformationItem } from '@/lib/pipeline-data';
 
 export type NodeType = 'source' | 'transformation' | 'destination' | 'dataset';
 
@@ -20,6 +21,7 @@ interface NodeProps {
   onMouseDown: (event: React.MouseEvent) => void;
   onMouseUp: (event: React.MouseEvent) => void;
   onPortMouseDown: (event: React.MouseEvent) => void;
+  onAddNode: (item: TransformationItem, position: { x: number; y: number }) => void;
   isSelected: boolean;
 }
 
@@ -68,7 +70,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, onClick, onConfig
             <div className={cn('p-1.5 rounded-md', typeConfig[type].color)}>
               <TypeIcon className="w-5 h-5 text-white" />
             </div>
-            <CardTitle className="text-sm font-medium leading-tight">{name}</CardTitle>
+            <p className="text-sm font-medium leading-tight text-center break-words">{name}</p>
           </div>
         {type !== 'destination' && (
           <Port 
@@ -91,3 +93,5 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, onClick, onConfig
 };
 
 export default Node;
+
+    
