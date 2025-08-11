@@ -5,17 +5,15 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Database, Cog, DatabaseZap, CheckCircle2, AlertTriangle, XCircle, Icon } from 'lucide-react';
+import { Database, Cog, DatabaseZap, Icon } from 'lucide-react';
 import Port from './port';
 
 export type NodeType = 'source' | 'transformation' | 'destination';
-export type NodeStatus = 'healthy' | 'warning' | 'error';
 
 interface NodeProps {
   id: string;
   name: string;
   type: NodeType;
-  status: NodeStatus;
   quality: number;
   position: { x: number; y: number };
   onClick: () => void;
@@ -31,15 +29,8 @@ const typeConfig: Record<NodeType, { icon: Icon; color: string; }> = {
   destination: { icon: DatabaseZap, color: 'bg-green-500' },
 };
 
-const statusConfig: Record<NodeStatus, { icon: Icon; color: string; text: string }> = {
-  healthy: { icon: CheckCircle2, color: 'text-green-500', text: 'Healthy' },
-  warning: { icon: AlertTriangle, color: 'text-yellow-500', text: 'Warning' },
-  error: { icon: XCircle, color: 'text-red-500', text: 'Error' },
-};
-
-const Node: React.FC<NodeProps> = ({ id, name, type, status, quality, position, onClick, onMouseDown, onMouseUp, onPortMouseDown, isSelected }) => {
+const Node: React.FC<NodeProps> = ({ id, name, type, quality, position, onClick, onMouseDown, onMouseUp, onPortMouseDown, isSelected }) => {
   const TypeIcon = typeConfig[type].icon;
-  const StatusIcon = statusConfig[status].icon;
   
   const handleNodeClick = (e: React.MouseEvent) => {
     // Prevent click from propagating to canvas when clicking on a node.
@@ -77,11 +68,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, status, quality, position, 
           </div>
         </CardHeader>
         <CardContent className="p-3 pt-0">
-            <div className="flex items-center justify-between text-xs">
-                <div className={cn("flex items-center gap-1", statusConfig[status].color)}>
-                    <StatusIcon className="w-3.5 h-3.5" />
-                    <span>{statusConfig[status].text}</span>
-                </div>
+            <div className="flex items-center justify-end text-xs">
                 <Badge variant={quality > 95 ? "default" : "destructive"} className={cn(
                     quality > 95 ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800",
                     "border-none"

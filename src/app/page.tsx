@@ -9,6 +9,7 @@ import Node from '@/components/data-flow/node';
 import Connector from '@/components/data-flow/connector';
 import { nodes as initialNodes, connectors as initialConnectors, PipelineNode, TransformationItem, Connector as ConnectorType, Field } from '@/lib/pipeline-data';
 import { SidebarProvider } from '@/components/ui/sidebar';
+import { cn } from '@/lib/utils';
 
 export default function DataFlowCanvas() {
   const [nodes, setNodes] = useState<PipelineNode[]>(initialNodes);
@@ -39,7 +40,6 @@ export default function DataFlowCanvas() {
       id: `${item.type}-${Date.now()}`,
       name: item.name,
       type: item.type,
-      status: 'healthy',
       quality: 100,
       position: {
         x: (position.x - canvasRect.left - pan.x) / zoom,
@@ -82,12 +82,14 @@ export default function DataFlowCanvas() {
   };
   
   const handleMouseDown = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
     // Only pan if not starting a drag on a node or a port
-    if (draggingNodeIdRef.current === null && !isConnectingRef.current) {
-      isPanningRef.current = true;
-      panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
-      if (canvasRef.current) canvasRef.current.style.cursor = 'grabbing';
+    if (target.closest('[data-node-id]') || target.closest('[data-port="true"]')) {
+      return;
     }
+    isPanningRef.current = true;
+    panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+    if (canvasRef.current) canvasRef.current.style.cursor = 'grabbing';
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -254,17 +256,25 @@ export default function DataFlowCanvas() {
               className="absolute top-0 left-0"
               style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'top left', width: '100%', height: '100%' }}
             >
-              {connectors.map((connector, index) => {
-                const fromNode = nodes.find((n) => n.id === connector.from);
-                const toNode = nodes.find((n) => n.id === connector.to);
-                if (!fromNode || !toNode) return null;
-                return <Connector key={`${connector.from}-${connector.to}-${index}`} from={fromNode.position} to={toNode.position} />;
-              })}
-              {newConnector && (() => {
-                const fromNode = nodes.find(n => n.id === newConnector.from);
-                if (!fromNode) return null;
-                return <Connector from={fromNode.position} to={newConnector.to} className="opacity-50" />;
-              })()}
+              <svg
+                  className={cn(
+                    'absolute top-0 left-0 w-full h-full pointer-events-none'
+                  )}
+                  style={{width: '100%', height: '100%'}}
+              >
+                  {connectors.map((connector, index) => {
+                    const fromNode = nodes.find((n) => n.id === connector.from);
+                    const toNode = nodes.find((n) => n.id === connector.to);
+                    if (!fromNode || !toNode) return null;
+                    return <Connector key={`${connector.from}-${connector.to}-${index}`} from={fromNode.position} to={toNode.position} />;
+                  })}
+                  {newConnector && (() => {
+                    const fromNode = nodes.find(n => n.id === newConnector.from);
+                    if (!fromNode) return null;
+                    return <Connector from={fromNode.position} to={newConnector.to} className="opacity-50" />;
+                  })()}
+              </svg>
+
               {nodes.map((node) => (
                 <Node
                   key={node.id}
@@ -290,3 +300,5 @@ export default function DataFlowCanvas() {
     </SidebarProvider>
   );
 }
+
+    

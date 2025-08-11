@@ -26,10 +26,6 @@ interface NodeConfigurationPanelProps {
 const StatsDisplay: React.FC<{ node: PipelineNode }> = ({ node }) => (
   <div className="space-y-4 text-sm mt-4">
     <div className="flex justify-between">
-      <span className="text-muted-foreground">Status:</span>
-      <span className="font-medium capitalize">{node.status}</span>
-    </div>
-    <div className="flex justify-between">
       <span className="text-muted-foreground">Data Quality Score:</span>
       <span className="font-medium">{node.quality}%</span>
     </div>
