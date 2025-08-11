@@ -235,6 +235,23 @@ export default function DataFlowCanvas() {
     return undefined;
   }, [nodes, connectors, selectedNodeId]);
 
+  const svgDimensions = useMemo(() => {
+    if (nodes.length === 0) return { width: '100%', height: '100%', top: 0, left: 0 };
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    nodes.forEach(node => {
+      minX = Math.min(minX, node.position.x);
+      minY = Math.min(minY, node.position.y);
+      maxX = Math.max(maxX, node.position.x + 208); // node width
+      maxY = Math.max(maxY, node.position.y + 96);  // node height
+    });
+    return { 
+      left: minX - 50,
+      top: minY - 50,
+      width: maxX - minX + 100, 
+      height: maxY - minY + 100
+    };
+  }, [nodes]);
+
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full flex-col bg-background font-body">
@@ -254,24 +271,39 @@ export default function DataFlowCanvas() {
           >
             <div
               className="absolute top-0 left-0"
-              style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'top left', width: '100%', height: '100%' }}
+              style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'top left' }}
             >
               <svg
-                  className={cn(
-                    'absolute top-0 left-0 w-full h-full pointer-events-none'
-                  )}
-                  style={{width: '100%', height: '100%'}}
+                  className={cn('absolute pointer-events-none overflow-visible')}
+                  style={{
+                    left: svgDimensions.left,
+                    top: svgDimensions.top,
+                    width: svgDimensions.width,
+                    height: svgDimensions.height
+                  }}
               >
                   {connectors.map((connector, index) => {
                     const fromNode = nodes.find((n) => n.id === connector.from);
                     const toNode = nodes.find((n) => n.id === connector.to);
                     if (!fromNode || !toNode) return null;
-                    return <Connector key={`${connector.from}-${connector.to}-${index}`} from={fromNode.position} to={toNode.position} />;
+                    return (
+                      <Connector 
+                        key={`${connector.from}-${connector.to}-${index}`} 
+                        from={{ x: fromNode.position.x - svgDimensions.left, y: fromNode.position.y - svgDimensions.top }} 
+                        to={{ x: toNode.position.x - svgDimensions.left, y: toNode.position.y - svgDimensions.top }}
+                      />
+                    );
                   })}
                   {newConnector && (() => {
                     const fromNode = nodes.find(n => n.id === newConnector.from);
                     if (!fromNode) return null;
-                    return <Connector from={fromNode.position} to={newConnector.to} className="opacity-50" />;
+                    return (
+                      <Connector 
+                        from={{ x: fromNode.position.x - svgDimensions.left, y: fromNode.position.y - svgDimensions.top }} 
+                        to={{ x: newConnector.to.x - svgDimensions.left, y: newConnector.to.y - svgDimensions.top }} 
+                        className="opacity-50" 
+                      />
+                    );
                   })()}
               </svg>
 
