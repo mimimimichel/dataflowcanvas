@@ -223,13 +223,13 @@ export default function DataFlowCanvas() {
       setConnectors(prev => [...prev, { from: fromNodeId, to: toNodeId }]);
       setNodes(prevNodes => {
         const newNodes = [...prevNodes];
-        const fromNode = newNodes.find(n => n.id === fromNodeId);
         const toNodeIndex = newNodes.findIndex(n => n.id === toNodeId);
 
-        if (toNodeIndex === -1 || !fromNode) return prevNodes;
+        if (toNodeIndex === -1) return prevNodes;
 
         let toNode = { ...newNodes[toNodeIndex] };
         
+        // This combines newly selected fields with existing ones.
         const currentInputFields = toNode.inputFields || [];
         const newFields = selectedFields.filter(sf => !currentInputFields.some(cif => cif.name === sf.name));
         toNode.inputFields = [...currentInputFields, ...newFields];
@@ -239,9 +239,9 @@ export default function DataFlowCanvas() {
             
             // Assign to left or right node id
             if (!joinOp.settings.leftNodeId) {
-                joinOp.settings.leftNodeId = fromNode.id;
+                joinOp.settings.leftNodeId = fromNodeId;
             } else if (!joinOp.settings.rightNodeId) {
-                joinOp.settings.rightNodeId = fromNode.id;
+                joinOp.settings.rightNodeId = fromNodeId;
             }
             toNode.operation = joinOp;
 
@@ -352,20 +352,19 @@ export default function DataFlowCanvas() {
       });
 
       // After a node is updated, we might need to update its downstream nodes
-      const downstreamNodesToUpdate = connectors
+      const downstreamNodeIds = connectors
         .filter(c => c.from === nodeId)
         .map(c => c.to);
 
-      if (downstreamNodesToUpdate.length > 0) {
+      if (downstreamNodeIds.length > 0) {
         return updatedNodes.map(n => {
-          if (downstreamNodesToUpdate.includes(n.id)) {
+          if (downstreamNodeIds.includes(n.id)) {
             // Re-calculate input fields for downstream nodes
             const incomingConnectors = connectors.filter(c => c.to === n.id);
-            const inputFields = incomingConnectors.flatMap(c => {
-              const sourceNode = updatedNodes.find(un => un.id === c.from);
-              return sourceNode?.outputFields || [];
-            });
-            return { ...n, inputFields };
+            const parentNodes = incomingConnectors.map(c => updatedNodes.find(un => un.id === c.from));
+            const newInputFields = parentNodes.flatMap(pn => pn?.outputFields || []);
+            
+            return { ...n, inputFields: newInputFields };
           }
           return n;
         });
@@ -427,25 +426,18 @@ export default function DataFlowCanvas() {
   };
 
   const handleDeleteConnector = (connector: ConnectorType) => {
-    setConnectors(prev => prev.filter(c => !(c.from === connector.from && c.to === connector.to)));
-
     const fromNode = nodes.find(n => n.id === connector.from);
-    const toNode = nodes.find(n => n.id === connector.to);
-
-    if (!fromNode || !toNode) return;
-
-    const fieldsToRemove = new Set(fromNode.outputFields?.map(f => f.name) || []);
     
     setNodes(prev => prev.map(n => {
       if (n.id === connector.to) {
         let updatedNode = {...n};
         
-        // Remove input fields from the source node
+        const fieldsToRemove = new Set(fromNode?.outputFields?.map(f => f.name) || []);
+
         if (updatedNode.inputFields) {
             updatedNode.inputFields = updatedNode.inputFields.filter(f => !fieldsToRemove.has(f.name));
         }
 
-        // Handle schema updates based on node type
         if (updatedNode.type === 'dataset' || (updatedNode.operation?.type === 'filter')) {
             updatedNode.outputFields = updatedNode.inputFields;
         }
@@ -469,7 +461,6 @@ export default function DataFlowCanvas() {
               if (leftNode && rightNode) {
                 updatedNode.outputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
               } else {
-                // If one side is disconnected, output schema is the remaining side's output
                 updatedNode.outputFields = leftNode?.outputFields || rightNode?.outputFields || [];
               }
                updatedNode.operation = joinOp;
@@ -479,7 +470,8 @@ export default function DataFlowCanvas() {
       }
       return n;
     }));
-    
+
+    setConnectors(prev => prev.filter(c => !(c.from === connector.from && c.to === connector.to)));
     setSelectedConnector(null);
   }
   
