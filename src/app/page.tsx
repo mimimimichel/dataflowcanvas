@@ -230,7 +230,6 @@ export default function DataFlowCanvas() {
 
         let toNode = { ...newNodes[toNodeIndex] };
         
-        // This combines newly selected fields with existing ones.
         const currentInputFields = toNode.inputFields || [];
         const newFields = selectedFields.filter(sf => !currentInputFields.some(cif => cif.name === sf.name));
         toNode.inputFields = [...currentInputFields, ...newFields];
@@ -238,16 +237,17 @@ export default function DataFlowCanvas() {
         if (toNode.operation?.type === 'join') {
             const joinOp = { ...toNode.operation } as JoinOperation;
             
-            // Assign to left or right node id
             if (!joinOp.settings.leftNodeId) {
                 joinOp.settings.leftNodeId = fromNodeId;
             } else if (!joinOp.settings.rightNodeId) {
                 joinOp.settings.rightNodeId = fromNodeId;
             }
             toNode.operation = joinOp;
-
-            // This is the crucial fix: we need to find both parent nodes and combine their output fields.
-            const otherParentId = joinOp.settings.leftNodeId === fromNodeId ? joinOp.settings.rightNodeId : joinOp.settings.leftNodeId;
+            
+            const otherParentId = joinOp.settings.leftNodeId === fromNodeId 
+                ? joinOp.settings.rightNodeId 
+                : joinOp.settings.leftNodeId;
+            
             const fromNode = newNodes.find(n => n.id === fromNodeId);
             const otherParentNode = newNodes.find(n => n.id === otherParentId);
 
@@ -327,65 +327,87 @@ export default function DataFlowCanvas() {
     setNodes(prevNodes => {
       const updatedNodes = prevNodes.map(n => {
         if (n.id === nodeId) {
-          const updatedNode = { ...n, ...newConfig };
-          // For datasets, input and output schemas are the same
-          if (updatedNode.type === 'dataset') {
-            updatedNode.outputFields = updatedNode.inputFields;
-          }
-          // For filter operations, output schema is the same as input
-          if (updatedNode.operation?.type === 'filter') {
-            updatedNode.outputFields = updatedNode.inputFields;
-          }
-          // For join operation, output is combination of inputs
-          if (updatedNode.operation?.type === 'join') {
-              const joinOp = updatedNode.operation as JoinOperation;
-              const leftNode = prevNodes.find(ln => ln.id === joinOp.settings.leftNodeId);
-              const rightNode = prevNodes.find(rn => rn.id === joinOp.settings.rightNodeId);
-              if (leftNode && rightNode) {
-                updatedNode.outputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
-              }
-          }
-          
-          if (updatedNode.operation?.type === 'group_by') {
-              const groupOp = updatedNode.operation as GroupByOperation;
-              const newOutputFields: Field[] = [];
-              groupOp.settings.groupByFields.forEach(fieldName => {
-                  const field = updatedNode.inputFields?.find(f => f.name === fieldName);
-                  if(field) newOutputFields.push(field);
-              });
-              groupOp.settings.aggregations.forEach(agg => {
-                  // This is simplified, in reality type would depend on agg type (e.g. count is int)
-                  const originalField = updatedNode.inputFields?.find(f => f.name === agg.field);
-                  newOutputFields.push({ name: agg.newName, type: originalField?.type || 'unknown' });
-              });
-              updatedNode.outputFields = newOutputFields;
-          }
-
-          return updatedNode;
+          return { ...n, ...newConfig };
         }
         return n;
       });
-
-      // After a node is updated, we might need to update its downstream nodes
-      const downstreamNodeIds = connectors
-        .filter(c => c.from === nodeId)
-        .map(c => c.to);
-
-      if (downstreamNodeIds.length > 0) {
-        return updatedNodes.map(n => {
-          if (downstreamNodeIds.includes(n.id)) {
-            // Re-calculate input fields for downstream nodes
-            const incomingConnectors = connectors.filter(c => c.to === n.id);
-            const parentNodes = incomingConnectors.map(c => updatedNodes.find(un => un.id === c.from));
-            const newInputFields = parentNodes.flatMap(pn => pn?.outputFields || []);
-            
-            return { ...n, inputFields: newInputFields };
+  
+      // After a node is updated, we might need to update its downstream nodes.
+      // This logic ensures that schema changes propagate correctly.
+      const propagateUpdates = (nodesToUpdate: PipelineNode[], startNodeId: string): PipelineNode[] => {
+        let currentNodes = [...nodesToUpdate];
+        const queue = [startNodeId];
+        const visited = new Set<string>([startNodeId]);
+  
+        while (queue.length > 0) {
+          const currentId = queue.shift()!;
+          const currentNode = currentNodes.find(n => n.id === currentId)!;
+          
+          // Re-calculate output schema for the current node based on its new config/inputs
+          let newOutputFields = currentNode.outputFields || [];
+          if (currentNode.type === 'dataset') {
+            newOutputFields = currentNode.inputFields || [];
+          } else if (currentNode.operation) {
+            switch(currentNode.operation.type) {
+              case 'filter':
+                newOutputFields = currentNode.inputFields || [];
+                break;
+              case 'join': {
+                const joinOp = currentNode.operation as JoinOperation;
+                const leftNode = currentNodes.find(ln => ln.id === joinOp.settings.leftNodeId);
+                const rightNode = currentNodes.find(rn => rn.id === joinOp.settings.rightNodeId);
+                if (leftNode && rightNode) {
+                  newOutputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
+                }
+                break;
+              }
+              case 'group_by': {
+                const groupOp = currentNode.operation as GroupByOperation;
+                const calculatedOutput: Field[] = [];
+                groupOp.settings.groupByFields.forEach(fieldName => {
+                    const field = currentNode.inputFields?.find(f => f.name === fieldName);
+                    if(field) calculatedOutput.push(field);
+                });
+                groupOp.settings.aggregations.forEach(agg => {
+                    const originalField = currentNode.inputFields?.find(f => f.name === agg.field);
+                    calculatedOutput.push({ name: agg.newName, type: originalField?.type || 'unknown' });
+                });
+                newOutputFields = calculatedOutput;
+                break;
+              }
+              default:
+                 newOutputFields = currentNode.inputFields || [];
+                 break;
+            }
           }
-          return n;
-        });
-      }
+          
+          currentNodes = currentNodes.map(n => n.id === currentId ? {...n, outputFields: newOutputFields} : n);
+          const finalCurrentNode = currentNodes.find(n => n.id === currentId)!;
 
-      return updatedNodes;
+          // Find downstream nodes and update their inputs
+          const downstreamNodeIds = connectors.filter(c => c.from === currentId).map(c => c.to);
+          
+          for (const downstreamId of downstreamNodeIds) {
+            const parentNodes = connectors
+              .filter(c => c.to === downstreamId)
+              .map(c => currentNodes.find(n => n.id === c.from));
+            
+            const newInputFields = parentNodes.flatMap(pn => pn?.outputFields || []);
+  
+            currentNodes = currentNodes.map(n => 
+              n.id === downstreamId ? { ...n, inputFields: newInputFields } : n
+            );
+  
+            if (!visited.has(downstreamId)) {
+              visited.add(downstreamId);
+              queue.push(downstreamId);
+            }
+          }
+        }
+        return currentNodes;
+      };
+  
+      return propagateUpdates(updatedNodes, nodeId);
     });
   };
   
@@ -402,11 +424,8 @@ export default function DataFlowCanvas() {
     const nodeToDelete = nodes.find(n => n.id === nodeId);
     if (!nodeToDelete) return;
 
-    // Get connectors to and from the node being deleted
-    const relatedConnectors = connectors.filter(c => c.from === nodeId || c.to === nodeId);
-    const downstreamConnectors = relatedConnectors.filter(c => c.from === nodeId);
-
-    // Get the fields that will be removed from downstream nodes
+    const downstreamConnectors = connectors.filter(c => c.from === nodeId);
+    const downstreamNodeIds = downstreamConnectors.map(c => c.to);
     const fieldsToRemove = new Set(nodeToDelete.outputFields?.map(f => f.name) || []);
 
     // Update downstream nodes
@@ -416,7 +435,6 @@ export default function DataFlowCanvas() {
             // Remove the fields from the deleted node
             updatedNode.inputFields = updatedNode.inputFields?.filter(f => !fieldsToRemove.has(f.name));
             
-            // If it's a join node, clear the corresponding source ID
             if (updatedNode.operation?.type === 'join') {
                 const joinOp = { ...updatedNode.operation } as JoinOperation;
                 if (joinOp.settings.leftNodeId === nodeId) joinOp.settings.leftNodeId = '';
@@ -641,5 +659,3 @@ export default function DataFlowCanvas() {
     </SidebarProvider>
   );
 }
-
-    
