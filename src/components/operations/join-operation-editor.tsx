@@ -62,6 +62,22 @@ const JoinOperationEditor: React.FC<JoinOperationEditorProps> = ({ operationSett
     </>
   );
 
+  // Helper to determine which node a field belongs to, to construct the value for the Select
+  const findNodeIdForField = (fieldName: string): string | undefined => {
+    if (leftNode.outputFields?.some(f => f.name === fieldName)) return leftNode.id;
+    if (rightNode.outputFields?.some(f => f.name === fieldName)) return rightNode.id;
+    // Fallback if field exists in both (less likely with good naming, but possible)
+    return leftNode.id;
+  }
+
+  const leftFieldValue = operationSettings.settings.condition.leftField
+    ? `${findNodeIdForField(operationSettings.settings.condition.leftField)}:${operationSettings.settings.condition.leftField}`
+    : '';
+  
+  const rightFieldValue = operationSettings.settings.condition.rightField
+    ? `${findNodeIdForField(operationSettings.settings.condition.rightField)}:${operationSettings.settings.condition.rightField}`
+    : '';
+
   return (
     <div className="space-y-4">
       <div className="grid w-full items-center gap-1.5">
@@ -87,7 +103,7 @@ const JoinOperationEditor: React.FC<JoinOperationEditorProps> = ({ operationSett
       <div className="flex items-center gap-2">
         <div className="flex-1 grid w-full items-center gap-1.5">
           <Select
-            value={operationSettings.settings.condition.leftField ? `any:${operationSettings.settings.condition.leftField}` : ''}
+            value={leftFieldValue}
             onValueChange={(value) => handleConditionChange('leftField', value)}
           >
             <SelectTrigger className="flex-1 h-9">
@@ -101,7 +117,7 @@ const JoinOperationEditor: React.FC<JoinOperationEditorProps> = ({ operationSett
         <span className="font-mono">=</span>
         <div className="flex-1 grid w-full items-center gap-1.5">
           <Select
-            value={operationSettings.settings.condition.rightField ? `any:${operationSettings.settings.condition.rightField}` : ''}
+            value={rightFieldValue}
             onValueChange={(value) => handleConditionChange('rightField', value)}
           >
             <SelectTrigger className="flex-1 h-9">
