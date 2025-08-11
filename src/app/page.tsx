@@ -215,7 +215,7 @@ export default function DataFlowCanvas() {
       setNodes(prev => prev.map(node => {
         if (node.id === toNodeId) {
             const currentInputFields = node.inputFields || [];
-            const newFields = selectedFields.filter(sf => !currentInputInputFields.some(cif => cif.name === sf.name));
+            const newFields = selectedFields.filter(sf => !currentInputFields.some(cif => cif.name === sf.name));
             const finalFields = [...currentInputFields, ...newFields];
             
             let finalOutputFields = node.outputFields;
