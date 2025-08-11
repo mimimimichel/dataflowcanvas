@@ -220,7 +220,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                      if (sourceNodesForJoin.left && sourceNodesForJoin.right) {
                         return (
                             <JoinOperationEditor
-                                operation={displayNode.operation as JoinOperation}
+                                operationSettings={displayNode.operation as JoinOperation}
                                 leftNode={sourceNodesForJoin.left}
                                 rightNode={sourceNodesForJoin.right}
                                 onUpdate={handleOperationUpdate}
@@ -331,5 +331,3 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
 };
 
 export default NodeConfigurationPanel;
-
-    
