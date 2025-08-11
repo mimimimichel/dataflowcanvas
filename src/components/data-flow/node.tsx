@@ -21,6 +21,7 @@ interface NodeProps {
   onClick: () => void;
   onMouseDown: (event: React.MouseEvent) => void;
   onMouseUp: (event: React.MouseEvent) => void;
+  onPortMouseDown: (event: React.MouseEvent) => void;
   isSelected: boolean;
 }
 
@@ -36,16 +37,28 @@ const statusConfig: Record<NodeStatus, { icon: Icon; color: string; text: string
   error: { icon: XCircle, color: 'text-red-500', text: 'Error' },
 };
 
-const Node: React.FC<NodeProps> = ({ name, type, status, quality, position, onClick, onMouseDown, onMouseUp, isSelected }) => {
+const Node: React.FC<NodeProps> = ({ name, type, status, quality, position, onClick, onMouseDown, onMouseUp, onPortMouseDown, isSelected }) => {
   const TypeIcon = typeConfig[type].icon;
   const StatusIcon = statusConfig[status].icon;
   
+  const handleNodeClick = (e: React.MouseEvent) => {
+    // Prevent click from propagating to canvas when clicking on a node.
+    e.stopPropagation();
+    onClick();
+  }
+
+  const handleNodeMouseDown = (e: React.MouseEvent) => {
+    // Only pass through the event, don't stop propagation here,
+    // so the canvas can handle dragging logic.
+    onMouseDown(e);
+  }
+
   return (
     <div
       className="absolute transition-all duration-300 group"
       style={{ top: position.y, left: position.x }}
-      onClick={onClick}
-      onMouseDown={onMouseDown}
+      onClick={handleNodeClick}
+      onMouseDown={handleNodeMouseDown}
       onMouseUp={onMouseUp}
     >
       <Card
@@ -57,6 +70,7 @@ const Node: React.FC<NodeProps> = ({ name, type, status, quality, position, onCl
         {type !== 'source' && (
           <Port 
             type="in"
+            onMouseDown={onPortMouseDown}
           />
         )}
         <CardHeader className="p-3">
@@ -84,6 +98,7 @@ const Node: React.FC<NodeProps> = ({ name, type, status, quality, position, onCl
         {type !== 'destination' && (
           <Port 
             type="out"
+            onMouseDown={onPortMouseDown}
           />
         )}
       </Card>

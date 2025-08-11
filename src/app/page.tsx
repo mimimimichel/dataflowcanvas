@@ -54,30 +54,32 @@ export default function DataFlowCanvas() {
     const node = nodes.find(n => n.id === nodeId);
     if (!node) return;
 
-    if (e.shiftKey || (e.target as HTMLElement).closest('[data-port]')) {
-      isConnectingRef.current = true;
-      if (!canvasRef.current) return;
-        const canvasRect = canvasRef.current.getBoundingClientRect();
-        setNewConnector({ 
-            from: nodeId, 
-            to: { 
-                x: (e.clientX - canvasRect.left - pan.x) / zoom,
-                y: (e.clientY - canvasRect.top - pan.y) / zoom,
-            } 
-        });
-
-    } else {
-        draggingNodeIdRef.current = nodeId;
-        if(canvasRef.current) {
-            dragOffsetRef.current = {
-                x: e.clientX / zoom - node.position.x,
-                y: e.clientY / zoom - node.position.y,
-            };
-        }
+    // Connection logic is now initiated from Port's onMouseDown
+    draggingNodeIdRef.current = nodeId;
+    if(canvasRef.current) {
+        dragOffsetRef.current = {
+            x: e.clientX / zoom - node.position.x,
+            y: e.clientY / zoom - node.position.y,
+        };
     }
+  };
+
+  const handlePortMouseDown = (e: React.MouseEvent, nodeId: string) => {
+    e.stopPropagation();
+    isConnectingRef.current = true;
+    if (!canvasRef.current) return;
+      const canvasRect = canvasRef.current.getBoundingClientRect();
+      setNewConnector({ 
+          from: nodeId, 
+          to: { 
+              x: (e.clientX - canvasRect.left - pan.x) / zoom,
+              y: (e.clientY - canvasRect.top - pan.y) / zoom,
+          } 
+      });
   };
   
   const handleMouseDown = (e: React.MouseEvent) => {
+    // Only pan if the click is directly on the canvas background
     if (e.target === e.currentTarget && canvasRef.current) {
         isPanningRef.current = true;
         panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
@@ -86,12 +88,7 @@ export default function DataFlowCanvas() {
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (draggingNodeIdRef.current) {
-      const nodeId = draggingNodeIdRef.current;
-      const newX = e.clientX / zoom - dragOffsetRef.current.x;
-      const newY = e.clientY / zoom - dragOffsetRef.current.y;
-      setNodes(prevNodes => prevNodes.map(n => n.id === nodeId ? { ...n, position: { x: newX, y: newY } } : n));
-    } else if (isConnectingRef.current && newConnector) {
+    if (isConnectingRef.current && newConnector) {
       if (!canvasRef.current) return;
       const canvasRect = canvasRef.current.getBoundingClientRect();
       setNewConnector({
@@ -101,6 +98,11 @@ export default function DataFlowCanvas() {
           y: (e.clientY - canvasRect.top - pan.y) / zoom,
         }
       });
+    } else if (draggingNodeIdRef.current) {
+      const nodeId = draggingNodeIdRef.current;
+      const newX = e.clientX / zoom - dragOffsetRef.current.x;
+      const newY = e.clientY / zoom - dragOffsetRef.current.y;
+      setNodes(prevNodes => prevNodes.map(n => n.id === nodeId ? { ...n, position: { x: newX, y: newY } } : n));
     } else if (isPanningRef.current) {
       const newX = e.clientX - panStartRef.current.x;
       const newY = e.clientY - panStartRef.current.y;
@@ -111,8 +113,13 @@ export default function DataFlowCanvas() {
   const handleMouseUp = (e: React.MouseEvent) => {
     isPanningRef.current = false;
     draggingNodeIdRef.current = null;
-    isConnectingRef.current = false;
-    setNewConnector(null);
+    
+    // Reset connection state if we mouse up on the canvas
+    if (isConnectingRef.current) {
+      isConnectingRef.current = false;
+      setNewConnector(null);
+    }
+
     if (canvasRef.current) {
       canvasRef.current.style.cursor = 'grab';
     }
@@ -129,8 +136,13 @@ export default function DataFlowCanvas() {
         return [...prev, newConn];
       });
     }
+    
+    // Reset connection state after trying to connect
     isConnectingRef.current = false;
     setNewConnector(null);
+    
+    // Reset dragging state as well
+    draggingNodeIdRef.current = null;
   }
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -148,11 +160,26 @@ export default function DataFlowCanvas() {
   };
 
   const handleWheel = (e: React.WheelEvent) => {
-    if (e.target !== canvasRef.current) return;
+    if (e.currentTarget !== canvasRef.current) return;
     e.preventDefault();
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
     const zoomFactor = 1.1;
-    const newZoom = e.deltaY < 0 ? zoom * zoomFactor : zoom / zoomFactor;
-    setZoom(Math.min(Math.max(newZoom, 0.2), 5));
+    let newZoom: number;
+
+    if (e.deltaY < 0) {
+      newZoom = zoom * zoomFactor;
+    } else {
+      newZoom = zoom / zoomFactor;
+    }
+    newZoom = Math.min(Math.max(newZoom, 0.2), 5);
+
+    const newPanX = pan.x - (x - pan.x) * (newZoom / zoom - 1);
+    const newPanY = pan.y - (y - pan.y) * (newZoom / zoom - 1);
+
+    setZoom(newZoom);
+    setPan({x: newPanX, y: newPanY});
   };
 
   const selectedNode = useMemo(() => {
@@ -166,41 +193,46 @@ export default function DataFlowCanvas() {
         <div className="flex flex-1 overflow-hidden">
           <TransformationsCatalogue onAddNode={handleAddNode} />
           <main
-            ref={canvasRef}
             className="flex-1 relative overflow-hidden cursor-grab"
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
-            onWheel={handleWheel}
           >
-            <div
-              className="absolute top-0 left-0"
-              style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'top left' }}
+             <div
+              ref={canvasRef}
+              className="absolute w-full h-full"
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onWheel={handleWheel}
             >
-              {connectors.map((connector, index) => {
-                const fromNode = nodes.find((n) => n.id === connector.from);
-                const toNode = nodes.find((n) => n.id === connector.to);
-                if (!fromNode || !toNode) return null;
-                return <Connector key={`${connector.from}-${connector.to}-${index}`} from={fromNode.position} to={toNode.position} />;
-              })}
-              {newConnector && (() => {
-                const fromNode = nodes.find(n => n.id === newConnector.from);
-                if (!fromNode) return null;
-                return <Connector from={fromNode.position} to={newConnector.to} className="opacity-50" />;
-              })()}
-              {nodes.map((node) => (
-                <Node
-                  key={node.id}
-                  {...node}
-                  onClick={() => handleNodeClick(node.id)}
-                  onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
-                  onMouseUp={(e) => handleNodeMouseUp(e, node.id)}
-                  isSelected={selectedNodeId === node.id}
-                />
-              ))}
+              <div
+                className="absolute top-0 left-0"
+                style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'top left' }}
+              >
+                {connectors.map((connector, index) => {
+                  const fromNode = nodes.find((n) => n.id === connector.from);
+                  const toNode = nodes.find((n) => n.id === connector.to);
+                  if (!fromNode || !toNode) return null;
+                  return <Connector key={`${connector.from}-${connector.to}-${index}`} from={fromNode.position} to={toNode.position} />;
+                })}
+                {newConnector && (() => {
+                  const fromNode = nodes.find(n => n.id === newConnector.from);
+                  if (!fromNode) return null;
+                  return <Connector from={fromNode.position} to={newConnector.to} className="opacity-50" />;
+                })()}
+                {nodes.map((node) => (
+                  <Node
+                    key={node.id}
+                    {...node}
+                    onClick={() => handleNodeClick(node.id)}
+                    onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
+                    onMouseUp={(e) => handleNodeMouseUp(e, node.id)}
+                    onPortMouseDown={(e) => handlePortMouseDown(e, node.id)}
+                    isSelected={selectedNodeId === node.id}
+                  />
+                ))}
+              </div>
             </div>
           </main>
         </div>
