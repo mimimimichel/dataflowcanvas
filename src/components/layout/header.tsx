@@ -95,7 +95,7 @@ const Header: React.FC<HeaderProps> = ({ versions, activeVersionId, onVersionCha
   const activeVersion = versions.find(v => v.id === activeVersionId);
 
   return (
-    <header className="relative flex h-16 items-center justify-between border-b bg-card px-4 md:px-6 z-20 shrink-0">
+    <header className="relative flex h-16 items-center justify-between border-b bg-card px-4 md:px-6 shrink-0">
       <div className="flex items-center gap-4">
         <SidebarTrigger />
         <GitBranch className="h-7 w-7 text-primary" />
