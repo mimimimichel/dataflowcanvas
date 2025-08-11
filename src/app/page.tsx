@@ -16,6 +16,7 @@ export default function DataFlowCanvas() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'consumer' | 'engineer'>('consumer');
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
   
   const canvasRef = useRef<HTMLDivElement>(null);
   
@@ -39,22 +40,23 @@ export default function DataFlowCanvas() {
       status: 'healthy',
       quality: 100,
       position: {
-        x: position.x - canvasRect.left - pan.x,
-        y: position.y - canvasRect.top - pan.y,
+        x: (position.x - canvasRect.left - pan.x) / zoom,
+        y: (position.y - canvasRect.top - pan.y) / zoom,
       },
     };
     setNodes((prev) => [...prev, newNode]);
-  }, [pan.x, pan.y]);
+  }, [pan.x, pan.y, zoom]);
 
   const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
     e.stopPropagation();
     draggingNodeIdRef.current = nodeId;
     const node = nodes.find(n => n.id === nodeId);
-    if(node) {
-      dragOffsetRef.current = {
-        x: e.clientX - node.position.x - pan.x,
-        y: e.clientY - node.position.y - pan.y,
-      };
+    if(node && canvasRef.current) {
+        const canvasRect = canvasRef.current.getBoundingClientRect();
+        dragOffsetRef.current = {
+            x: e.clientX / zoom - node.position.x,
+            y: e.clientY / zoom - node.position.y,
+        };
     }
   };
   
@@ -69,8 +71,8 @@ export default function DataFlowCanvas() {
   const handleMouseMove = (e: React.MouseEvent) => {
     if (draggingNodeIdRef.current) {
       const nodeId = draggingNodeIdRef.current;
-      const newX = e.clientX - dragOffsetRef.current.x - pan.x;
-      const newY = e.clientY - dragOffsetRef.current.y - pan.y;
+      const newX = e.clientX / zoom - dragOffsetRef.current.x;
+      const newY = e.clientY / zoom - dragOffsetRef.current.y;
       setNodes(prevNodes => prevNodes.map(n => n.id === nodeId ? { ...n, position: { x: newX, y: newY } } : n));
     } else if (isPanningRef.current) {
       const newX = e.clientX - panStartRef.current.x;
@@ -101,6 +103,13 @@ export default function DataFlowCanvas() {
     e.preventDefault();
   };
 
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const zoomFactor = 1.1;
+    const newZoom = e.deltaY < 0 ? zoom * zoomFactor : zoom / zoomFactor;
+    setZoom(Math.min(Math.max(newZoom, 0.2), 5));
+  };
+
   const selectedNode = useMemo(() => {
     return nodes.find((n) => n.id === selectedNodeId);
   }, [nodes, selectedNodeId]);
@@ -120,10 +129,11 @@ export default function DataFlowCanvas() {
             onMouseLeave={handleMouseUp}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
+            onWheel={handleWheel}
           >
             <div
-              className="absolute inset-0"
-              style={{ transform: `translate(${pan.x}px, ${pan.y}px)` }}
+              className="absolute top-0 left-0"
+              style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'top left' }}
             >
               {connectors.map((connector) => {
                 const fromNode = nodes.find((n) => n.id === connector.from);
