@@ -139,6 +139,10 @@ const TransformationsCatalogue: React.FC = () => {
     filteredTransformations.advanced.flatMap(category => category.items),
     [filteredTransformations.advanced]
   );
+  
+  const commonAndAdvancedItems = isCollapsed ? 
+    [...filteredTransformations.common, ...allAdvancedItems] : 
+    filteredTransformations.common;
 
   return (
     <Sidebar collapsible="icon" className="w-72">
@@ -156,12 +160,10 @@ const TransformationsCatalogue: React.FC = () => {
         <SidebarContent>
             <CatalogueSection title="Sources" items={filteredTransformations.sources} itemType="source" />
             
-            <CatalogueSection title="Transformations Courantes" items={filteredTransformations.common} itemType="transformation" />
+            <CatalogueSection title="Transformations" items={commonAndAdvancedItems} itemType="transformation" />
             
-            {isCollapsed ? (
-                 <CatalogueSection title="Transformations Avancées" items={allAdvancedItems} itemType="transformation" />
-            ) : (
-                <AdvancedTransformations categories={filteredTransformations.advanced} defaultOpen={defaultAccordionOpen}/>
+            {!isCollapsed && (
+                 <AdvancedTransformations categories={filteredTransformations.advanced} defaultOpen={defaultAccordionOpen}/>
             )}
            
             {filteredTransformations.dataset.name && (
