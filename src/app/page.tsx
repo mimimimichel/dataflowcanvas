@@ -7,7 +7,7 @@ import TransformationsCatalogue from '@/components/sidebar/transformations-catal
 import NodeConfigurationPanel from '@/components/sidebar/node-configuration-panel';
 import Node from '@/components/data-flow/node';
 import Connector from '@/components/data-flow/connector';
-import { nodes as initialNodes, connectors as initialConnectors, PipelineNode, TransformationItem, Connector as ConnectorType, Field, Operation } from '@/lib/pipeline-data';
+import { nodes as initialNodes, connectors as initialConnectors, PipelineNode, TransformationItem, Connector as ConnectorType, Field, Operation, FilterOperation } from '@/lib/pipeline-data';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import ConnectionFieldsModal from '@/components/data-flow/connection-fields-modal';
@@ -59,6 +59,18 @@ export default function DataFlowCanvas() {
   const handleAddNode = useCallback((item: TransformationItem, position: {x: number, y: number}) => {
     if (!canvasRef.current) return;
     const canvasRect = canvasRef.current.getBoundingClientRect();
+
+    let operation: Operation | undefined = undefined;
+    // This is a simplistic mapping. A more robust solution might involve a mapping object or more metadata in the TransformationItem.
+    if (item.category === 'FILTRAGE ET SÉLECTION') {
+        operation = {
+            type: 'filter',
+            settings: { field: '', operator: '==', value: '' }
+        } as FilterOperation;
+    }
+     // A more robust solution would be needed for joins, as it requires info from multiple nodes.
+     // For now, we are not setting an operation for joins on creation.
+    
     const newNode: PipelineNode = {
       id: `${item.type}-${Date.now()}`,
       name: item.name,
@@ -69,6 +81,7 @@ export default function DataFlowCanvas() {
       },
       inputFields: item.type === 'destination' || item.type === 'transformation' || item.type === 'dataset' ? [] : undefined,
       outputFields: item.type === 'source' || item.type === 'transformation' || item.type === 'dataset' ? [] : undefined,
+      operation: item.type === 'transformation' ? operation : undefined,
     };
     setNodes((prev) => [...prev, newNode]);
   }, [pan.x, pan.y, zoom]);
@@ -190,7 +203,16 @@ export default function DataFlowCanvas() {
         const newFields = selectedFields.filter(sf => !currentInputFields.some(cif => cif.name === sf.name));
         const finalFields = [...currentInputFields, ...newFields];
         const newOutputFields = node.type === 'dataset' ? finalFields : node.outputFields;
-        return { ...node, inputFields: finalFields, outputFields: newOutputFields };
+
+        // If a transformation node's output is not yet defined, initialize it with its input.
+        let finalOutputFields = node.outputFields;
+        if (node.type === 'transformation' && (!node.outputFields || node.outputFields.length === 0)) {
+            finalOutputFields = finalFields;
+        } else if (node.type === 'dataset') {
+            finalOutputFields = finalFields;
+        }
+
+        return { ...node, inputFields: finalFields, outputFields: finalOutputFields };
       }
       return node;
     }));
@@ -244,6 +266,10 @@ export default function DataFlowCanvas() {
         const updatedNode = { ...n, ...newConfig };
         // For datasets, input and output schemas are the same
         if (updatedNode.type === 'dataset') {
+          updatedNode.outputFields = updatedNode.inputFields;
+        }
+        // For filter operations, output schema is the same as input
+        if (updatedNode.operation?.type === 'filter') {
           updatedNode.outputFields = updatedNode.inputFields;
         }
         return updatedNode;

@@ -121,7 +121,12 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
     const newConfig: Partial<PipelineNode> = { name: nodeName };
     if (node.type === 'transformation') {
         newConfig.operation = operation;
-        newConfig.outputFields = outputFields;
+        // For filter operations, output schema is the same as input
+        if(operation?.type === 'filter') {
+            newConfig.outputFields = inputFields;
+        } else {
+            newConfig.outputFields = outputFields;
+        }
     }
     if (node.type === 'source') {
         newConfig.outputFields = outputFields;
@@ -196,7 +201,11 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
             <Separator className="my-4"/>
             <h3 className="text-md font-medium mb-2">Output Schema</h3>
              <p className="text-sm text-muted-foreground mb-2">Define the fields produced by this transformation.</p>
-            <SchemaEditor fields={outputFields} onFieldsChange={setOutputFields} isEditable={true} />
+            <SchemaEditor 
+                fields={outputFields} 
+                onFieldsChange={setOutputFields} 
+                isEditable={operation?.type !== 'filter'} 
+            />
           </>
         );
        case 'dataset':
