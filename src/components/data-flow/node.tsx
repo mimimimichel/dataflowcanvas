@@ -54,7 +54,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, onClick, onConfig
     >
       <Card
         className={cn(
-          'w-52 h-20 shadow-lg hover:shadow-xl transition-shadow cursor-grab active:cursor-grabbing border-2 relative',
+          'w-52 h-20 shadow-lg hover:shadow-xl transition-shadow cursor-grab active:cursor-grabbing border-2 relative flex items-center justify-center p-2',
           isSelected ? 'border-primary shadow-2xl scale-105' : 'border-transparent'
         )}
       >
@@ -64,16 +64,12 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, onClick, onConfig
             onMouseDown={onPortMouseDown}
           />
         )}
-        <CardHeader className="p-2">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
             <div className={cn('p-1.5 rounded-md', typeConfig[type].color)}>
               <TypeIcon className="w-5 h-5 text-white" />
             </div>
             <CardTitle className="text-sm font-medium leading-tight">{name}</CardTitle>
           </div>
-        </CardHeader>
-        <CardContent className="p-0">
-        </CardContent>
         {type !== 'destination' && (
           <Port 
             type="out"
