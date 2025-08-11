@@ -238,7 +238,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
         </SheetHeader>
         <Separator />
         <div className="flex-1 overflow-y-auto pr-6 -mr-6">
-            <Tabs defaultValue='config' className="w-full mt-4">
+            <Tabs defaultValue='stats' className="w-full mt-4">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="stats"><AreaChart className="mr-2"/> Statistics</TabsTrigger>
                 <TabsTrigger value="config"><SlidersHorizontal className="mr-2"/> Configuration</TabsTrigger>
@@ -291,5 +291,3 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
 };
 
 export default NodeConfigurationPanel;
-
-    

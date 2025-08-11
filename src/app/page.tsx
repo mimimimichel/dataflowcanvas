@@ -44,18 +44,13 @@ export default function DataFlowCanvas() {
   const handleNodeClick = (id: string) => {
     setSelectedNodeId(id);
     setSelectedConnector(null);
+    setIsConfigPanelOpen(true);
   };
   
   const handleConnectorClick = (connector: ConnectorType) => {
     setSelectedConnector(connector);
     setSelectedNodeId(null);
   };
-
-  const handleNodeConfigClick = (nodeId: string) => {
-    setSelectedNodeId(nodeId);
-    setSelectedConnector(null);
-    setIsConfigPanelOpen(true);
-  }
   
   const handleAddNode = useCallback((item: TransformationItem, position: {x: number, y: number}) => {
     if (!canvasRef.current) return;
@@ -106,7 +101,7 @@ export default function DataFlowCanvas() {
   
   const handleMouseDown = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (target.closest('[data-node-id]') || target.closest('[data-port="true"]') || target.closest('[data-config-button="true"]') || target.closest('[data-connector="true"]')) {
+    if (target.closest('[data-node-id]') || target.closest('[data-port="true"]') || target.closest('[data-connector="true"]')) {
       return;
     }
     isPanningRef.current = true;
@@ -419,7 +414,6 @@ export default function DataFlowCanvas() {
                   key={node.id}
                   {...node}
                   onClick={() => handleNodeClick(node.id)}
-                  onConfigClick={() => handleNodeConfigClick(node.id)}
                   onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
                   onMouseUp={(e) => handleNodeMouseUp(e, node.id)}
                   onPortMouseDown={(e) => handlePortMouseDown(e, node.id)}
@@ -450,5 +444,3 @@ export default function DataFlowCanvas() {
     </SidebarProvider>
   );
 }
-
-    

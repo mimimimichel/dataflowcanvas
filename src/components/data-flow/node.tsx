@@ -4,9 +4,8 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal } from 'lucide-react';
+import { Database, Cog, DatabaseZap, Icon, Layers } from 'lucide-react';
 import Port from './port';
-import { Button } from '@/components/ui/button';
 import { TransformationItem } from '@/lib/pipeline-data';
 
 export type NodeType = 'source' | 'transformation' | 'destination' | 'dataset';
@@ -17,7 +16,6 @@ interface NodeProps {
   type: NodeType;
   position: { x: number; y: number };
   onClick: () => void;
-  onConfigClick: () => void;
   onMouseDown: (event: React.MouseEvent) => void;
   onMouseUp: (event: React.MouseEvent) => void;
   onPortMouseDown: (event: React.MouseEvent) => void;
@@ -32,17 +30,12 @@ const typeConfig: Record<NodeType, { icon: Icon; color: string; }> = {
   dataset: { icon: Layers, color: 'bg-yellow-500' },
 };
 
-const Node: React.FC<NodeProps> = ({ id, name, type, position, onClick, onConfigClick, onMouseDown, onMouseUp, onPortMouseDown, isSelected }) => {
+const Node: React.FC<NodeProps> = ({ id, name, type, position, onClick, onMouseDown, onMouseUp, onPortMouseDown, isSelected }) => {
   const TypeIcon = typeConfig[type].icon;
   
   const handleNodeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onClick();
-  }
-
-  const handleConfigClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onConfigClick();
   }
 
   return (
@@ -78,20 +71,9 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, onClick, onConfig
             onMouseDown={onPortMouseDown}
           />
         )}
-        <Button 
-          data-config-button="true"
-          variant="ghost" 
-          size="icon" 
-          className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={handleConfigClick}
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-        </Button>
       </Card>
     </div>
   );
 };
 
 export default Node;
-
-    
