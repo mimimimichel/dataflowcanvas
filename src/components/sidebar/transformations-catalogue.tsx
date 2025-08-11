@@ -32,7 +32,7 @@ const DraggableSidebarMenuButton: React.FC<{item: TransformationItem, children: 
                 <Tooltip>
                     <TooltipTrigger asChild>{button}</TooltipTrigger>
                     <TooltipContent side="right" align="center" className="max-w-xs">
-                        <p className="font-semibold">{item.category}</p>
+                        <p className="font-semibold">{item.name}</p>
                         <p className="text-muted-foreground">{item.description}</p>
                     </TooltipContent>
                 </Tooltip>
@@ -116,7 +116,7 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = () => 
                         <AccordionContent className="p-0 pl-2">
                            <div className="py-1">
                                 {category.items.map((item) => (
-                                    <DraggableSidebarMenuButton key={item.name} item={{...item, type: 'transformation', category: category.name}}>
+                                    <DraggableSidebarMenuButton key={item.name} item={{...item, type: 'transformation', category: category.name, operationType: item.operationType}}>
                                         <item.icon className="h-4 w-4" />
                                         {item.name}
                                     </DraggableSidebarMenuButton>
@@ -152,5 +152,3 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = () => 
 };
 
 export default TransformationsCatalogue;
-
-    

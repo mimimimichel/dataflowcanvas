@@ -61,22 +61,29 @@ export default function DataFlowCanvas() {
     const canvasRect = canvasRef.current.getBoundingClientRect();
 
     let operation: Operation | undefined = undefined;
-    if (item.category === 'FILTRAGE ET SÉLECTION') {
-        operation = {
-            type: 'filter',
-            settings: { field: '', operator: '==', value: '' }
-        } as FilterOperation;
-    } else if (item.category === 'JOINTURES ET UNIONS') {
-        const joinInputs = connectors.filter(c => c.to.startsWith('temp-join-')).map(c => c.from);
-        operation = {
-            type: 'join',
-            settings: {
-                leftNodeId: '',
-                rightNodeId: '',
-                joinType: 'inner',
-                condition: { leftField: '', rightField: '' }
-            }
-        } as JoinOperation;
+    if (item.type === 'transformation' && item.operationType) {
+        switch (item.operationType) {
+            case 'filter':
+                operation = {
+                    type: 'filter',
+                    settings: { field: '', operator: '==', value: '' }
+                } as FilterOperation;
+                break;
+            case 'join':
+                operation = {
+                    type: 'join',
+                    settings: {
+                        leftNodeId: '',
+                        rightNodeId: '',
+                        joinType: 'inner',
+                        condition: { leftField: '', rightField: '' }
+                    }
+                } as JoinOperation;
+                break;
+            default:
+                operation = { type: item.operationType, settings: {} };
+                break;
+        }
     }
     
     const newNode: PipelineNode = {
@@ -92,7 +99,7 @@ export default function DataFlowCanvas() {
       operation: item.type === 'transformation' ? operation : undefined,
     };
     setNodes((prev) => [...prev, newNode]);
-  }, [pan.x, pan.y, zoom, connectors]);
+  }, [pan.x, pan.y, zoom]);
 
   const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
     e.stopPropagation();

@@ -121,8 +121,9 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
       if (!node || node.type !== 'transformation' || node.operation?.type !== 'join') {
           return { left: undefined, right: undefined };
       }
-      const left = nodes.find(n => n.id === node.operation?.settings.leftNodeId);
-      const right = nodes.find(n => n.id === node.operation?.settings.rightNodeId);
+      const joinOp = node.operation as JoinOperation;
+      const left = nodes.find(n => n.id === joinOp.settings.leftNodeId);
+      const right = nodes.find(n => n.id === joinOp.settings.rightNodeId);
       return { left, right };
   }, [node, nodes]);
 
@@ -137,8 +138,9 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
         if(operation?.type === 'filter') {
             newConfig.outputFields = inputFields;
         } else if (operation?.type === 'join') {
-             const leftNode = nodes.find(n => n.id === operation.settings.leftNodeId);
-             const rightNode = nodes.find(n => n.id === operation.settings.rightNodeId);
+             const joinOp = operation as JoinOperation;
+             const leftNode = nodes.find(n => n.id === joinOp.settings.leftNodeId);
+             const rightNode = nodes.find(n => n.id === joinOp.settings.rightNodeId);
              const newOutputFields = [
                 ...(leftNode?.outputFields || []),
                 ...(rightNode?.outputFields || [])
@@ -201,30 +203,44 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
           </>
         );
       case 'transformation':
+        const renderOperationEditor = () => {
+            if (!operation) {
+                return <p className="text-sm text-muted-foreground">No operation configured for this transformation.</p>;
+            }
+
+            switch(operation.type) {
+                case 'filter':
+                    return (
+                        <FilterOperationEditor 
+                            operation={operation as FilterOperation}
+                            inputFields={inputFields}
+                            onUpdate={(op) => setOperation(op)}
+                        />
+                    );
+                case 'join':
+                     if (sourceNodes.left && sourceNodes.right) {
+                        return (
+                            <JoinOperationEditor
+                                operation={operation as JoinOperation}
+                                leftNode={sourceNodes.left}
+                                rightNode={sourceNodes.right}
+                                onUpdate={(op) => setOperation(op)}
+                            />
+                        );
+                     }
+                     return <p className="text-sm text-muted-foreground">Please connect two nodes to configure the join.</p>
+                default:
+                    return <p className="text-sm text-muted-foreground">Configuration for '{operation.type}' is not yet available.</p>;
+            }
+        };
+
         return (
           <>
             <h3 className="text-md font-medium mb-2">Input Schema</h3>
             <SchemaEditor fields={inputFields} onFieldsChange={setInputFields} isEditable={false} />
             <Separator className="my-4"/>
             <h3 className="text-md font-medium mb-2">Transformation Operation</h3>
-            {operation?.type === 'filter' && (
-              <FilterOperationEditor 
-                operation={operation as FilterOperation}
-                inputFields={inputFields}
-                onUpdate={(op) => setOperation(op)}
-              />
-            )}
-            {operation?.type === 'join' && sourceNodes.left && sourceNodes.right && (
-                <JoinOperationEditor
-                    operation={operation as JoinOperation}
-                    leftNode={sourceNodes.left}
-                    rightNode={sourceNodes.right}
-                    onUpdate={(op) => setOperation(op)}
-                />
-            )}
-            {!operation && (
-              <p className="text-sm text-muted-foreground">No operation configured for this transformation.</p>
-            )}
+            {renderOperationEditor()}
             <Separator className="my-4"/>
             <h3 className="text-md font-medium mb-2">Output Schema</h3>
              <p className="text-sm text-muted-foreground mb-2">The output schema is automatically determined by the operation.</p>
