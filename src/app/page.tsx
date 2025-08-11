@@ -237,6 +237,7 @@ export default function DataFlowCanvas() {
         if (toNode.operation?.type === 'join') {
             const joinOp = { ...toNode.operation } as JoinOperation;
             
+            // Assign parent nodes to the join operation
             if (!joinOp.settings.leftNodeId) {
                 joinOp.settings.leftNodeId = fromNodeId;
             } else if (!joinOp.settings.rightNodeId) {
@@ -244,30 +245,19 @@ export default function DataFlowCanvas() {
             }
             toNode.operation = joinOp;
             
-            const otherParentId = joinOp.settings.leftNodeId === fromNodeId 
-                ? joinOp.settings.rightNodeId 
-                : joinOp.settings.leftNodeId;
-            
-            const fromNode = newNodes.find(n => n.id === fromNodeId);
-            const otherParentNode = newNodes.find(n => n.id === otherParentId);
+            // Re-calculate input fields from BOTH parents
+            const leftParentNode = newNodes.find(n => n.id === joinOp.settings.leftNodeId);
+            const rightParentNode = newNodes.find(n => n.id === joinOp.settings.rightNodeId);
 
-            const combinedInputFields = [...(fromNode?.outputFields || [])];
-            
-            if (otherParentNode) {
-                 (otherParentNode.outputFields || []).forEach(otherField => {
-                    if(!combinedInputFields.some(f => f.name === otherField.name)) {
-                        combinedInputFields.push(otherField);
-                    }
-                });
-            }
-
+            const combinedInputFields = [
+                ...(leftParentNode?.outputFields || []),
+                ...(rightParentNode?.outputFields || [])
+            ];
             toNode.inputFields = combinedInputFields;
             
-            const leftNode = newNodes.find(n => n.id === joinOp.settings.leftNodeId);
-            const rightNode = newNodes.find(n => n.id === joinOp.settings.rightNodeId);
-
-            if(leftNode && rightNode) {
-              toNode.outputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
+            // Re-calculate output fields
+            if(leftParentNode && rightParentNode) {
+              toNode.outputFields = getJoinOutputFields(leftParentNode, rightParentNode, joinOp.settings.joinType);
             }
         } else if (toNode.type === 'transformation' && (!toNode.outputFields || toNode.outputFields.length === 0)) {
             toNode.outputFields = toNode.inputFields;
@@ -382,25 +372,25 @@ export default function DataFlowCanvas() {
           }
           
           currentNodes = currentNodes.map(n => n.id === currentId ? {...n, outputFields: newOutputFields} : n);
-          const finalCurrentNode = currentNodes.find(n => n.id === currentId)!;
 
           // Find downstream nodes and update their inputs
-          const downstreamNodeIds = connectors.filter(c => c.from === currentId).map(c => c.to);
-          
-          for (const downstreamId of downstreamNodeIds) {
+          const downstreamConnectors = connectors.filter(c => c.from === currentId);
+          for (const connector of downstreamConnectors) {
+            const downstreamId = connector.to;
+
             const parentNodes = connectors
-              .filter(c => c.to === downstreamId)
-              .map(c => currentNodes.find(n => n.id === c.from));
+                .filter(c => c.to === downstreamId)
+                .map(c => currentNodes.find(n => n.id === c.from));
             
             const newInputFields = parentNodes.flatMap(pn => pn?.outputFields || []);
-  
+
             currentNodes = currentNodes.map(n => 
-              n.id === downstreamId ? { ...n, inputFields: newInputFields } : n
+                n.id === downstreamId ? { ...n, inputFields: newInputFields } : n
             );
-  
+
             if (!visited.has(downstreamId)) {
-              visited.add(downstreamId);
-              queue.push(downstreamId);
+                visited.add(downstreamId);
+                queue.push(downstreamId);
             }
           }
         }

@@ -27,8 +27,7 @@ const JoinOperationEditor: React.FC<JoinOperationEditorProps> = ({ operationSett
   };
   
    const handleConditionChange = (key: 'leftField' | 'rightField', value: string) => {
-    // The value is expected to be in "nodeId:fieldName" format, but we only need the fieldName.
-    const fieldName = value.split(':')[1] || value;
+    const fieldName = value;
     onUpdate({
       ...operationSettings,
       settings: {
@@ -41,41 +40,13 @@ const JoinOperationEditor: React.FC<JoinOperationEditorProps> = ({ operationSett
     });
   };
 
-  const renderFieldOptions = () => (
-    <>
-        <SelectGroup>
-            <Label className="px-2 py-1.5 text-xs font-semibold">{leftNode.name}</Label>
-            {(leftNode.outputFields || []).map(field => (
-                <SelectItem key={`${leftNode.id}:${field.name}`} value={`${leftNode.id}:${field.name}`}>
-                {field.name}
-                </SelectItem>
-            ))}
-        </SelectGroup>
-        <SelectGroup>
-            <Label className="px-2 py-1.5 text-xs font-semibold">{rightNode.name}</Label>
-            {(rightNode.outputFields || []).map(field => (
-                <SelectItem key={`${rightNode.id}:${field.name}`} value={`${rightNode.id}:${field.name}`}>
-                {field.name}
-                </SelectItem>
-            ))}
-        </SelectGroup>
-    </>
+  const renderFieldOptions = (node: PipelineNode) => (
+    (node.outputFields || []).map(field => (
+        <SelectItem key={`${node.id}:${field.name}`} value={field.name}>
+        {field.name}
+        </SelectItem>
+    ))
   );
-
-  // Helper to determine which node a field belongs to, to construct the value for the Select
-  const findNodeIdForField = (fieldName: string): string | undefined => {
-    if (leftNode.outputFields?.some(f => f.name === fieldName)) return leftNode.id;
-    if (rightNode.outputFields?.some(f => f.name === fieldName)) return rightNode.id;
-    return leftNode.id;
-  }
-
-  const leftFieldValue = operationSettings.settings.condition.leftField
-    ? `${findNodeIdForField(operationSettings.settings.condition.leftField)}:${operationSettings.settings.condition.leftField}`
-    : '';
-  
-  const rightFieldValue = operationSettings.settings.condition.rightField
-    ? `${findNodeIdForField(operationSettings.settings.condition.rightField)}:${operationSettings.settings.condition.rightField}`
-    : '';
 
   return (
     <div className="space-y-4">
@@ -102,28 +73,42 @@ const JoinOperationEditor: React.FC<JoinOperationEditorProps> = ({ operationSett
       <div className="flex items-center gap-2">
         <div className="flex-1 grid w-full items-center gap-1.5">
           <Select
-            value={leftFieldValue}
+            value={operationSettings.settings.condition.leftField}
             onValueChange={(value) => handleConditionChange('leftField', value)}
           >
             <SelectTrigger className="flex-1 h-9">
               <SelectValue placeholder="Select field" />
             </SelectTrigger>
             <SelectContent>
-                {renderFieldOptions()}
+                <SelectGroup>
+                    <Label className="px-2 py-1.5 text-xs font-semibold">{leftNode.name}</Label>
+                    {renderFieldOptions(leftNode)}
+                </SelectGroup>
+                 <SelectGroup>
+                    <Label className="px-2 py-1.5 text-xs font-semibold">{rightNode.name}</Label>
+                    {renderFieldOptions(rightNode)}
+                </SelectGroup>
             </SelectContent>
           </Select>
         </div>
         <span className="font-mono">=</span>
         <div className="flex-1 grid w-full items-center gap-1.5">
           <Select
-            value={rightFieldValue}
+            value={operationSettings.settings.condition.rightField}
             onValueChange={(value) => handleConditionChange('rightField', value)}
           >
             <SelectTrigger className="flex-1 h-9">
               <SelectValue placeholder="Select field" />
             </SelectTrigger>
             <SelectContent>
-                {renderFieldOptions()}
+                <SelectGroup>
+                    <Label className="px-2 py-1.5 text-xs font-semibold">{leftNode.name}</Label>
+                    {renderFieldOptions(leftNode)}
+                </SelectGroup>
+                 <SelectGroup>
+                    <Label className="px-2 py-1.5 text-xs font-semibold">{rightNode.name}</Label>
+                    {renderFieldOptions(rightNode)}
+                </SelectGroup>
             </SelectContent>
           </Select>
         </div>

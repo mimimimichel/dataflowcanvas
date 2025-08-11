@@ -103,10 +103,8 @@ const SchemaEditor: React.FC<{ fields: Field[], onFieldsChange: (fields: Field[]
 
 const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, nodes, isOpen, onClose, onSave, onDelete }) => {
   const { toast } = useToast();
-  // draftNode holds local edits. It's initialized with the node prop.
   const [draftNode, setDraftNode] = useState<Partial<PipelineNode>>({});
 
-  // When the selected node changes externally, we reset the draft
   useEffect(() => {
     setDraftNode({});
   }, [node]);
@@ -123,7 +121,6 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
 
   if (!node) return null;
 
-  // This is the effective node state, combining the base node with any local drafts.
   const displayNode = { ...node, ...draftNode };
 
   const handleSave = () => {
@@ -216,18 +213,20 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                             onUpdate={handleOperationUpdate}
                         />
                     );
-                case 'join':
-                     if (sourceNodesForJoin.left && sourceNodesForJoin.right) {
+                case 'join': {
+                     const { left, right } = sourceNodesForJoin;
+                     if (left && right) {
                         return (
                             <JoinOperationEditor
                                 operationSettings={displayNode.operation as JoinOperation}
-                                leftNode={sourceNodesForJoin.left}
-                                rightNode={sourceNodesForJoin.right}
+                                leftNode={left}
+                                rightNode={right}
                                 onUpdate={handleOperationUpdate}
                             />
                         );
                      }
-                     return <p className="text-sm text-muted-foreground">Please connect two nodes to configure the join.</p>
+                     return <p className="text-sm text-muted-foreground">Please connect two nodes to configure the join.</p>;
+                }
                 case 'group_by':
                     return (
                         <GroupByOperationEditor
