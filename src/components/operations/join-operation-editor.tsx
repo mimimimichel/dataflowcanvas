@@ -66,7 +66,6 @@ const JoinOperationEditor: React.FC<JoinOperationEditorProps> = ({ operationSett
   const findNodeIdForField = (fieldName: string): string | undefined => {
     if (leftNode.outputFields?.some(f => f.name === fieldName)) return leftNode.id;
     if (rightNode.outputFields?.some(f => f.name === fieldName)) return rightNode.id;
-    // Fallback if field exists in both (less likely with good naming, but possible)
     return leftNode.id;
   }
 
