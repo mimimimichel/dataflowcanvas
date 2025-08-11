@@ -37,7 +37,7 @@ const statusConfig: Record<NodeStatus, { icon: Icon; color: string; text: string
   error: { icon: XCircle, color: 'text-red-500', text: 'Error' },
 };
 
-const Node: React.FC<NodeProps> = ({ name, type, status, quality, position, onClick, onMouseDown, onMouseUp, onPortMouseDown, isSelected }) => {
+const Node: React.FC<NodeProps> = ({ id, name, type, status, quality, position, onClick, onMouseDown, onMouseUp, onPortMouseDown, isSelected }) => {
   const TypeIcon = typeConfig[type].icon;
   const StatusIcon = statusConfig[status].icon;
   
@@ -54,6 +54,7 @@ const Node: React.FC<NodeProps> = ({ name, type, status, quality, position, onCl
       onClick={handleNodeClick}
       onMouseDown={onMouseDown}
       onMouseUp={onMouseUp}
+      data-node-id={id}
     >
       <Card
         className={cn(
