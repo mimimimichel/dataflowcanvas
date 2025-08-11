@@ -82,8 +82,8 @@ export default function DataFlowCanvas() {
   };
   
   const handleMouseDown = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
     // Only pan if not starting a drag on a node or a port
+    const target = e.target as HTMLElement;
     if (target.closest('[data-node-id]') || target.closest('[data-port="true"]')) {
       return;
     }
@@ -300,5 +300,3 @@ export default function DataFlowCanvas() {
     </SidebarProvider>
   );
 }
-
-    

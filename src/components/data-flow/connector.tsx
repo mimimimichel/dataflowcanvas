@@ -13,16 +13,20 @@ interface ConnectorProps {
   className?: string;
 }
 
+const NODE_WIDTH = 208; // w-52
+const NODE_HEIGHT = 96; // h-24
+const PORT_OFFSET_Y = NODE_HEIGHT / 2;
+const PORT_OFFSET_X_OUT = NODE_WIDTH;
+const PORT_OFFSET_X_IN = 0;
+
 const Connector: React.FC<ConnectorProps> = ({ from, to, className }) => {
-  const fromWithNodeOffset = { x: from.x + 208, y: from.y + 48 }; // width of node
-  const toWithNodeOffset = { x: to.x, y: to.y + 48 };
+  const fromWithNodeOffset = { x: from.x + PORT_OFFSET_X_OUT, y: from.y + PORT_OFFSET_Y };
+  const toWithNodeOffset = { x: to.x + PORT_OFFSET_X_IN, y: to.y + PORT_OFFSET_Y };
 
   const path = `M ${fromWithNodeOffset.x} ${fromWithNodeOffset.y} C ${fromWithNodeOffset.x + 50} ${fromWithNodeOffset.y} ${toWithNodeOffset.x - 50} ${toWithNodeOffset.y} ${toWithNodeOffset.x} ${toWithNodeOffset.y}`;
   
   return (
-    <svg
-      className={cn('absolute top-0 left-0 w-[1px] h-[1px] pointer-events-none overflow-visible', className)}
-    >
+    <g className={className}>
       <path
         d={path}
         fill="none"
@@ -30,7 +34,7 @@ const Connector: React.FC<ConnectorProps> = ({ from, to, className }) => {
         strokeWidth="2"
         className="connector-path"
       />
-    </svg>
+    </g>
   );
 };
 
