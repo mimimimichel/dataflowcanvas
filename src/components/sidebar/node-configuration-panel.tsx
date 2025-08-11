@@ -104,80 +104,30 @@ const SchemaEditor: React.FC<{ fields: Field[], onFieldsChange: (fields: Field[]
 
 const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, nodes, connectors, isOpen, onClose, onSave, onDelete }) => {
   const { toast } = useToast();
-  const [nodeName, setNodeName] = useState('');
-  const [operation, setOperation] = useState<Operation | undefined>();
-  const [outputFields, setOutputFields] = useState<Field[]>([]);
-  const [inputFields, setInputFields] = useState<Field[]>([]);
-
+  const [currentNode, setCurrentNode] = useState<Partial<PipelineNode> | undefined>();
 
   useEffect(() => {
     if (node) {
-      setNodeName(node.name);
-      setOperation(node.operation);
-      setOutputFields(node.outputFields || []);
-      setInputFields(node.inputFields || []);
+      // Create a deep copy to avoid direct state mutation
+      setCurrentNode(JSON.parse(JSON.stringify(node)));
     }
   }, [node]);
 
   const sourceNodesForJoin = useMemo(() => {
-    if (!node || node.operation?.type !== 'join') return { left: undefined, right: undefined };
-    const joinOp = node.operation as JoinOperation;
+    if (!currentNode || currentNode.operation?.type !== 'join') return { left: undefined, right: undefined };
+    const joinOp = currentNode.operation as JoinOperation;
     const left = nodes.find(n => n.id === joinOp.settings.leftNodeId);
     const right = nodes.find(n => n.id === joinOp.settings.rightNodeId);
     return { left, right };
-  }, [node, nodes]);
+  }, [currentNode, nodes]);
 
-
-  if (!node) return null;
+  if (!node || !currentNode) return null;
 
   const handleSave = () => {
-    const newConfig: Partial<PipelineNode> = { name: nodeName };
-    
-    // We create a temporary operation object to update before setting the state.
-    let tempOperation = operation;
-
-    if (node.type === 'transformation') {
-        newConfig.operation = operation;
-        if(tempOperation?.type === 'filter') {
-            newConfig.outputFields = inputFields;
-        } else if (tempOperation?.type === 'join') {
-            const joinOp = tempOperation as JoinOperation;
-            const leftNode = nodes.find(n => n.id === joinOp.settings.leftNodeId);
-            const rightNode = nodes.find(n => n.id === joinOp.settings.rightNodeId);
-            if (leftNode && rightNode) {
-              newConfig.outputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
-            }
-        } else if (tempOperation?.type === 'group_by') {
-            const groupOp = tempOperation as GroupByOperation;
-            const newOutputFields: Field[] = [];
-            groupOp.settings.groupByFields.forEach(fieldName => {
-                const field = inputFields.find(f => f.name === fieldName);
-                if(field) newOutputFields.push(field);
-            });
-            groupOp.settings.aggregations.forEach(agg => {
-                const originalField = inputFields.find(f => f.name === agg.field);
-                newOutputFields.push({ name: agg.newName, type: originalField?.type || 'unknown' });
-            });
-            newConfig.outputFields = newOutputFields;
-        }else {
-            newConfig.outputFields = outputFields;
-        }
-    }
-    if (node.type === 'source') {
-        newConfig.outputFields = outputFields;
-    }
-    if (node.type === 'dataset') {
-      newConfig.inputFields = inputFields;
-      newConfig.outputFields = inputFields; // a dataset's output is its input
-    }
-     if (node.type === 'destination') {
-        newConfig.inputFields = inputFields;
-    }
-
-    onSave(node.id, newConfig);
+    onSave(node.id, currentNode);
     toast({
       title: "Configuration Saved",
-      description: `Changes to "${nodeName}" have been saved.`
+      description: `Changes to "${currentNode.name}" have been saved.`
     });
     onClose();
   }
@@ -186,46 +136,50 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
     onDelete(node.id);
     toast({
       title: "Node Deleted",
-      description: `"${nodeName}" has been removed from the pipeline.`
+      description: `"${node.name}" has been removed from the pipeline.`
     });
     onClose();
   }
 
+  const handleUpdate = (field: keyof PipelineNode, value: any) => {
+    setCurrentNode(prev => (prev ? { ...prev, [field]: value } : undefined));
+  };
+  
   const handleOperationUpdate = (updatedOperation: Operation) => {
-    setOperation(updatedOperation);
-    // Dynamically update output schema on operation change
-    if (updatedOperation.type === 'join') {
-        const joinOp = updatedOperation as JoinOperation;
-        const leftNode = nodes.find(n => n.id === joinOp.settings.leftNodeId);
-        const rightNode = nodes.find(n => n.id === joinOp.settings.rightNodeId);
-        if (leftNode && rightNode) {
-            setOutputFields(getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType));
-        }
+    const newConfig: Partial<PipelineNode> = { operation: updatedOperation };
+
+    if (updatedOperation.type === 'filter') {
+      newConfig.outputFields = currentNode.inputFields;
+    } else if (updatedOperation.type === 'join') {
+      const joinOp = updatedOperation as JoinOperation;
+      const leftNode = nodes.find(n => n.id === joinOp.settings.leftNodeId);
+      const rightNode = nodes.find(n => n.id === joinOp.settings.rightNodeId);
+      if (leftNode && rightNode) {
+        newConfig.outputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
+      }
+    } else if (updatedOperation.type === 'group_by' && currentNode.inputFields) {
+      const groupOp = updatedOperation as GroupByOperation;
+      const newOutputFields: Field[] = [];
+      groupOp.settings.groupByFields.forEach(fieldName => {
+          const field = currentNode.inputFields!.find(f => f.name === fieldName);
+          if(field) newOutputFields.push(field);
+      });
+      groupOp.settings.aggregations.forEach(agg => {
+          const originalField = currentNode.inputFields!.find(f => f.name === agg.field);
+          newOutputFields.push({ name: agg.newName, type: originalField?.type || 'unknown' });
+      });
+      newConfig.outputFields = newOutputFields;
     }
-     if (updatedOperation.type === 'group_by') {
-        const groupOp = updatedOperation as GroupByOperation;
-        const newOutputFields: Field[] = [];
-        groupOp.settings.groupByFields.forEach(fieldName => {
-            const field = inputFields.find(f => f.name === fieldName);
-            if(field) newOutputFields.push(field);
-        });
-        groupOp.settings.aggregations.forEach(agg => {
-            const originalField = inputFields.find(f => f.name === agg.field);
-            newOutputFields.push({ name: agg.newName, type: originalField?.type || 'unknown' });
-        });
-        setOutputFields(newOutputFields);
-    }
-    if(updatedOperation.type === 'filter') {
-        setOutputFields(inputFields);
-    }
+    
+    setCurrentNode(prev => (prev ? { ...prev, ...newConfig } : undefined));
   }
   
   const renderConfigContent = () => {
-    switch(node.type) {
+    switch(currentNode.type) {
       case 'source':
         return (
           <>
-             {node.name === 'File Source' && (
+             {currentNode.name === 'File Source' && (
               <div className="space-y-4">
                 <div className="grid w-full items-center gap-1.5">
                   <Label htmlFor="file-path">File Path</Label>
@@ -239,21 +193,21 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
               </div>
             )}
             <h3 className="text-md font-medium mb-2">Output Schema</h3>
-            <SchemaEditor fields={outputFields} onFieldsChange={setOutputFields} isEditable={true} />
+            <SchemaEditor fields={currentNode.outputFields || []} onFieldsChange={(fields) => handleUpdate('outputFields', fields)} isEditable={true} />
           </>
         );
       case 'transformation':
         const renderOperationEditor = () => {
-            if (!operation) {
+            if (!currentNode.operation) {
                 return <p className="text-sm text-muted-foreground">No operation configured for this transformation.</p>;
             }
 
-            switch(operation.type) {
+            switch(currentNode.operation.type) {
                 case 'filter':
                     return (
                         <FilterOperationEditor 
-                            operation={operation as FilterOperation}
-                            inputFields={inputFields}
+                            operation={currentNode.operation as FilterOperation}
+                            inputFields={currentNode.inputFields || []}
                             onUpdate={handleOperationUpdate}
                         />
                     );
@@ -261,7 +215,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                      if (sourceNodesForJoin.left && sourceNodesForJoin.right) {
                         return (
                             <JoinOperationEditor
-                                operation={operation as JoinOperation}
+                                operation={currentNode.operation as JoinOperation}
                                 leftNode={sourceNodesForJoin.left}
                                 rightNode={sourceNodesForJoin.right}
                                 onUpdate={handleOperationUpdate}
@@ -272,20 +226,20 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                 case 'group_by':
                     return (
                         <GroupByOperationEditor
-                            operation={operation as GroupByOperation}
-                            inputFields={inputFields}
+                            operation={currentNode.operation as GroupByOperation}
+                            inputFields={currentNode.inputFields || []}
                             onUpdate={handleOperationUpdate}
                         />
                     );
                 default:
-                    return <p className="text-sm text-muted-foreground">Configuration for '{operation.type}' is not yet available.</p>;
+                    return <p className="text-sm text-muted-foreground">Configuration for '{currentNode.operation.type}' is not yet available.</p>;
             }
         };
 
         return (
           <>
             <h3 className="text-md font-medium mb-2">Input Schema</h3>
-            <SchemaEditor fields={inputFields} onFieldsChange={setInputFields} isEditable={false} />
+            <SchemaEditor fields={currentNode.inputFields || []} onFieldsChange={(fields) => handleUpdate('inputFields', fields)} isEditable={false} />
             <Separator className="my-4"/>
             <h3 className="text-md font-medium mb-2">Transformation Operation</h3>
             {renderOperationEditor()}
@@ -293,8 +247,8 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
             <h3 className="text-md font-medium mb-2">Output Schema</h3>
              <p className="text-sm text-muted-foreground mb-2">The output schema is automatically determined by the operation.</p>
             <SchemaEditor 
-                fields={outputFields} 
-                onFieldsChange={setOutputFields} 
+                fields={currentNode.outputFields || []} 
+                onFieldsChange={(fields) => handleUpdate('outputFields', fields)} 
                 isEditable={false} 
             />
           </>
@@ -304,14 +258,14 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
           <>
             <h3 className="text-md font-medium mb-2">Dataset Schema</h3>
             <p className="text-sm text-muted-foreground mb-2">The schema is defined by its inputs. You can rename fields here.</p>
-            <SchemaEditor fields={inputFields} onFieldsChange={setInputFields} isEditable={true} />
+            <SchemaEditor fields={currentNode.inputFields || []} onFieldsChange={(fields) => handleUpdate('inputFields', fields)} isEditable={true} />
           </>
         );
       case 'destination':
         return (
           <>
             <h3 className="text-md font-medium mb-2">Input Schema</h3>
-            <SchemaEditor fields={inputFields} onFieldsChange={setInputFields} isEditable={false} />
+            <SchemaEditor fields={currentNode.inputFields || []} onFieldsChange={(fields) => handleUpdate('inputFields', fields)} isEditable={false} />
           </>
         );
       default:
@@ -323,7 +277,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="sm:max-w-lg w-full flex flex-col">
         <SheetHeader className="mb-4">
-          <SheetTitle className="text-xl">Configure: {node.name}</SheetTitle>
+          <SheetTitle className="text-xl">Configure: {currentNode.name}</SheetTitle>
           <SheetDescription>
             Modify configurations, rules, and schemas for this node.
           </SheetDescription>
@@ -333,7 +287,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
           <div className="space-y-4">
             <div className="grid w-full items-center gap-1.5">
                 <Label htmlFor="node-name">Node Name</Label>
-                <Input type="text" id="node-name" value={nodeName} onChange={(e) => setNodeName(e.target.value)} />
+                <Input type="text" id="node-name" value={currentNode.name} onChange={(e) => handleUpdate('name', e.target.value)} />
             </div>
             <Separator className="my-4"/>
             {renderConfigContent()}
@@ -350,7 +304,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
                             This action cannot be undone. This will permanently delete the
-                            <strong> {node.name} </strong> node and remove its connections.
+                            <strong> {currentNode.name} </strong> node and remove its connections.
                         </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>

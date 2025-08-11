@@ -399,12 +399,12 @@ export default function DataFlowCanvas() {
       if (n.id === connector.to) {
         let updatedNode = {...n};
         
-        if (updatedNode.inputFields) {
-            const fromNodeFields = fromNode?.outputFields?.map(f => f.name) || [];
-            updatedNode.inputFields = updatedNode.inputFields.filter(f => !fromNodeFields.includes(f.name));
+        if (updatedNode.inputFields && fromNode?.outputFields) {
+            const fromNodeFieldNames = new Set(fromNode.outputFields.map(f => f.name));
+            updatedNode.inputFields = updatedNode.inputFields.filter(f => !fromNodeFieldNames.has(f.name));
         }
 
-        if (updatedNode.type === 'dataset') {
+        if (updatedNode.type === 'dataset' || (updatedNode.operation?.type === 'filter')) {
             updatedNode.outputFields = updatedNode.inputFields;
         }
 
