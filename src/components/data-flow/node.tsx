@@ -14,6 +14,7 @@ import JoinOperation from '@/components/operations/join-operation';
 export type NodeType = 'source' | 'transformation' | 'destination' | 'dataset';
 
 interface NodeProps extends PipelineNode {
+  nodes: PipelineNode[];
   onSelect: () => void;
   onConfigOpen: () => void;
   onMouseDown: (event: React.MouseEvent) => void;
@@ -36,7 +37,7 @@ const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
         return <p className="text-xs text-muted-foreground text-center p-2">No fields defined</p>;
     }
     return (
-        <div className="p-2 bg-muted rounded-md max-h-48">
+        <div className="p-2 bg-muted rounded-md">
             <div className="space-y-1">
                 {fields.map(field => (
                     <div key={field.name} className="flex justify-between items-center text-xs">
@@ -49,7 +50,7 @@ const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
     );
 };
 
-const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputFields, outputFields, onSelect, onConfigOpen, onMouseDown, onMouseUp, onPortMouseDown, isSelected, onUpdateOperation }) => {
+const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputFields, outputFields, onSelect, onConfigOpen, onMouseDown, onMouseUp, onPortMouseDown, isSelected, onUpdateOperation, nodes }) => {
   const TypeIcon = operation?.type === 'join' ? GitCompare : (typeConfig[type].icon || Cog);
   const [isExpanded, setIsExpanded] = useState(false);
   
@@ -72,7 +73,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
                 case 'filter':
                     return <FilterOperation operation={operation} inputFields={inputFields || []} onUpdate={(op) => onUpdateOperation(id, op)} />;
                 case 'join':
-                    return <JoinOperation operation={operation} />;
+                    return <JoinOperation operation={operation} nodes={nodes} />;
                 default:
                     return <div className="p-2 text-xs font-mono bg-muted rounded-md">Unsupported operation</div>;
             }
