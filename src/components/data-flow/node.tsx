@@ -47,18 +47,12 @@ const Node: React.FC<NodeProps> = ({ name, type, status, quality, position, onCl
     onClick();
   }
 
-  const handleNodeMouseDown = (e: React.MouseEvent) => {
-    // Only pass through the event, don't stop propagation here,
-    // so the canvas can handle dragging logic.
-    onMouseDown(e);
-  }
-
   return (
     <div
       className="absolute transition-all duration-300 group"
       style={{ top: position.y, left: position.x }}
       onClick={handleNodeClick}
-      onMouseDown={handleNodeMouseDown}
+      onMouseDown={onMouseDown}
       onMouseUp={onMouseUp}
     >
       <Card

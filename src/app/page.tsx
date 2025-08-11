@@ -52,9 +52,8 @@ export default function DataFlowCanvas() {
   const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
     e.stopPropagation();
     const node = nodes.find(n => n.id === nodeId);
-    if (!node) return;
+    if (!node || isConnectingRef.current) return;
 
-    // Connection logic is now initiated from Port's onMouseDown
     draggingNodeIdRef.current = nodeId;
     if(canvasRef.current) {
         dragOffsetRef.current = {
@@ -67,6 +66,7 @@ export default function DataFlowCanvas() {
   const handlePortMouseDown = (e: React.MouseEvent, nodeId: string) => {
     e.stopPropagation();
     isConnectingRef.current = true;
+    draggingNodeIdRef.current = null; // Prevent node dragging when connecting
     if (!canvasRef.current) return;
       const canvasRect = canvasRef.current.getBoundingClientRect();
       setNewConnector({ 
@@ -128,13 +128,18 @@ export default function DataFlowCanvas() {
   const handleNodeMouseUp = (e: React.MouseEvent, toNodeId: string) => {
     e.stopPropagation();
     if (isConnectingRef.current && newConnector && newConnector.from !== toNodeId) {
-      const newConn = { from: newConnector.from, to: toNodeId };
-      setConnectors(prev => {
-        if (prev.some(c => c.from === newConn.from && c.to === newConn.to)) {
-          return prev;
-        }
-        return [...prev, newConn];
-      });
+      const fromNode = nodes.find(n => n.id === newConnector.from);
+      const toNode = nodes.find(n => n.id === toNodeId);
+      
+      if (fromNode && toNode && fromNode.type !== 'destination' && toNode.type !== 'source') {
+        const newConn = { from: newConnector.from, to: toNodeId };
+        setConnectors(prev => {
+          if (prev.some(c => c.from === newConn.from && c.to === newConn.to)) {
+            return prev;
+          }
+          return [...prev, newConn];
+        });
+      }
     }
     
     // Reset connection state after trying to connect
