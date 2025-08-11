@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { transformations, TransformationItem } from '@/lib/pipeline-data';
 import { Search, type Icon } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '../ui/sidebar';
+import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar, SidebarGroupLabel } from '../ui/sidebar';
 
 const DraggableSidebarMenuButton: React.FC<{item: TransformationItem, children: React.ReactNode}> = ({ item, children }) => {
     const handleDragStart = (e: React.DragEvent) => {
@@ -47,45 +47,6 @@ const CatalogueSection: React.FC<{title: string, items: TransformationItem[], it
       </div>
   );
 };
-
-const AdvancedTransformations: React.FC<{
-  categories: {name: string, items: TransformationItem[]}[], 
-  defaultOpen: string[]
-}> = ({categories, defaultOpen}) => {
-  if (categories.length === 0) return null;
-  return (
-       <Accordion type="multiple" className="w-full px-2 group-data-[collapsible=icon]:hidden" defaultValue={defaultOpen}>
-           <AccordionItem value="advanced" className="border-none">
-              <AccordionTrigger className="p-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:no-underline hover:bg-muted rounded-md [&[data-state=open]>svg]:rotate-180">
-                  <span className="flex-1 text-left">Transformations Avancées</span>
-              </AccordionTrigger>
-              <AccordionContent className="p-0 pl-2">
-                 {categories.map(category => (
-                      <Accordion key={category.name} type="multiple" defaultValue={[category.name]}>
-                           <AccordionItem value={category.name} key={category.name} className="border-none">
-                              <AccordionTrigger className="p-2 text-xs font-semibold text-muted-foreground/80 uppercase tracking-wider hover:no-underline hover:bg-muted/80 rounded-md [&[data-state=open]>svg]:rotate-180">
-                                  <span className="flex-1 text-left">{category.name}</span>
-                              </AccordionTrigger>
-                              <AccordionContent className="p-0 pl-2">
-                                 <SidebarMenu>
-                                      {category.items.map((item) => (
-                                          <SidebarMenuItem key={item.operationType || item.name}>
-                                              <DraggableSidebarMenuButton item={{...item, type: 'transformation'}}>
-                                                  <item.icon className="h-4 w-4" />
-                                                  <span>{item.name}</span>
-                                              </DraggableSidebarMenuButton>
-                                          </SidebarMenuItem>
-                                      ))}
-                                  </SidebarMenu>
-                              </AccordionContent>
-                          </AccordionItem>
-                      </Accordion>
-                 ))}
-              </AccordionContent>
-          </AccordionItem>
-      </Accordion>
-  )
-}
 
 const TransformationsCatalogue: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -128,21 +89,12 @@ const TransformationsCatalogue: React.FC = () => {
     };
   }, [searchTerm]);
 
-  const defaultAccordionOpen = useMemo(() => {
-      if(searchTerm) {
-          return filteredTransformations.advanced.map(c => c.name);
-      }
-      return [];
-  }, [searchTerm, filteredTransformations.advanced]);
-  
   const allAdvancedItems = useMemo(() => 
     filteredTransformations.advanced.flatMap(category => category.items),
     [filteredTransformations.advanced]
   );
   
-  const commonAndAdvancedItems = isCollapsed ? 
-    [...filteredTransformations.common, ...allAdvancedItems] : 
-    filteredTransformations.common;
+  const allTransformations = [...filteredTransformations.common, ...allAdvancedItems];
 
   return (
     <Sidebar collapsible="icon" className="w-72">
@@ -160,10 +112,64 @@ const TransformationsCatalogue: React.FC = () => {
         <SidebarContent>
             <CatalogueSection title="Sources" items={filteredTransformations.sources} itemType="source" />
             
-            <CatalogueSection title="Transformations" items={commonAndAdvancedItems} itemType="transformation" />
+            <div className="p-2">
+              <p className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 group-data-[collapsible=icon]:hidden">Transformations</p>
+              <SidebarMenu>
+                {isCollapsed ? (
+                  allTransformations.map(item => (
+                    <SidebarMenuItem key={item.operationType || item.name}>
+                      <DraggableSidebarMenuButton item={{...item, type: 'transformation'}}>
+                          <item.icon className="h-4 w-4" />
+                          <span className="group-data-[collapsible=icon]:hidden">{item.name}</span>
+                      </DraggableSidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))
+                ) : (
+                  <>
+                    {filteredTransformations.common.map(item => (
+                      <SidebarMenuItem key={item.operationType || item.name}>
+                        <DraggableSidebarMenuButton item={{...item, type: 'transformation'}}>
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.name}</span>
+                        </DraggableSidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </>
+                )}
+              </SidebarMenu>
+            </div>
             
             {!isCollapsed && (
-                 <AdvancedTransformations categories={filteredTransformations.advanced} defaultOpen={defaultAccordionOpen}/>
+              <Accordion type="multiple" className="w-full px-2 group-data-[collapsible=icon]:hidden" defaultValue={searchTerm ? filteredTransformations.advanced.map(c => c.name) : []}>
+                  <AccordionItem value="advanced" className="border-none">
+                      <AccordionTrigger className="p-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:no-underline hover:bg-muted rounded-md [&[data-state=open]>svg]:rotate-180">
+                          <span className="flex-1 text-left">Transformations Avancées</span>
+                      </AccordionTrigger>
+                      <AccordionContent className="p-0 pl-2">
+                        {filteredTransformations.advanced.map(category => (
+                              <Accordion key={category.name} type="multiple" defaultValue={[category.name]}>
+                                  <AccordionItem value={category.name} key={category.name} className="border-none">
+                                      <AccordionTrigger className="p-2 text-xs font-semibold text-muted-foreground/80 uppercase tracking-wider hover:no-underline hover:bg-muted/80 rounded-md [&[data-state=open]>svg]:rotate-180">
+                                          <span className="flex-1 text-left">{category.name}</span>
+                                      </AccordionTrigger>
+                                      <AccordionContent className="p-0 pl-2">
+                                        <SidebarMenu>
+                                              {category.items.map((item) => (
+                                                  <SidebarMenuItem key={item.operationType || item.name}>
+                                                      <DraggableSidebarMenuButton item={{...item, type: 'transformation'}}>
+                                                          <item.icon className="h-4 w-4" />
+                                                          <span>{item.name}</span>
+                                                      </DraggableSidebarMenuButton>
+                                                  </SidebarMenuItem>
+                                              ))}
+                                          </SidebarMenu>
+                                      </AccordionContent>
+                                  </AccordionItem>
+                              </Accordion>
+                        ))}
+                      </AccordionContent>
+                  </AccordionItem>
+              </Accordion>
             )}
            
             {filteredTransformations.dataset.name && (
