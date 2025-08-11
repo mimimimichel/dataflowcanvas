@@ -13,6 +13,17 @@ import { PipelineNode, Field } from '@/lib/pipeline-data';
 import { AreaChart, SlidersHorizontal, Table, Trash2, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Table as UiTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 
 interface NodeConfigurationPanelProps {
@@ -20,6 +31,7 @@ interface NodeConfigurationPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (nodeId: string, newConfig: Partial<PipelineNode>) => void;
+  onDelete: (nodeId: string) => void;
   viewMode: 'consumer' | 'engineer';
 }
 
@@ -109,7 +121,7 @@ const SchemaEditor: React.FC<{ fields: Field[], onFieldsChange: (fields: Field[]
   );
 };
 
-const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, isOpen, onClose, onSave, viewMode }) => {
+const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, isOpen, onClose, onSave, onDelete, viewMode }) => {
   const { toast } = useToast();
   const [nodeName, setNodeName] = useState('');
   const [rule, setRule] = useState('');
@@ -148,6 +160,15 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
     onClose();
   }
   
+  const handleDelete = () => {
+    onDelete(node.id);
+    toast({
+      title: "Node Deleted",
+      description: `"${nodeName}" has been removed from the pipeline.`
+    });
+    onClose();
+  }
+
   const isSchemaEditable = node.type === 'source' || (node.type === 'destination' && viewMode === 'engineer');
   const isRuleEditable = node.type === 'transformation' && viewMode === 'engineer';
   
@@ -190,7 +211,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="sm:max-w-lg w-full">
+      <SheetContent className="sm:max-w-lg w-full flex flex-col">
         <SheetHeader className="mb-4">
           <SheetTitle className="text-xl">Configure: {node.name}</SheetTitle>
           <SheetDescription>
@@ -200,28 +221,53 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
           </SheetDescription>
         </SheetHeader>
         <Separator />
-        <Tabs defaultValue={viewMode === 'engineer' ? 'config' : 'stats'} className="w-full mt-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="stats"><AreaChart className="mr-2"/> Statistics</TabsTrigger>
-            <TabsTrigger value="config" disabled={viewMode === 'consumer'}><SlidersHorizontal className="mr-2"/> Configuration</TabsTrigger>
-          </TabsList>
-          <TabsContent value="stats">
-             <StatsDisplay node={node} />
-          </TabsContent>
-          <TabsContent value="config">
-            <div className="space-y-4">
-              <div className="grid w-full items-center gap-1.5">
-                <Label htmlFor="node-name">Node Name</Label>
-                <Input type="text" id="node-name" value={nodeName} onChange={(e) => setNodeName(e.target.value)} disabled={viewMode === 'consumer'} />
-              </div>
-              <Separator className="my-4"/>
-              {renderConfigContent()}
+        <div className="flex-1 overflow-y-auto pr-6 -mr-6">
+            <Tabs defaultValue={viewMode === 'engineer' ? 'config' : 'stats'} className="w-full mt-4">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="stats"><AreaChart className="mr-2"/> Statistics</TabsTrigger>
+                <TabsTrigger value="config" disabled={viewMode === 'consumer'}><SlidersHorizontal className="mr-2"/> Configuration</TabsTrigger>
+            </TabsList>
+            <TabsContent value="stats">
+                <StatsDisplay node={node} />
+            </TabsContent>
+            <TabsContent value="config">
+                <div className="space-y-4">
+                <div className="grid w-full items-center gap-1.5">
+                    <Label htmlFor="node-name">Node Name</Label>
+                    <Input type="text" id="node-name" value={nodeName} onChange={(e) => setNodeName(e.target.value)} disabled={viewMode === 'consumer'} />
+                </div>
+                <Separator className="my-4"/>
+                {renderConfigContent()}
+                </div>
+            </TabsContent>
+            </Tabs>
+        </div>
+        <SheetFooter className="mt-6 border-t pt-4">
+            <div className="flex justify-between w-full">
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive" disabled={viewMode === 'consumer'}><Trash2 className="mr-2"/> Delete Node</Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the
+                            <strong> {node.name} </strong> node and remove its connections.
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+
+                <div className="flex gap-2">
+                    <Button variant="outline" onClick={onClose}>Cancel</Button>
+                    <Button onClick={handleSave} disabled={viewMode === 'consumer'}>Save Changes</Button>
+                </div>
             </div>
-          </TabsContent>
-        </Tabs>
-        <SheetFooter className="mt-6">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave} disabled={viewMode === 'consumer'}>Save Changes</Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

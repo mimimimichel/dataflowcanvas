@@ -14,7 +14,6 @@ interface NodeProps {
   id: string;
   name: string;
   type: NodeType;
-  quality: number;
   position: { x: number; y: number };
   onClick: () => void;
   onMouseDown: (event: React.MouseEvent) => void;
@@ -29,7 +28,7 @@ const typeConfig: Record<NodeType, { icon: Icon; color: string; }> = {
   destination: { icon: DatabaseZap, color: 'bg-green-500' },
 };
 
-const Node: React.FC<NodeProps> = ({ id, name, type, quality, position, onClick, onMouseDown, onMouseUp, onPortMouseDown, isSelected }) => {
+const Node: React.FC<NodeProps> = ({ id, name, type, position, onClick, onMouseDown, onMouseUp, onPortMouseDown, isSelected }) => {
   const TypeIcon = typeConfig[type].icon;
   
   const handleNodeClick = (e: React.MouseEvent) => {
@@ -68,14 +67,6 @@ const Node: React.FC<NodeProps> = ({ id, name, type, quality, position, onClick,
           </div>
         </CardHeader>
         <CardContent className="p-3 pt-0">
-            <div className="flex items-center justify-end text-xs">
-                <Badge variant={quality > 95 ? "default" : "destructive"} className={cn(
-                    quality > 95 ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800",
-                    "border-none"
-                )}>
-                    Quality: {quality}%
-                </Badge>
-            </div>
         </CardContent>
         {type !== 'destination' && (
           <Port 

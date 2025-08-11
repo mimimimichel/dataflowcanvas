@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import Header from '@/components/layout/header';
 import TransformationsCatalogue from '@/components/sidebar/transformations-catalogue';
 import NodeConfigurationPanel from '@/components/sidebar/node-configuration-panel';
@@ -82,7 +82,6 @@ export default function DataFlowCanvas() {
   };
   
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Only pan if not starting a drag on a node or a port
     const target = e.target as HTMLElement;
     if (target.closest('[data-node-id]') || target.closest('[data-port="true"]')) {
       return;
@@ -178,7 +177,6 @@ export default function DataFlowCanvas() {
   const handleWheel = (e: React.WheelEvent) => {
     if (!canvasRef.current) return;
     const target = e.target as HTMLElement;
-    // Only zoom if the event is directly on the canvas background
     if (target.closest('[data-node-id]') || target.closest('svg')) {
       return;
     }
@@ -205,6 +203,12 @@ export default function DataFlowCanvas() {
   
   const handleNodeConfigChange = (nodeId: string, newConfig: Partial<PipelineNode>) => {
     setNodes(prevNodes => prevNodes.map(n => n.id === nodeId ? { ...n, ...newConfig } : n));
+  };
+  
+  const handleDeleteNode = (nodeId: string) => {
+    setNodes(prev => prev.filter(n => n.id !== nodeId));
+    setConnectors(prev => prev.filter(c => c.from !== nodeId && c.to !== nodeId));
+    setSelectedNodeId(null);
   };
   
   const selectedNode = useMemo(() => {
@@ -251,6 +255,18 @@ export default function DataFlowCanvas() {
       height: maxY - minY + 100
     };
   }, [nodes]);
+  
+    useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeId) {
+        handleDeleteNode(selectedNodeId);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedNodeId]);
 
   return (
     <SidebarProvider>
@@ -326,6 +342,7 @@ export default function DataFlowCanvas() {
           isOpen={!!selectedNodeId}
           onClose={() => setSelectedNodeId(null)}
           onSave={handleNodeConfigChange}
+          onDelete={handleDeleteNode}
           viewMode={viewMode}
         />
       </div>
