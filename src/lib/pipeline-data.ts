@@ -16,7 +16,7 @@ export interface Field {
   type: string;
 }
 
-export type OperationType = 'filter';
+export type OperationType = 'filter' | 'join';
 
 export interface BaseOperation {
     type: OperationType;
@@ -31,7 +31,21 @@ export interface FilterOperation extends BaseOperation {
     }
 }
 
-export type Operation = FilterOperation; // | JoinOperation | ...
+export interface JoinOperation extends BaseOperation {
+    type: 'join';
+    settings: {
+        leftNodeId: string;
+        rightNodeId: string;
+        joinType: 'inner' | 'left' | 'right' | 'full';
+        condition: {
+            leftField: string;
+            rightField: string;
+        }
+    }
+}
+
+
+export type Operation = FilterOperation | JoinOperation;
 
 export interface PipelineNode {
   id: string;
@@ -93,6 +107,18 @@ export const nodes: PipelineNode[] = [
     type: 'transformation', 
     position: { x: 350, y: 250 },
     rule: "SELECT *, o.order_id, o.amount FROM input c JOIN orders o ON c.id = o.customer_id",
+    operation: {
+        type: 'join',
+        settings: {
+            leftNodeId: 'source-1',
+            rightNodeId: 'source-2', // Placeholder, assuming another source exists
+            joinType: 'inner',
+            condition: {
+                leftField: 'id',
+                rightField: 'customer_id'
+            }
+        }
+    },
     inputFields: [
       { name: 'id', type: 'integer' },
       { name: 'first_name', type: 'string' },

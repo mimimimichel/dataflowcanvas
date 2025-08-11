@@ -5,10 +5,11 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal } from 'lucide-react';
+import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal, GitCompare } from 'lucide-react';
 import Port from './port';
 import { TransformationItem, PipelineNode, Field, Operation } from '@/lib/pipeline-data';
 import FilterOperation from '@/components/operations/filter-operation';
+import JoinOperation from '@/components/operations/join-operation';
 
 export type NodeType = 'source' | 'transformation' | 'destination' | 'dataset';
 
@@ -25,7 +26,7 @@ interface NodeProps extends PipelineNode {
 
 const typeConfig: Record<NodeType, { icon: Icon; color: string; }> = {
   source: { icon: Database, color: 'bg-blue-500' },
-  transformation: { icon: Cog, color: 'bg-purple-500' },
+  transformation: { icon: GitCompare, color: 'bg-purple-500' },
   destination: { icon: DatabaseZap, color: 'bg-green-500' },
   dataset: { icon: Layers, color: 'bg-yellow-500' },
 };
@@ -49,7 +50,7 @@ const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
 };
 
 const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputFields, outputFields, onSelect, onConfigOpen, onMouseDown, onMouseUp, onPortMouseDown, isSelected, onUpdateOperation }) => {
-  const TypeIcon = typeConfig[type].icon;
+  const TypeIcon = operation?.type === 'join' ? GitCompare : (typeConfig[type].icon || Cog);
   const [isExpanded, setIsExpanded] = useState(false);
   
   const handleNodeClick = (e: React.MouseEvent) => {
@@ -70,6 +71,8 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
             switch(operation.type) {
                 case 'filter':
                     return <FilterOperation operation={operation} inputFields={inputFields || []} onUpdate={(op) => onUpdateOperation(id, op)} />;
+                case 'join':
+                    return <JoinOperation operation={operation} />;
                 default:
                     return <div className="p-2 text-xs font-mono bg-muted rounded-md">Unsupported operation</div>;
             }
