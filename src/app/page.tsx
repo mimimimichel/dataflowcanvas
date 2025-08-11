@@ -7,7 +7,7 @@ import TransformationsCatalogue from '@/components/sidebar/transformations-catal
 import NodeConfigurationPanel from '@/components/sidebar/node-configuration-panel';
 import Node from '@/components/data-flow/node';
 import Connector from '@/components/data-flow/connector';
-import { nodes as initialNodes, connectors as initialConnectors, PipelineNode, TransformationItem, Connector as ConnectorType } from '@/lib/pipeline-data';
+import { nodes as initialNodes, connectors as initialConnectors, PipelineNode, TransformationItem, Connector as ConnectorType, Field } from '@/lib/pipeline-data';
 import { SidebarProvider } from '@/components/ui/sidebar';
 
 export default function DataFlowCanvas() {
@@ -45,6 +45,9 @@ export default function DataFlowCanvas() {
         x: (position.x - canvasRect.left - pan.x) / zoom,
         y: (position.y - canvasRect.top - pan.y) / zoom,
       },
+      inputFields: item.type === 'destination' ? [{name: 'new_field', type: 'string'}] : [],
+      outputFields: item.type === 'source' ? [{name: 'new_field', type: 'string'}] : [],
+      rule: item.type === 'transformation' ? 'SELECT * FROM input' : '',
     };
     setNodes((prev) => [...prev, newNode]);
   }, [pan.x, pan.y, zoom]);
@@ -79,11 +82,10 @@ export default function DataFlowCanvas() {
   };
   
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Only pan if the click is directly on the canvas background
-    if (e.target === e.currentTarget && canvasRef.current) {
+    if (e.target === canvasRef.current) {
         isPanningRef.current = true;
         panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
-        canvasRef.current.style.cursor = 'grabbing';
+        if(canvasRef.current) canvasRef.current.style.cursor = 'grabbing';
     }
   };
 
@@ -114,7 +116,6 @@ export default function DataFlowCanvas() {
     isPanningRef.current = false;
     draggingNodeIdRef.current = null;
     
-    // Reset connection state if we mouse up on the canvas
     if (isConnectingRef.current) {
       isConnectingRef.current = false;
       setNewConnector(null);
@@ -142,11 +143,8 @@ export default function DataFlowCanvas() {
       }
     }
     
-    // Reset connection state after trying to connect
     isConnectingRef.current = false;
     setNewConnector(null);
-    
-    // Reset dragging state as well
     draggingNodeIdRef.current = null;
   }
 
@@ -165,7 +163,7 @@ export default function DataFlowCanvas() {
   };
 
   const handleWheel = (e: React.WheelEvent) => {
-    if (e.currentTarget !== canvasRef.current) return;
+    if (!canvasRef.current || !e.currentTarget.contains(e.target as Node)) return;
     e.preventDefault();
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -186,10 +184,37 @@ export default function DataFlowCanvas() {
     setZoom(newZoom);
     setPan({x: newPanX, y: newPanY});
   };
-
+  
+  const handleNodeConfigChange = (nodeId: string, newConfig: Partial<PipelineNode>) => {
+    setNodes(prevNodes => prevNodes.map(n => n.id === nodeId ? { ...n, ...newConfig } : n));
+  };
+  
   const selectedNode = useMemo(() => {
-    return nodes.find((n) => n.id === selectedNodeId);
-  }, [nodes, selectedNodeId]);
+    // Re-calculating input fields for transformation nodes based on connections
+    if (selectedNodeId) {
+      const node = nodes.find(n => n.id === selectedNodeId);
+      if (node && node.type === 'transformation') {
+        const incomingConnections = connectors.filter(c => c.to === selectedNodeId);
+        const inputFields: Field[] = [];
+        incomingConnections.forEach(conn => {
+          const sourceNode = nodes.find(n => n.id === conn.from);
+          if (sourceNode && sourceNode.outputFields) {
+            inputFields.push(...sourceNode.outputFields);
+          }
+        });
+        
+        // This is a simplified logic. In a real scenario, you might want to de-duplicate fields
+        // or handle naming collisions.
+        const uniqueInputFields = Array.from(new Map(inputFields.map(item => [item.name, item])).values());
+        
+        // We find the node in the current state and create a new object to avoid direct mutation.
+        const originalNode = nodes.find(n => n.id === selectedNodeId);
+        return {...originalNode, ...node, inputFields: uniqueInputFields};
+      }
+      return node;
+    }
+    return undefined;
+  }, [nodes, connectors, selectedNodeId]);
 
   return (
     <SidebarProvider>
@@ -201,15 +226,15 @@ export default function DataFlowCanvas() {
             className="flex-1 relative overflow-hidden cursor-grab"
             onDrop={handleDrop}
             onDragOver={handleDragOver}
+            onWheel={handleWheel}
+            ref={canvasRef}
           >
              <div
-              ref={canvasRef}
               className="absolute w-full h-full"
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
-              onWheel={handleWheel}
             >
               <div
                 className="absolute top-0 left-0"
@@ -245,6 +270,7 @@ export default function DataFlowCanvas() {
           node={selectedNode}
           isOpen={!!selectedNodeId}
           onClose={() => setSelectedNodeId(null)}
+          onSave={handleNodeConfigChange}
           viewMode={viewMode}
         />
       </div>
