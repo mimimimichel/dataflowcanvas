@@ -31,12 +31,14 @@ export interface FilterOperation extends BaseOperation {
     }
 }
 
+export type JoinType = 'inner' | 'left' | 'right' | 'full';
+
 export interface JoinOperation extends BaseOperation {
     type: 'join';
     settings: {
         leftNodeId: string;
         rightNodeId: string;
-        joinType: 'inner' | 'left' | 'right' | 'full';
+        joinType: JoinType;
         condition: {
             leftField: string;
             rightField: string;

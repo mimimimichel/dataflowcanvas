@@ -7,7 +7,7 @@ import TransformationsCatalogue from '@/components/sidebar/transformations-catal
 import NodeConfigurationPanel from '@/components/sidebar/node-configuration-panel';
 import Node from '@/components/data-flow/node';
 import Connector from '@/components/data-flow/connector';
-import { nodes as initialNodes, connectors as initialConnectors, PipelineNode, TransformationItem, Connector as ConnectorType, Field, Operation, FilterOperation } from '@/lib/pipeline-data';
+import { nodes as initialNodes, connectors as initialConnectors, PipelineNode, TransformationItem, Connector as ConnectorType, Field, Operation, FilterOperation, JoinOperation } from '@/lib/pipeline-data';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import ConnectionFieldsModal from '@/components/data-flow/connection-fields-modal';
@@ -61,15 +61,23 @@ export default function DataFlowCanvas() {
     const canvasRect = canvasRef.current.getBoundingClientRect();
 
     let operation: Operation | undefined = undefined;
-    // This is a simplistic mapping. A more robust solution might involve a mapping object or more metadata in the TransformationItem.
     if (item.category === 'FILTRAGE ET SÉLECTION') {
         operation = {
             type: 'filter',
             settings: { field: '', operator: '==', value: '' }
         } as FilterOperation;
+    } else if (item.category === 'JOINTURES ET UNIONS') {
+        const joinInputs = connectors.filter(c => c.to.startsWith('temp-join-')).map(c => c.from);
+        operation = {
+            type: 'join',
+            settings: {
+                leftNodeId: '',
+                rightNodeId: '',
+                joinType: 'inner',
+                condition: { leftField: '', rightField: '' }
+            }
+        } as JoinOperation;
     }
-     // A more robust solution would be needed for joins, as it requires info from multiple nodes.
-     // For now, we are not setting an operation for joins on creation.
     
     const newNode: PipelineNode = {
       id: `${item.type}-${Date.now()}`,
@@ -84,7 +92,7 @@ export default function DataFlowCanvas() {
       operation: item.type === 'transformation' ? operation : undefined,
     };
     setNodes((prev) => [...prev, newNode]);
-  }, [pan.x, pan.y, zoom]);
+  }, [pan.x, pan.y, zoom, connectors]);
 
   const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
     e.stopPropagation();
@@ -196,28 +204,50 @@ export default function DataFlowCanvas() {
   }
 
   const handleSaveConnectionFields = (fromNodeId: string, toNodeId: string, selectedFields: Field[]) => {
-    setConnectors(prev => [...prev, { from: fromNodeId, to: toNodeId }]);
-    setNodes(prev => prev.map(node => {
-      if (node.id === toNodeId) {
-        const currentInputFields = node.inputFields || [];
-        const newFields = selectedFields.filter(sf => !currentInputFields.some(cif => cif.name === sf.name));
-        const finalFields = [...currentInputFields, ...newFields];
-        const newOutputFields = node.type === 'dataset' ? finalFields : node.outputFields;
+      setConnectors(prev => [...prev, { from: fromNodeId, to: toNodeId }]);
+      setNodes(prev => prev.map(node => {
+        if (node.id === toNodeId) {
+            const currentInputFields = node.inputFields || [];
+            const newFields = selectedFields.filter(sf => !currentInputFields.some(cif => cif.name === sf.name));
+            const finalFields = [...currentInputFields, ...newFields];
+            
+            let finalOutputFields = node.outputFields;
 
-        // If a transformation node's output is not yet defined, initialize it with its input.
-        let finalOutputFields = node.outputFields;
-        if (node.type === 'transformation' && (!node.outputFields || node.outputFields.length === 0)) {
-            finalOutputFields = finalFields;
-        } else if (node.type === 'dataset') {
-            finalOutputFields = finalFields;
+            // If it's a join node, we need to handle inputs and operation settings differently
+            if (node.operation?.type === 'join') {
+                const joinOp = node.operation as JoinOperation;
+                const fromNode = nodes.find(n => n.id === fromNodeId);
+
+                // This is a simplified logic. It assumes first two connections are left and right.
+                if (!joinOp.settings.leftNodeId) {
+                    joinOp.settings.leftNodeId = fromNodeId;
+                } else if (!joinOp.settings.rightNodeId) {
+                    joinOp.settings.rightNodeId = fromNodeId;
+                }
+
+                const leftNode = nodes.find(n => n.id === joinOp.settings.leftNodeId);
+                const rightNode = nodes.find(n => n.id === joinOp.settings.rightNodeId);
+
+                finalOutputFields = [
+                    ...(leftNode?.outputFields || []),
+                    ...(rightNode?.outputFields || [])
+                ];
+
+                return { ...node, inputFields: finalFields, outputFields: finalOutputFields, operation: joinOp };
+
+            } else if (node.type === 'transformation' && (!node.outputFields || node.outputFields.length === 0)) {
+                finalOutputFields = finalFields;
+            } else if (node.type === 'dataset') {
+                finalOutputFields = finalFields;
+            }
+
+            return { ...node, inputFields: finalFields, outputFields: finalOutputFields };
         }
-
-        return { ...node, inputFields: finalFields, outputFields: finalOutputFields };
-      }
-      return node;
+        return node;
     }));
     setConnectionForFields(null);
-  };
+};
+
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -281,7 +311,6 @@ export default function DataFlowCanvas() {
     const handleUpdateOperation = (nodeId: string, operation: Operation) => {
         setNodes(prevNodes => prevNodes.map(n => {
             if (n.id === nodeId) {
-                // Here you could add logic to update outputFields based on the operation
                 return { ...n, operation };
             }
             return n;
@@ -323,12 +352,36 @@ export default function DataFlowCanvas() {
     setConnectors(prev => prev.filter(c => !(c.from === connector.from && c.to === connector.to)));
 
     const fromNode = nodes.find(n => n.id === connector.from);
+    const toNode = nodes.find(n => n.id === connector.to);
     const fromNodeFields = fromNode?.outputFields?.map(f => f.name) || [];
     
     setNodes(prev => prev.map(n => {
       if (n.id === connector.to) {
         const remainingFields = n.inputFields?.filter(f => !fromNodeFields.includes(f.name));
-        return {...n, inputFields: remainingFields, outputFields: n.type === 'dataset' ? remainingFields : n.outputFields};
+        let updatedNode = {...n, inputFields: remainingFields};
+        
+        if (n.type === 'dataset') {
+            updatedNode.outputFields = remainingFields;
+        }
+
+        if (n.operation?.type === 'join') {
+            const joinOp = n.operation as JoinOperation;
+            if (joinOp.settings.leftNodeId === connector.from) {
+                joinOp.settings.leftNodeId = '';
+            }
+            if (joinOp.settings.rightNodeId === connector.from) {
+                joinOp.settings.rightNodeId = '';
+            }
+            const leftNode = nodes.find(node => node.id === joinOp.settings.leftNodeId);
+            const rightNode = nodes.find(node => node.id === joinOp.settings.rightNodeId);
+             updatedNode.outputFields = [
+                ...(leftNode?.outputFields || []),
+                ...(rightNode?.outputFields || [])
+             ];
+             updatedNode.operation = joinOp;
+        }
+
+        return updatedNode;
       }
       return n;
     }));
@@ -467,6 +520,7 @@ export default function DataFlowCanvas() {
         </div>
         <NodeConfigurationPanel
           node={selectedNode}
+          nodes={nodes}
           isOpen={isConfigPanelOpen}
           onClose={() => setIsConfigPanelOpen(false)}
           onSave={handleNodeConfigChange}

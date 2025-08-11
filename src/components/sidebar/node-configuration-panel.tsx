@@ -1,13 +1,13 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { PipelineNode, Field, Operation, FilterOperation } from '@/lib/pipeline-data';
+import { PipelineNode, Field, Operation, FilterOperation, JoinOperation } from '@/lib/pipeline-data';
 import { Trash2, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Table as UiTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -23,10 +23,12 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import FilterOperationEditor from '@/components/operations/filter-operation-editor';
+import JoinOperationEditor from '@/components/operations/join-operation-editor';
 
 
 interface NodeConfigurationPanelProps {
   node: PipelineNode | undefined;
+  nodes: PipelineNode[];
   isOpen: boolean;
   onClose: () => void;
   onSave: (nodeId: string, newConfig: Partial<PipelineNode>) => void;
@@ -98,7 +100,7 @@ const SchemaEditor: React.FC<{ fields: Field[], onFieldsChange: (fields: Field[]
   );
 };
 
-const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, isOpen, onClose, onSave, onDelete }) => {
+const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, nodes, isOpen, onClose, onSave, onDelete }) => {
   const { toast } = useToast();
   const [nodeName, setNodeName] = useState('');
   const [operation, setOperation] = useState<Operation | undefined>();
@@ -115,6 +117,16 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
     }
   }, [node]);
 
+  const sourceNodes = useMemo(() => {
+      if (!node || node.type !== 'transformation' || node.operation?.type !== 'join') {
+          return { left: undefined, right: undefined };
+      }
+      const left = nodes.find(n => n.id === node.operation?.settings.leftNodeId);
+      const right = nodes.find(n => n.id === node.operation?.settings.rightNodeId);
+      return { left, right };
+  }, [node, nodes]);
+
+
   if (!node) return null;
 
   const handleSave = () => {
@@ -124,6 +136,16 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
         // For filter operations, output schema is the same as input
         if(operation?.type === 'filter') {
             newConfig.outputFields = inputFields;
+        } else if (operation?.type === 'join') {
+             const leftNode = nodes.find(n => n.id === operation.settings.leftNodeId);
+             const rightNode = nodes.find(n => n.id === operation.settings.rightNodeId);
+             const newOutputFields = [
+                ...(leftNode?.outputFields || []),
+                ...(rightNode?.outputFields || [])
+             ];
+             newConfig.outputFields = newOutputFields;
+             // also update the operation settings to reflect the UI
+             setOperation(newConfig.operation)
         } else {
             newConfig.outputFields = outputFields;
         }
@@ -192,19 +214,24 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
                 onUpdate={(op) => setOperation(op)}
               />
             )}
-            {operation?.type === 'join' && (
-               <p className="text-sm text-muted-foreground">Join configuration is not yet available in this panel.</p>
+            {operation?.type === 'join' && sourceNodes.left && sourceNodes.right && (
+                <JoinOperationEditor
+                    operation={operation as JoinOperation}
+                    leftNode={sourceNodes.left}
+                    rightNode={sourceNodes.right}
+                    onUpdate={(op) => setOperation(op)}
+                />
             )}
             {!operation && (
               <p className="text-sm text-muted-foreground">No operation configured for this transformation.</p>
             )}
             <Separator className="my-4"/>
             <h3 className="text-md font-medium mb-2">Output Schema</h3>
-             <p className="text-sm text-muted-foreground mb-2">Define the fields produced by this transformation.</p>
+             <p className="text-sm text-muted-foreground mb-2">The output schema is automatically determined by the operation.</p>
             <SchemaEditor 
                 fields={outputFields} 
                 onFieldsChange={setOutputFields} 
-                isEditable={operation?.type !== 'filter'} 
+                isEditable={false} 
             />
           </>
         );
