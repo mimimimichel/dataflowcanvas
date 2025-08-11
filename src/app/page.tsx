@@ -271,7 +271,7 @@ export default function DataFlowCanvas() {
   }, [nodes, selectedNodeId]);
 
   useEffect(() => {
-    if (!canvasRef.current) return;
+    if (typeof window === 'undefined' || !canvasRef.current) return;
     
     if (nodes.length === 0) {
       setSvgDimensions({ width: '100%', height: '100%', top: 0, left: 0 });
@@ -405,3 +405,4 @@ export default function DataFlowCanvas() {
     </SidebarProvider>
   );
 }
+
