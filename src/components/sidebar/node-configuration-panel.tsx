@@ -104,28 +104,33 @@ const SchemaEditor: React.FC<{ fields: Field[], onFieldsChange: (fields: Field[]
 const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, nodes, isOpen, onClose, onSave, onDelete }) => {
   const { toast } = useToast();
   // draftNode holds local edits. It's initialized with the node prop.
-  const [draftNode, setDraftNode] = useState<Partial<PipelineNode> | undefined>(node);
+  const [draftNode, setDraftNode] = useState<Partial<PipelineNode>>({});
 
   // When the selected node changes externally, we reset the draft
   useEffect(() => {
-    setDraftNode(node);
+    setDraftNode({});
   }, [node]);
 
   const sourceNodesForJoin = useMemo(() => {
-    if (!draftNode || draftNode.operation?.type !== 'join') return { left: undefined, right: undefined };
-    const joinOp = draftNode.operation as JoinOperation;
+    const operation = draftNode?.operation || node?.operation;
+    if (!node || operation?.type !== 'join') return { left: undefined, right: undefined };
+    
+    const joinOp = operation as JoinOperation;
     const left = nodes.find(n => n.id === joinOp.settings.leftNodeId);
     const right = nodes.find(n => n.id === joinOp.settings.rightNodeId);
     return { left, right };
-  }, [draftNode, nodes]);
+  }, [node, draftNode, nodes]);
 
-  if (!node || !draftNode) return null;
+  if (!node) return null;
+
+  // This is the effective node state, combining the base node with any local drafts.
+  const displayNode = { ...node, ...draftNode };
 
   const handleSave = () => {
     onSave(node.id, draftNode);
     toast({
       title: "Configuration Saved",
-      description: `Changes to "${draftNode.name || node.name}" have been saved.`
+      description: `Changes to "${displayNode.name}" have been saved.`
     });
     onClose();
   }
@@ -140,15 +145,13 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
   }
 
   const handleUpdate = (field: keyof PipelineNode, value: any) => {
-    setDraftNode(prev => (prev ? { ...prev, [field]: value } : undefined));
+    setDraftNode(prev => ({ ...prev, [field]: value }));
   };
   
   const handleOperationUpdate = (updatedOperation: Operation) => {
     const newConfig: Partial<PipelineNode> = { operation: updatedOperation };
 
-    // This logic should probably live in the main page state reducer, 
-    // but for now, we calculate it here for the draft state.
-    const effectiveInputFields = draftNode.inputFields || node.inputFields || [];
+    const effectiveInputFields = displayNode.inputFields || [];
 
     if (updatedOperation.type === 'filter') {
       newConfig.outputFields = effectiveInputFields;
@@ -173,13 +176,10 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
       newConfig.outputFields = newOutputFields;
     }
     
-    setDraftNode(prev => (prev ? { ...prev, ...newConfig } : undefined));
+    setDraftNode(prev => ({ ...prev, ...newConfig }));
   }
   
   const renderConfigContent = () => {
-    // Use draftNode for displaying values, but fall back to node for initial render
-    const displayNode = draftNode || node;
-
     switch(displayNode.type) {
       case 'source':
         return (
@@ -282,7 +282,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="sm:max-w-lg w-full flex flex-col">
         <SheetHeader className="mb-4">
-          <SheetTitle className="text-xl">Configure: {draftNode.name || node.name}</SheetTitle>
+          <SheetTitle className="text-xl">Configure: {displayNode.name}</SheetTitle>
           <SheetDescription>
             Modify configurations, rules, and schemas for this node.
           </SheetDescription>
@@ -292,7 +292,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
           <div className="space-y-4">
             <div className="grid w-full items-center gap-1.5">
                 <Label htmlFor="node-name">Node Name</Label>
-                <Input type="text" id="node-name" value={draftNode.name || ''} onChange={(e) => handleUpdate('name', e.target.value)} />
+                <Input type="text" id="node-name" value={displayNode.name} onChange={(e) => handleUpdate('name', e.target.value)} />
             </div>
             <Separator className="my-4"/>
             {renderConfigContent()}
@@ -309,7 +309,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
                             This action cannot be undone. This will permanently delete the
-                            <strong> {draftNode.name || node.name} </strong> node and remove its connections.
+                            <strong> {displayNode.name} </strong> node and remove its connections.
                         </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
