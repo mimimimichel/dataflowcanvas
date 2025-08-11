@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { PipelineNode, Field, Operation, FilterOperation, JoinOperation } from '@/lib/pipeline-data';
+import { PipelineNode, Field, Operation, FilterOperation, JoinOperation, Connector } from '@/lib/pipeline-data';
 import { Trash2, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Table as UiTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -29,6 +29,7 @@ import JoinOperationEditor from '@/components/operations/join-operation-editor';
 interface NodeConfigurationPanelProps {
   node: PipelineNode | undefined;
   nodes: PipelineNode[];
+  connectors: Connector[];
   isOpen: boolean;
   onClose: () => void;
   onSave: (nodeId: string, newConfig: Partial<PipelineNode>) => void;
@@ -100,7 +101,7 @@ const SchemaEditor: React.FC<{ fields: Field[], onFieldsChange: (fields: Field[]
   );
 };
 
-const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, nodes, isOpen, onClose, onSave, onDelete }) => {
+const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, nodes, connectors, isOpen, onClose, onSave, onDelete }) => {
   const { toast } = useToast();
   const [nodeName, setNodeName] = useState('');
   const [operation, setOperation] = useState<Operation | undefined>();
@@ -117,15 +118,19 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
     }
   }, [node]);
 
-  const sourceNodes = useMemo(() => {
-      if (!node || node.type !== 'transformation' || node.operation?.type !== 'join') {
-          return { left: undefined, right: undefined };
-      }
-      const joinOp = node.operation as JoinOperation;
-      const left = nodes.find(n => n.id === joinOp.settings.leftNodeId);
-      const right = nodes.find(n => n.id === joinOp.settings.rightNodeId);
-      return { left, right };
-  }, [node, nodes]);
+  const sourceNodesForJoin = useMemo(() => {
+    if (!node) return { left: undefined, right: undefined };
+    const incomingConnectors = connectors.filter(c => c.to === node.id);
+    if (incomingConnectors.length < 2) return { left: undefined, right: undefined };
+
+    const leftNodeId = incomingConnectors[0].from;
+    const rightNodeId = incomingConnectors[1].from;
+    
+    const left = nodes.find(n => n.id === leftNodeId);
+    const right = nodes.find(n => n.id === rightNodeId);
+    
+    return { left, right };
+  }, [node, connectors, nodes]);
 
 
   if (!node) return null;
@@ -134,20 +139,21 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
     const newConfig: Partial<PipelineNode> = { name: nodeName };
     if (node.type === 'transformation') {
         newConfig.operation = operation;
-        // For filter operations, output schema is the same as input
         if(operation?.type === 'filter') {
             newConfig.outputFields = inputFields;
         } else if (operation?.type === 'join') {
-             const joinOp = operation as JoinOperation;
-             const leftNode = nodes.find(n => n.id === joinOp.settings.leftNodeId);
-             const rightNode = nodes.find(n => n.id === joinOp.settings.rightNodeId);
-             const newOutputFields = [
+            const joinOp = operation as JoinOperation;
+            const leftNode = nodes.find(n => n.id === sourceNodesForJoin.left?.id);
+            const rightNode = nodes.find(n => n.id === sourceNodesForJoin.right?.id);
+            const newOutputFields = [
                 ...(leftNode?.outputFields || []),
                 ...(rightNode?.outputFields || [])
-             ];
-             newConfig.outputFields = newOutputFields;
-             // also update the operation settings to reflect the UI
-             setOperation(newConfig.operation)
+            ];
+            newConfig.outputFields = newOutputFields;
+            joinOp.settings.leftNodeId = leftNode?.id || '';
+            joinOp.settings.rightNodeId = rightNode?.id || '';
+            newConfig.operation = joinOp;
+            setOperation(newConfig.operation)
         } else {
             newConfig.outputFields = outputFields;
         }
@@ -218,12 +224,12 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                         />
                     );
                 case 'join':
-                     if (sourceNodes.left && sourceNodes.right) {
+                     if (sourceNodesForJoin.left && sourceNodesForJoin.right) {
                         return (
                             <JoinOperationEditor
                                 operation={operation as JoinOperation}
-                                leftNode={sourceNodes.left}
-                                rightNode={sourceNodes.right}
+                                leftNode={sourceNodesForJoin.left}
+                                rightNode={sourceNodesForJoin.right}
                                 onUpdate={(op) => setOperation(op)}
                             />
                         );

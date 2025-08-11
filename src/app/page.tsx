@@ -309,6 +309,17 @@ export default function DataFlowCanvas() {
         if (updatedNode.operation?.type === 'filter') {
           updatedNode.outputFields = updatedNode.inputFields;
         }
+        // For join operation, output is combination of inputs
+        if (updatedNode.operation?.type === 'join') {
+            const joinOp = updatedNode.operation as JoinOperation;
+            const leftNode = nodes.find(ln => ln.id === joinOp.settings.leftNodeId);
+            const rightNode = nodes.find(rn => rn.id === joinOp.settings.rightNodeId);
+            updatedNode.outputFields = [
+                ...(leftNode?.outputFields || []),
+                ...(rightNode?.outputFields || [])
+            ];
+        }
+
         return updatedNode;
       }
       return n;
@@ -528,6 +539,7 @@ export default function DataFlowCanvas() {
         <NodeConfigurationPanel
           node={selectedNode}
           nodes={nodes}
+          connectors={connectors}
           isOpen={isConfigPanelOpen}
           onClose={() => setIsConfigPanelOpen(false)}
           onSave={handleNodeConfigChange}

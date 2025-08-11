@@ -56,8 +56,13 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = () => 
     const filteredSources = transformations.sources.filter(source => 
       source.name.toLowerCase().includes(lowerCaseSearchTerm)
     );
+    
+    const filteredCommon = transformations.common.filter(item => 
+        item.name.toLowerCase().includes(lowerCaseSearchTerm) || 
+        item.description?.toLowerCase().includes(lowerCaseSearchTerm)
+    );
 
-    const filteredCategories = transformations.categories.map(category => ({
+    const filteredAdvanced = transformations.advanced.map(category => ({
       ...category,
       items: category.items.filter(item => 
         item.name.toLowerCase().includes(lowerCaseSearchTerm) || 
@@ -72,16 +77,17 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = () => 
       sources: filteredSources,
       dataset: isDatasetVisible ? transformations.dataset : { name: '', icon: () => null, type: 'dataset' as const, description: '' },
       destination: isDestinationVisible ? transformations.destination : { name: '', icon: () => null, type: 'destination' as const, description: '' },
-      categories: filteredCategories,
+      common: filteredCommon,
+      advanced: filteredAdvanced,
     };
   }, [searchTerm]);
 
   const defaultAccordionOpen = useMemo(() => {
       if(searchTerm) {
-          return filteredTransformations.categories.map(c => c.name);
+          return filteredTransformations.advanced.map(c => c.name);
       }
-      return ['TRANSFORMATIONS DE NETTOYAGE (Data Cleaning)'];
-  }, [searchTerm, filteredTransformations.categories]);
+      return [];
+  }, [searchTerm, filteredTransformations.advanced]);
 
   return (
     <aside className="w-72 border-r bg-card flex flex-col shrink-0">
@@ -107,24 +113,43 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = () => 
                 ))}
             </div>
             
-            <Accordion type="multiple" className="w-full px-2" defaultValue={defaultAccordionOpen} key={searchTerm}>
-                {filteredTransformations.categories.map(category => (
-                    <AccordionItem value={category.name} key={category.name} className="border-none">
-                        <AccordionTrigger className="p-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:no-underline hover:bg-muted rounded-md [&[data-state=open]>svg]:rotate-180">
-                            <span className="flex-1 text-left">{category.name}</span>
-                        </AccordionTrigger>
-                        <AccordionContent className="p-0 pl-2">
-                           <div className="py-1">
-                                {category.items.map((item) => (
-                                    <DraggableSidebarMenuButton key={item.name} item={{...item, type: 'transformation', category: category.name, operationType: item.operationType}}>
-                                        <item.icon className="h-4 w-4" />
-                                        {item.name}
-                                    </DraggableSidebarMenuButton>
-                                ))}
-                            </div>
-                        </AccordionContent>
-                    </AccordionItem>
+             <div className="p-2">
+                <p className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Transformations Courantes</p>
+                {filteredTransformations.common.map((item) => (
+                    <DraggableSidebarMenuButton key={item.name} item={{...item, type: 'transformation'}}>
+                        <item.icon className="h-4 w-4" />
+                        {item.name}
+                    </DraggableSidebarMenuButton>
                 ))}
+            </div>
+            
+            <Accordion type="multiple" className="w-full px-2" defaultValue={defaultAccordionOpen} key={searchTerm}>
+                 <AccordionItem value="advanced" className="border-none">
+                    <AccordionTrigger className="p-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:no-underline hover:bg-muted rounded-md [&[data-state=open]>svg]:rotate-180">
+                        <span className="flex-1 text-left">Transformations Avancées</span>
+                    </AccordionTrigger>
+                    <AccordionContent className="p-0 pl-2">
+                       {filteredTransformations.advanced.map(category => (
+                            <Accordion key={category.name} type="multiple" defaultValue={[category.name]}>
+                                 <AccordionItem value={category.name} key={category.name} className="border-none">
+                                    <AccordionTrigger className="p-2 text-xs font-semibold text-muted-foreground/80 uppercase tracking-wider hover:no-underline hover:bg-muted/80 rounded-md [&[data-state=open]>svg]:rotate-180">
+                                        <span className="flex-1 text-left">{category.name}</span>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="p-0 pl-2">
+                                       <div className="py-1">
+                                            {category.items.map((item) => (
+                                                <DraggableSidebarMenuButton key={item.name} item={{...item, type: 'transformation'}}>
+                                                    <item.icon className="h-4 w-4" />
+                                                    {item.name}
+                                                </DraggableSidebarMenuButton>
+                                            ))}
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            </Accordion>
+                       ))}
+                    </AccordionContent>
+                </AccordionItem>
             </Accordion>
            
             {filteredTransformations.dataset.name && (

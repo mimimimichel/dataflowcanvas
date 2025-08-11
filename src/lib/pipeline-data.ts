@@ -7,7 +7,8 @@ import {
   Timer, Clock, WholeWord, SpellCheck, Globe, Hash, KeyRound, Lock, GitBranch,
   Milestone, DatabaseBackup, TestTube, FileJson, GitPullRequest, Settings,
   FileText, FunctionSquare, Pilcrow, Pencil, Search, GitCompare, EyeOff,
-  Fingerprint, Bot, Group, Shuffle, Blend, BoxSelect, Code, Unplug, Layers
+  Fingerprint, Bot, Group, Shuffle, Blend, BoxSelect, Code, Unplug, Layers,
+  Table
 } from 'lucide-react';
 import type { NodeType } from '@/components/data-flow/node';
 
@@ -142,6 +143,7 @@ export const nodes: PipelineNode[] = [
     name: 'Aggregate Spend', 
     type: 'transformation', 
     position: { x: 650, y: 150 },
+    operation: { type: 'group_by', settings: {} },
     inputFields: [
        { name: 'id', type: 'integer' },
       { name: 'first_name', type: 'string' },
@@ -186,7 +188,6 @@ export interface TransformationItem {
     icon: Icon;
     type: NodeType;
     operationType?: OperationType;
-    category?: string;
     description?: string;
 }
 
@@ -197,7 +198,16 @@ export const transformations = {
     ],
     dataset: { name: 'Intermediate Dataset', icon: Layers, description: "Store intermediate results of a pipeline." },
     destination: { name: 'Data Warehouse', icon: DatabaseZap, description: "Load data into a data warehouse." },
-    categories: [
+    common: [
+        { name: 'Filtrer', icon: Filter, operationType: 'filter', description: "Filtrer des lignes selon une ou plusieurs conditions." },
+        { name: 'Joindre', icon: GitCompare, operationType: 'join', description: "Combiner des données de deux sources différentes." },
+        { name: 'Agréger', icon: Group, operationType: 'group_by', description: "Regrouper des données et appliquer des fonctions d'agrégation (SUM, AVG...)." },
+        { name: 'Trier', icon: SortAsc, operationType: 'sort', description: "Trier les données selon une ou plusieurs colonnes." },
+        { name: 'Sélectionner des colonnes', icon: Table, operationType: 'select_columns', description: "Choisir les colonnes à conserver ou à exclure." },
+        { name: 'Union', icon: Combine, operationType: 'union', description: "Combiner les lignes de deux sources de données." },
+        { name: 'Passe-plat (No-op)', icon: ArrowRightLeft, operationType: 'no_op', description: "A pass-through transformation that doesn't modify the data." },
+    ],
+    advanced: [
         {
             name: "TRANSFORMATIONS DE NETTOYAGE (Data Cleaning)",
             items: [
@@ -212,7 +222,6 @@ export const transformations = {
         {
             name: "TRANSFORMATIONS STRUCTURELLES",
             items: [
-                { name: 'Passe-plat (No-op)', icon: ArrowRightLeft, operationType: 'no_op', description: "A pass-through transformation that doesn't modify the data." },
                 { name: 'Pivot/Unpivot', icon: UnfoldVertical, operationType: 'pivot_unpivot' },
                 { name: 'Split/Merge colonnes', icon: Columns, operationType: 'split_merge_columns' },
                 { name: 'Transposition', icon: ArrowRightLeft, operationType: 'transpose' },
@@ -225,7 +234,6 @@ export const transformations = {
             name: "TRANSFORMATIONS D'AGRÉGATION",
             items: [
                 { name: 'Agrégations numériques', icon: Sigma, operationType: 'numeric_aggregation' },
-                { name: 'Group By', icon: Group, operationType: 'group_by' },
                 { name: 'Window functions', icon: Rows, operationType: 'window_functions' },
                 { name: 'Binning', icon: BoxSelect, operationType: 'binning' },
                 { name: 'Percentiles et quantiles', icon: BarChart3, operationType: 'percentiles' },
@@ -235,10 +243,8 @@ export const transformations = {
         {
             name: "JOINTURES ET UNIONS",
             items: [
-                { name: 'Types de jointures', icon: GitCompare, operationType: 'join' },
                 { name: 'Self joins', icon: GitPullRequest, operationType: 'self_join' },
                 { name: 'Fuzzy matching', icon: Bot, operationType: 'fuzzy_matching' },
-                { name: 'Union/Union All', icon: Combine, operationType: 'union' },
                 { name: 'Intersect/Except', icon: Unplug, operationType: 'intersect_except' },
                 { name: 'Lookup enrichment', icon: Search, operationType: 'lookup_enrichment' },
             ]
@@ -246,7 +252,6 @@ export const transformations = {
         {
             name: "FILTRAGE ET SÉLECTION",
             items: [
-                { name: 'Filtres conditionnels', icon: Filter, operationType: 'filter' },
                 { name: 'Filtres temporels', icon: CalendarDays, operationType: 'temporal_filter' },
                 { name: 'Filtres par expression régulière', icon: Pilcrow, operationType: 'regex_filter' },
                 { name: 'Top N/Bottom N', icon: SortAsc, operationType: 'top_n' },
