@@ -108,7 +108,13 @@ export default function DataFlowCanvas() {
   const handlePortMouseUp = (e: React.MouseEvent, toNodeId: string) => {
     e.stopPropagation();
     if (newConnector && newConnector.from !== toNodeId) {
-      setConnectors(prev => [...prev, { from: newConnector.from, to: toNodeId }]);
+      const newConn = { from: newConnector.from, to: toNodeId };
+      setConnectors(prev => {
+        if (prev.some(c => c.from === newConn.from && c.to === newConn.to)) {
+          return prev;
+        }
+        return [...prev, newConn];
+      });
     }
     setNewConnector(null);
   }
@@ -159,11 +165,11 @@ export default function DataFlowCanvas() {
               className="absolute top-0 left-0"
               style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'top left' }}
             >
-              {connectors.map((connector) => {
+              {connectors.map((connector, index) => {
                 const fromNode = nodes.find((n) => n.id === connector.from);
                 const toNode = nodes.find((n) => n.id === connector.to);
                 if (!fromNode || !toNode) return null;
-                return <Connector key={`${connector.from}-${connector.to}`} from={fromNode.position} to={toNode.position} />;
+                return <Connector key={`${connector.from}-${connector.to}-${index}`} from={fromNode.position} to={toNode.position} />;
               })}
               {newConnector && (() => {
                 const fromNode = nodes.find(n => n.id === newConnector.from);
