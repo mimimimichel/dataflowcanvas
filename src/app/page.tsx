@@ -18,7 +18,7 @@ export default function DataFlowCanvas() {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   
-  const mainRef = useRef<HTMLElement>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
   const panStartRef = useRef({ x: 0, y: 0 });
 
   const handleNodeClick = (id: string) => {
@@ -26,8 +26,8 @@ export default function DataFlowCanvas() {
   };
   
   const handleAddNode = useCallback((item: TransformationItem, position: {x: number, y: number}) => {
-    if (!mainRef.current) return;
-    const canvasRect = mainRef.current.getBoundingClientRect();
+    if (!canvasRef.current) return;
+    const canvasRect = canvasRef.current.getBoundingClientRect();
     const newNode: PipelineNode = {
       id: `${item.type}-${Date.now()}`,
       name: item.name,
@@ -35,16 +35,16 @@ export default function DataFlowCanvas() {
       status: 'healthy',
       quality: 100,
       position: {
-        x: position.x - canvasRect.left - pan.x,
-        y: position.y - canvasRect.top - pan.y,
+        x: position.x - canvasRect.left,
+        y: position.y - canvasRect.top,
       },
     };
     setNodes((prev) => [...prev, newNode]);
-  }, [pan.x, pan.y]);
+  }, []);
   
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Only pan when clicking on the canvas background
-    if (e.target === mainRef.current) {
+    // Only pan when clicking on the canvas background, not on a node
+    if (e.target === e.currentTarget) {
       setIsPanning(true);
       panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
       e.currentTarget.style.cursor = 'grabbing';
@@ -65,23 +65,17 @@ export default function DataFlowCanvas() {
       e.currentTarget.style.cursor = 'grab';
     }
   };
-  
-  const handleMouseLeave = (e: React.MouseEvent) => {
-    if (isPanning) {
-      setIsPanning(false);
-      e.currentTarget.style.cursor = 'grab';
-    }
-  };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     const itemString = e.dataTransfer.getData('application/json');
     if (itemString) {
       const item = JSON.parse(itemString);
-      const position = { x: e.clientX, y: e.clientY };
+      // We adjust the position by the current pan to place it correctly.
+      const position = { x: e.clientX - pan.x, y: e.clientY - pan.y };
       handleAddNode(item, position);
     }
-  }, [handleAddNode]);
+  }, [handleAddNode, pan.x, pan.y]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -98,12 +92,12 @@ export default function DataFlowCanvas() {
         <div className="flex flex-1 overflow-hidden">
           <TransformationsCatalogue onAddNode={handleAddNode} />
           <main
-            ref={mainRef}
+            ref={canvasRef}
             className="flex-1 relative overflow-hidden cursor-grab"
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseLeave}
+            onMouseLeave={handleMouseUp} // Use mouseUp to ensure panning stops
             onDrop={handleDrop}
             onDragOver={handleDragOver}
           >
