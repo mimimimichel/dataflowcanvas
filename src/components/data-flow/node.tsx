@@ -5,11 +5,12 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal, GitCompare } from 'lucide-react';
+import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal, GitCompare, Group as GroupIcon } from 'lucide-react';
 import Port from './port';
 import { TransformationItem, PipelineNode, Field, Operation } from '@/lib/pipeline-data';
 import FilterOperation from '@/components/operations/filter-operation';
 import JoinOperation from '@/components/operations/join-operation';
+import GroupByOperation from '@/components/operations/group-by-operation';
 
 export type NodeType = 'source' | 'transformation' | 'destination' | 'dataset';
 
@@ -51,7 +52,17 @@ const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
 };
 
 const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputFields, outputFields, onSelect, onConfigOpen, onMouseDown, onMouseUp, onPortMouseDown, isSelected, onUpdateOperation, nodes }) => {
-  const TypeIcon = operation?.type === 'join' ? GitCompare : (typeConfig[type].icon || Cog);
+  
+  const getIconForOperation = (op?: Operation) => {
+    if(!op) return typeConfig[type].icon || Cog;
+    switch(op.type){
+        case 'join': return GitCompare;
+        case 'group_by': return GroupIcon;
+        default: return typeConfig[type].icon || Cog;
+    }
+  }
+  
+  const TypeIcon = getIconForOperation(operation);
   const [isExpanded, setIsExpanded] = useState(false);
   
   const handleNodeClick = (e: React.MouseEvent) => {
@@ -74,6 +85,8 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
                     return <FilterOperation operation={operation} inputFields={inputFields || []} onUpdate={(op) => onUpdateOperation(id, op)} />;
                 case 'join':
                     return <JoinOperation operation={operation} nodes={nodes} />;
+                case 'group_by':
+                    return <GroupByOperation operation={operation} />;
                 default:
                     return <div className="p-2 text-xs font-mono bg-muted rounded-md">Unsupported operation</div>;
             }

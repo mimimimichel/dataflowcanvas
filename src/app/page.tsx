@@ -7,7 +7,7 @@ import TransformationsCatalogue from '@/components/sidebar/transformations-catal
 import NodeConfigurationPanel from '@/components/sidebar/node-configuration-panel';
 import Node from '@/components/data-flow/node';
 import Connector from '@/components/data-flow/connector';
-import { nodes as initialNodes, connectors as initialConnectors, PipelineNode, TransformationItem, Connector as ConnectorType, Field, Operation, FilterOperation, JoinOperation } from '@/lib/pipeline-data';
+import { nodes as initialNodes, connectors as initialConnectors, PipelineNode, TransformationItem, Connector as ConnectorType, Field, Operation, FilterOperation, JoinOperation, GroupByOperation } from '@/lib/pipeline-data';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import ConnectionFieldsModal from '@/components/data-flow/connection-fields-modal';
@@ -79,6 +79,15 @@ export default function DataFlowCanvas() {
                         condition: { leftField: '', rightField: '' }
                     }
                 } as JoinOperation;
+                break;
+            case 'group_by':
+                operation = {
+                    type: 'group_by',
+                    settings: {
+                        groupByFields: [],
+                        aggregations: []
+                    }
+                } as GroupByOperation;
                 break;
             default:
                 operation = { type: item.operationType, settings: {} };
@@ -318,6 +327,21 @@ export default function DataFlowCanvas() {
                 ...(leftNode?.outputFields || []),
                 ...(rightNode?.outputFields || [])
             ];
+        }
+        
+        if (updatedNode.operation?.type === 'group_by') {
+            const groupOp = updatedNode.operation as GroupByOperation;
+            const newOutputFields: Field[] = [];
+            groupOp.settings.groupByFields.forEach(fieldName => {
+                const field = updatedNode.inputFields?.find(f => f.name === fieldName);
+                if(field) newOutputFields.push(field);
+            });
+            groupOp.settings.aggregations.forEach(agg => {
+                // This is simplified, in reality type would depend on agg type (e.g. count is int)
+                const originalField = updatedNode.inputFields?.find(f => f.name === agg.field);
+                newOutputFields.push({ name: agg.newName, type: originalField?.type || 'unknown' });
+            });
+            updatedNode.outputFields = newOutputFields;
         }
 
         return updatedNode;

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { PipelineNode, Field, Operation, FilterOperation, JoinOperation, Connector } from '@/lib/pipeline-data';
+import { PipelineNode, Field, Operation, FilterOperation, JoinOperation, Connector, GroupByOperation } from '@/lib/pipeline-data';
 import { Trash2, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Table as UiTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import FilterOperationEditor from '@/components/operations/filter-operation-editor';
 import JoinOperationEditor from '@/components/operations/join-operation-editor';
+import GroupByOperationEditor from '@/components/operations/group-by-operation-editor';
 
 
 interface NodeConfigurationPanelProps {
@@ -119,18 +120,12 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
   }, [node]);
 
   const sourceNodesForJoin = useMemo(() => {
-    if (!node) return { left: undefined, right: undefined };
-    const incomingConnectors = connectors.filter(c => c.to === node.id);
-    if (incomingConnectors.length < 2) return { left: undefined, right: undefined };
-
-    const leftNodeId = incomingConnectors[0].from;
-    const rightNodeId = incomingConnectors[1].from;
-    
-    const left = nodes.find(n => n.id === leftNodeId);
-    const right = nodes.find(n => n.id === rightNodeId);
-    
+    if (!node || node.operation?.type !== 'join') return { left: undefined, right: undefined };
+    const joinOp = node.operation as JoinOperation;
+    const left = nodes.find(n => n.id === joinOp.settings.leftNodeId);
+    const right = nodes.find(n => n.id === joinOp.settings.rightNodeId);
     return { left, right };
-  }, [node, connectors, nodes]);
+  }, [node, nodes]);
 
 
   if (!node) return null;
@@ -143,18 +138,27 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
             newConfig.outputFields = inputFields;
         } else if (operation?.type === 'join') {
             const joinOp = operation as JoinOperation;
-            const leftNode = nodes.find(n => n.id === sourceNodesForJoin.left?.id);
-            const rightNode = nodes.find(n => n.id === sourceNodesForJoin.right?.id);
+            const leftNode = nodes.find(n => n.id === joinOp.settings.leftNodeId);
+            const rightNode = nodes.find(n => n.id === joinOp.settings.rightNodeId);
             const newOutputFields = [
                 ...(leftNode?.outputFields || []),
                 ...(rightNode?.outputFields || [])
             ];
             newConfig.outputFields = newOutputFields;
-            joinOp.settings.leftNodeId = leftNode?.id || '';
-            joinOp.settings.rightNodeId = rightNode?.id || '';
-            newConfig.operation = joinOp;
             setOperation(newConfig.operation)
-        } else {
+        } else if (operation?.type === 'group_by') {
+            const groupOp = operation as GroupByOperation;
+            const newOutputFields: Field[] = [];
+            groupOp.settings.groupByFields.forEach(fieldName => {
+                const field = inputFields.find(f => f.name === fieldName);
+                if(field) newOutputFields.push(field);
+            });
+            groupOp.settings.aggregations.forEach(agg => {
+                const originalField = inputFields.find(f => f.name === agg.field);
+                newOutputFields.push({ name: agg.newName, type: originalField?.type || 'unknown' });
+            });
+            newConfig.outputFields = newOutputFields;
+        }else {
             newConfig.outputFields = outputFields;
         }
     }
@@ -235,6 +239,14 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                         );
                      }
                      return <p className="text-sm text-muted-foreground">Please connect two nodes to configure the join.</p>
+                case 'group_by':
+                    return (
+                        <GroupByOperationEditor
+                            operation={operation as GroupByOperation}
+                            inputFields={inputFields}
+                            onUpdate={(op) => setOperation(op)}
+                        />
+                    );
                 default:
                     return <p className="text-sm text-muted-foreground">Configuration for '{operation.type}' is not yet available.</p>;
             }

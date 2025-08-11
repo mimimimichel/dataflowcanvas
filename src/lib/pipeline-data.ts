@@ -17,7 +17,7 @@ export interface Field {
   type: string;
 }
 
-export type OperationType = 'filter' | 'join' | string;
+export type OperationType = 'filter' | 'join' | 'group_by' | string;
 
 export interface BaseOperation {
     type: OperationType;
@@ -49,8 +49,24 @@ export interface JoinOperation extends BaseOperation {
     }
 }
 
+export type AggregationType = 'sum' | 'avg' | 'count' | 'min' | 'max';
 
-export type Operation = FilterOperation | JoinOperation | BaseOperation;
+export interface Aggregation {
+    field: string;
+    type: AggregationType;
+    newName: string;
+}
+
+export interface GroupByOperation extends BaseOperation {
+    type: 'group_by';
+    settings: {
+        groupByFields: string[];
+        aggregations: Aggregation[];
+    }
+}
+
+
+export type Operation = FilterOperation | JoinOperation | GroupByOperation | BaseOperation;
 
 export interface PipelineNode {
   id: string;
@@ -143,7 +159,15 @@ export const nodes: PipelineNode[] = [
     name: 'Aggregate Spend', 
     type: 'transformation', 
     position: { x: 650, y: 150 },
-    operation: { type: 'group_by', settings: {} },
+    operation: { 
+        type: 'group_by', 
+        settings: {
+            groupByFields: ['id'],
+            aggregations: [
+                { field: 'amount', type: 'sum', newName: 'total_spend' }
+            ]
+        } 
+    },
     inputFields: [
        { name: 'id', type: 'integer' },
       { name: 'first_name', type: 'string' },
@@ -154,7 +178,7 @@ export const nodes: PipelineNode[] = [
       { name: 'amount', type: 'float' },
     ],
     outputFields: [
-        { name: 'customer_id', type: 'integer' },
+        { name: 'id', type: 'integer' },
         { name: 'total_spend', type: 'float' },
     ]
   },
@@ -164,7 +188,7 @@ export const nodes: PipelineNode[] = [
     type: 'destination', 
     position: { x: 950, y: 150 },
     inputFields: [
-        { name: 'customer_id', type: 'integer' },
+        { name: 'id', type: 'integer' },
         { name: 'total_spend', type: 'float' },
     ]
   },
