@@ -82,15 +82,16 @@ export default function DataFlowCanvas() {
   };
   
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Only pan if clicking on the canvas background
-    if (e.target === e.currentTarget) {
+    // Only pan if not starting a drag on a node or a port
+    if (draggingNodeIdRef.current === null && !isConnectingRef.current) {
       isPanningRef.current = true;
       panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
-      if(canvasRef.current) canvasRef.current.style.cursor = 'grabbing';
+      if (canvasRef.current) canvasRef.current.style.cursor = 'grabbing';
     }
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
+    e.preventDefault();
     if (isConnectingRef.current && newConnector) {
       if (!canvasRef.current) return;
       const canvasRect = canvasRef.current.getBoundingClientRect();
@@ -114,11 +115,16 @@ export default function DataFlowCanvas() {
   };
 
   const handleMouseUp = (e: React.MouseEvent) => {
-    isPanningRef.current = false;
-    draggingNodeIdRef.current = null;
+    if (isPanningRef.current) {
+      isPanningRef.current = false;
+      if (canvasRef.current) canvasRef.current.style.cursor = 'grab';
+    }
+    
+    if (draggingNodeIdRef.current) {
+      draggingNodeIdRef.current = null;
+    }
     
     if (isConnectingRef.current) {
-      // Check if dropping on a node
       const toNodeElement = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-node-id]');
       const toNodeId = toNodeElement?.getAttribute('data-node-id');
 
@@ -128,10 +134,6 @@ export default function DataFlowCanvas() {
          isConnectingRef.current = false;
          setNewConnector(null);
       }
-    }
-
-    if (canvasRef.current) {
-      canvasRef.current.style.cursor = 'grab';
     }
   };
   
@@ -172,7 +174,12 @@ export default function DataFlowCanvas() {
   };
 
   const handleWheel = (e: React.WheelEvent) => {
-    if (!canvasRef.current || !e.currentTarget.contains(e.target as Node)) return;
+    if (!canvasRef.current) return;
+    const target = e.target as HTMLElement;
+    // Only zoom if the event is directly on the canvas background
+    if (target.closest('[data-node-id]') || target.closest('svg')) {
+      return;
+    }
     e.preventDefault();
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -199,7 +206,6 @@ export default function DataFlowCanvas() {
   };
   
   const selectedNode = useMemo(() => {
-    // Re-calculating input fields for transformation nodes based on connections
     if (selectedNodeId) {
       const node = nodes.find(n => n.id === selectedNodeId);
       if (node && node.type === 'transformation') {
@@ -212,13 +218,15 @@ export default function DataFlowCanvas() {
           }
         });
         
-        // This is a simplified logic. In a real scenario, you might want to de-duplicate fields
-        // or handle naming collisions.
         const uniqueInputFields = Array.from(new Map(inputFields.map(item => [item.name, item])).values());
         
-        // We find the node in the current state and create a new object to avoid direct mutation.
         const originalNode = nodes.find(n => n.id === selectedNodeId);
-        return {...originalNode, ...node, inputFields: uniqueInputFields};
+        if (originalNode) {
+          const updatedNode = {...originalNode, inputFields: uniqueInputFields};
+           if (JSON.stringify(originalNode) !== JSON.stringify(updatedNode)) {
+             return updatedNode;
+           }
+        }
       }
       return node;
     }
@@ -243,8 +251,8 @@ export default function DataFlowCanvas() {
             onMouseLeave={handleMouseUp}
           >
             <div
-              className="absolute top-0 left-0 w-full h-full"
-              style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'top left' }}
+              className="absolute top-0 left-0"
+              style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'top left', width: '100%', height: '100%' }}
             >
               {connectors.map((connector, index) => {
                 const fromNode = nodes.find((n) => n.id === connector.from);
