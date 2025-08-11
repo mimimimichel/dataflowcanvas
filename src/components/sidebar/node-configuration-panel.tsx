@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { PipelineNode, Field, Operation, FilterOperation, JoinOperation, Connector, GroupByOperation } from '@/lib/pipeline-data';
+import { PipelineNode, Field, Operation, FilterOperation, JoinOperation, Connector, GroupByOperation, getJoinOutputFields } from '@/lib/pipeline-data';
 import { Trash2, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Table as UiTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -140,11 +140,9 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
             const joinOp = operation as JoinOperation;
             const leftNode = nodes.find(n => n.id === joinOp.settings.leftNodeId);
             const rightNode = nodes.find(n => n.id === joinOp.settings.rightNodeId);
-            const newOutputFields = [
-                ...(leftNode?.outputFields || []),
-                ...(rightNode?.outputFields || [])
-            ];
-            newConfig.outputFields = newOutputFields;
+            if (leftNode && rightNode) {
+              newConfig.outputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
+            }
             setOperation(newConfig.operation)
         } else if (operation?.type === 'group_by') {
             const groupOp = operation as GroupByOperation;

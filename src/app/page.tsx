@@ -7,7 +7,7 @@ import TransformationsCatalogue from '@/components/sidebar/transformations-catal
 import NodeConfigurationPanel from '@/components/sidebar/node-configuration-panel';
 import Node from '@/components/data-flow/node';
 import Connector from '@/components/data-flow/connector';
-import { nodes as initialNodes, connectors as initialConnectors, PipelineNode, TransformationItem, Connector as ConnectorType, Field, Operation, FilterOperation, JoinOperation, GroupByOperation } from '@/lib/pipeline-data';
+import { nodes as initialNodes, connectors as initialConnectors, PipelineNode, TransformationItem, Connector as ConnectorType, Field, Operation, FilterOperation, JoinOperation, GroupByOperation, getJoinOutputFields } from '@/lib/pipeline-data';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import ConnectionFieldsModal from '@/components/data-flow/connection-fields-modal';
@@ -244,10 +244,9 @@ export default function DataFlowCanvas() {
                 const leftNode = nodes.find(n => n.id === joinOp.settings.leftNodeId);
                 const rightNode = nodes.find(n => n.id === joinOp.settings.rightNodeId);
 
-                finalOutputFields = [
-                    ...(leftNode?.outputFields || []),
-                    ...(rightNode?.outputFields || [])
-                ];
+                if(leftNode && rightNode) {
+                  finalOutputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
+                }
 
                 return { ...node, inputFields: finalFields, outputFields: finalOutputFields, operation: joinOp };
 
@@ -323,10 +322,9 @@ export default function DataFlowCanvas() {
             const joinOp = updatedNode.operation as JoinOperation;
             const leftNode = nodes.find(ln => ln.id === joinOp.settings.leftNodeId);
             const rightNode = nodes.find(rn => rn.id === joinOp.settings.rightNodeId);
-            updatedNode.outputFields = [
-                ...(leftNode?.outputFields || []),
-                ...(rightNode?.outputFields || [])
-            ];
+            if (leftNode && rightNode) {
+              updatedNode.outputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
+            }
         }
         
         if (updatedNode.operation?.type === 'group_by') {
@@ -416,10 +414,11 @@ export default function DataFlowCanvas() {
             }
             const leftNode = nodes.find(node => node.id === joinOp.settings.leftNodeId);
             const rightNode = nodes.find(node => node.id === joinOp.settings.rightNodeId);
-             updatedNode.outputFields = [
-                ...(leftNode?.outputFields || []),
-                ...(rightNode?.outputFields || [])
-             ];
+            if (leftNode && rightNode) {
+              updatedNode.outputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
+            } else {
+              updatedNode.outputFields = leftNode?.outputFields || rightNode?.outputFields || [];
+            }
              updatedNode.operation = joinOp;
         }
 

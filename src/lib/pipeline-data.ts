@@ -78,6 +78,26 @@ export interface PipelineNode {
   operation?: Operation;
 }
 
+export function getJoinOutputFields(leftNode: PipelineNode, rightNode: PipelineNode, joinType: JoinType): Field[] {
+    const leftFields = leftNode.outputFields || [];
+    const rightFields = rightNode.outputFields || [];
+    
+    const nullable = (field: Field) => ({ ...field, type: `${field.type} | null` });
+
+    switch(joinType) {
+        case 'inner':
+            return [...leftFields, ...rightFields];
+        case 'left':
+            return [...leftFields, ...rightFields.map(nullable)];
+        case 'right':
+            return [...leftFields.map(nullable), ...rightFields];
+        case 'full':
+            return [...leftFields.map(nullable), ...rightFields.map(nullable)];
+        default:
+             return [...leftFields, ...rightFields];
+    }
+}
+
 export const nodes: PipelineNode[] = [
   { 
     id: 'source-1', 
