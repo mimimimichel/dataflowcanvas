@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal, GitCompare, Group as GroupIcon, ChevronDown, ArrowRightLeft } from 'lucide-react';
+import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal, GitCompare, Group as GroupIcon, ChevronDown, ArrowRightLeft, Filter, SortAsc, Table, Combine } from 'lucide-react';
 import Port from './port';
 import { TransformationItem, PipelineNode, Field, Operation } from '@/lib/pipeline-data';
 import FilterOperation from '@/components/operations/filter-operation';
@@ -54,10 +54,14 @@ const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
 const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputFields, outputFields, onSelect, onConfigOpen, onMouseDown, onMouseUp, onPortMouseDown, isSelected, onUpdateOperation, nodes }) => {
   
   const getIconForOperation = (op?: Operation) => {
-    if(!op) return typeConfig[type].icon || Cog;
+    if(!op || type !== 'transformation') return typeConfig[type].icon || Cog;
     switch(op.type){
+        case 'filter': return Filter;
         case 'join': return GitCompare;
         case 'group_by': return GroupIcon;
+        case 'sort': return SortAsc;
+        case 'select_columns': return Table;
+        case 'union': return Combine;
         case 'no_op': return ArrowRightLeft;
         default: return typeConfig[type].icon || Cog;
     }
