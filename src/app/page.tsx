@@ -23,6 +23,7 @@ export default function DataFlowCanvas() {
   const [nodes, setNodes] = useState<PipelineNode[]>(initialNodes);
   const [connectors, setConnectors] = useState<ConnectorType[]>(initialConnectors);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [newConnector, setNewConnector] = useState<{ from: string; to: { x: number; y: number } } | null>(null);
@@ -42,6 +43,11 @@ export default function DataFlowCanvas() {
   const handleNodeClick = (id: string) => {
     setSelectedNodeId(id);
   };
+
+  const handleNodeConfigClick = (nodeId: string) => {
+    setSelectedNodeId(nodeId);
+    setIsConfigPanelOpen(true);
+  }
   
   const handleAddNode = useCallback((item: TransformationItem, position: {x: number, y: number}) => {
     if (!canvasRef.current) return;
@@ -92,7 +98,7 @@ export default function DataFlowCanvas() {
   
   const handleMouseDown = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (target.closest('[data-node-id]') || target.closest('[data-port="true"]')) {
+    if (target.closest('[data-node-id]') || target.closest('[data-port="true"]') || target.closest('[data-config-button="true"]')) {
       return;
     }
     isPanningRef.current = true;
@@ -262,7 +268,10 @@ export default function DataFlowCanvas() {
         }
     });
 
-    setSelectedNodeId(null);
+    if(selectedNodeId === nodeId) {
+      setSelectedNodeId(null);
+      setIsConfigPanelOpen(false);
+    }
   };
   
   const selectedNode = useMemo(() => {
@@ -304,7 +313,7 @@ export default function DataFlowCanvas() {
   
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeId) {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeId && !isConfigPanelOpen) {
         handleDeleteNode(selectedNodeId);
       }
     };
@@ -312,7 +321,7 @@ export default function DataFlowCanvas() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedNodeId, handleDeleteNode]);
+  }, [selectedNodeId, isConfigPanelOpen, handleDeleteNode]);
 
   const connectionModalSourceNode = nodes.find(n => n.id === connectionForFields?.fromNodeId);
 
@@ -376,6 +385,7 @@ export default function DataFlowCanvas() {
                   key={node.id}
                   {...node}
                   onClick={() => handleNodeClick(node.id)}
+                  onConfigClick={() => handleNodeConfigClick(node.id)}
                   onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
                   onMouseUp={(e) => handleNodeMouseUp(e, node.id)}
                   onPortMouseDown={(e) => handlePortMouseDown(e, node.id)}
@@ -387,8 +397,8 @@ export default function DataFlowCanvas() {
         </div>
         <NodeConfigurationPanel
           node={selectedNode}
-          isOpen={!!selectedNodeId}
-          onClose={() => setSelectedNodeId(null)}
+          isOpen={isConfigPanelOpen}
+          onClose={() => setIsConfigPanelOpen(false)}
           onSave={handleNodeConfigChange}
           onDelete={handleDeleteNode}
         />
@@ -405,4 +415,3 @@ export default function DataFlowCanvas() {
     </SidebarProvider>
   );
 }
-
