@@ -7,7 +7,7 @@ import TransformationsCatalogue from '@/components/sidebar/transformations-catal
 import NodeConfigurationPanel from '@/components/sidebar/node-configuration-panel';
 import Node from '@/components/data-flow/node';
 import Connector from '@/components/data-flow/connector';
-import { nodes as initialNodes, connectors as initialConnectors, PipelineNode, TransformationItem, Connector as ConnectorType, Field, Operation, FilterOperation, JoinOperation, GroupByOperation, getJoinOutputFields } from '@/lib/pipeline-data';
+import { initialVersions, PipelineNode, TransformationItem, Connector as ConnectorType, Field, Operation, FilterOperation, JoinOperation, GroupByOperation, getJoinOutputFields, PipelineVersion } from '@/lib/pipeline-data';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import ConnectionFieldsModal from '@/components/data-flow/connection-fields-modal';
@@ -20,8 +20,28 @@ type SvgDimensions = {
 };
 
 export default function DataFlowCanvas() {
-  const [nodes, setNodes] = useState<PipelineNode[]>(initialNodes);
-  const [connectors, setConnectors] = useState<ConnectorType[]>(initialConnectors);
+  const [versions, setVersions] = useState<PipelineVersion[]>(initialVersions);
+  const [activeVersionId, setActiveVersionId] = useState<string>('v1');
+  
+  const activeVersion = useMemo(() => versions.find(v => v.id === activeVersionId)!, [versions, activeVersionId]);
+  
+  const nodes = activeVersion.nodes;
+  const connectors = activeVersion.connectors;
+
+  const setNodes = (updater: React.SetStateAction<PipelineNode[]>) => {
+    const newNodes = typeof updater === 'function' ? updater(nodes) : updater;
+    setVersions(currentVersions => currentVersions.map(v => 
+      v.id === activeVersionId ? { ...v, nodes: newNodes } : v
+    ));
+  };
+  
+  const setConnectors = (updater: React.SetStateAction<ConnectorType[]>) => {
+    const newConnectors = typeof updater === 'function' ? updater(connectors) : updater;
+    setVersions(currentVersions => currentVersions.map(v => 
+      v.id === activeVersionId ? { ...v, connectors: newConnectors } : v
+    ));
+  };
+
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedConnector, setSelectedConnector] = useState<ConnectorType | null>(null);
   const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
@@ -220,28 +240,27 @@ export default function DataFlowCanvas() {
   }
 
   const handleSaveConnectionFields = (fromNodeId: string, toNodeId: string, selectedFields: Field[]) => {
-      const newConnection = { from: fromNodeId, to: toNodeId };
-      const updatedConnectors = [...connectors, newConnection];
+      const updatedConnectors = [...connectors, { from: fromNodeId, to: toNodeId }];
       setConnectors(updatedConnectors);
-    
-      setNodes(prevNodes => {
-        const newNodes = [...prevNodes];
-        const toNodeIndex = newNodes.findIndex(n => n.id === toNodeId);
-        if (toNodeIndex === -1) return prevNodes;
 
+      setNodes(currentNodes => {
+        const toNodeIndex = currentNodes.findIndex(n => n.id === toNodeId);
+        if (toNodeIndex === -1) return currentNodes;
+
+        let newNodes = [...currentNodes];
         let toNode = { ...newNodes[toNodeIndex] };
 
         if (toNode.operation?.type === 'join') {
             const joinOp = { ...toNode.operation } as JoinOperation;
             const parentConnections = updatedConnectors.filter(c => c.to === toNodeId);
             const parentIds = parentConnections.map(c => c.from);
-
-            if (parentIds.length > 0) joinOp.settings.leftNodeId = parentIds[0];
-            if (parentIds.length > 1) joinOp.settings.rightNodeId = parentIds[1];
             
+            joinOp.settings.leftNodeId = parentIds[0] || '';
+            joinOp.settings.rightNodeId = parentIds[1] || '';
+
             const leftParentNode = newNodes.find(n => n.id === joinOp.settings.leftNodeId);
             const rightParentNode = newNodes.find(n => n.id === joinOp.settings.rightNodeId);
-
+            
             const combinedInputFields = [
                 ...(leftParentNode?.outputFields || []),
                 ...(rightParentNode?.outputFields || [])
@@ -250,6 +269,12 @@ export default function DataFlowCanvas() {
             
             if(leftParentNode && rightParentNode) {
               toNode.outputFields = getJoinOutputFields(leftParentNode, rightParentNode, joinOp.settings.joinType);
+            } else if (leftParentNode) {
+              toNode.outputFields = leftParentNode.outputFields;
+            } else if (rightParentNode) {
+              toNode.outputFields = rightParentNode.outputFields;
+            } else {
+              toNode.outputFields = [];
             }
             toNode.operation = joinOp;
         } else {
@@ -373,16 +398,17 @@ export default function DataFlowCanvas() {
           const downstreamConnectors = connectors.filter(c => c.from === currentId);
           for (const connector of downstreamConnectors) {
             const downstreamId = connector.to;
+            const downstreamNodeIndex = currentNodes.findIndex(n => n.id === downstreamId);
+            if (downstreamNodeIndex === -1) continue;
 
             const parentNodes = connectors
                 .filter(c => c.to === downstreamId)
-                .map(c => currentNodes.find(n => n.id === c.from));
+                .map(c => currentNodes.find(n => n.id === c.from))
+                .filter((n): n is PipelineNode => !!n);
             
             const newInputFields = parentNodes.flatMap(pn => pn?.outputFields || []);
 
-            currentNodes = currentNodes.map(n => 
-                n.id === downstreamId ? { ...n, inputFields: newInputFields } : n
-            );
+            currentNodes[downstreamNodeIndex] = { ...currentNodes[downstreamNodeIndex], inputFields: newInputFields };
 
             if (!visited.has(downstreamId)) {
                 visited.add(downstreamId);
@@ -409,7 +435,7 @@ export default function DataFlowCanvas() {
   const handleDeleteNode = (nodeId: string) => {
     const nodeToDelete = nodes.find(n => n.id === nodeId);
     if (!nodeToDelete) return;
-
+    
     const downstreamConnectors = connectors.filter(c => c.from === nodeId);
     const downstreamNodeIds = downstreamConnectors.map(c => c.to);
     const fieldsToRemove = new Set(nodeToDelete.outputFields?.map(f => f.name) || []);
@@ -493,6 +519,18 @@ export default function DataFlowCanvas() {
     if (!selectedNodeId) return undefined;
     return nodes.find(n => n.id === selectedNodeId);
   }, [nodes, selectedNodeId]);
+  
+  const handleCreateVersion = (name: string) => {
+    const newVersion: PipelineVersion = {
+      id: `v${versions.length + 1}`,
+      name,
+      nodes: JSON.parse(JSON.stringify(activeVersion.nodes)),
+      connectors: JSON.parse(JSON.stringify(activeVersion.connectors)),
+    };
+    setVersions(prev => [...prev, newVersion]);
+    setActiveVersionId(newVersion.id);
+  };
+
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -547,7 +585,12 @@ export default function DataFlowCanvas() {
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full flex-col bg-background font-body">
-        <Header />
+        <Header 
+          versions={versions} 
+          activeVersionId={activeVersionId} 
+          onVersionChange={setActiveVersionId}
+          onCreateVersion={handleCreateVersion}
+        />
         <div className="flex flex-1 overflow-hidden">
           <TransformationsCatalogue />
           <main

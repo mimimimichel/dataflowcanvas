@@ -1,15 +1,74 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Upload, Download, Share2, GitBranch } from 'lucide-react';
+import { Upload, Download, Share2, GitBranch, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { PipelineVersion } from '@/lib/pipeline-data';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  versions: PipelineVersion[];
+  activeVersionId: string;
+  onVersionChange: (id: string) => void;
+  onCreateVersion: (name: string) => void;
+}
+
+const CreateVersionDialog: React.FC<{
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCreate: (name: string) => void;
+  activeVersionName: string;
+}> = ({ isOpen, onOpenChange, onCreate, activeVersionName }) => {
+  const [name, setName] = useState(`Copy of ${activeVersionName}`);
+
+  const handleCreate = () => {
+    if(name.trim()) {
+      onCreate(name.trim());
+      onOpenChange(false);
+    }
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Create New Version</DialogTitle>
+          <DialogDescription>
+            This will create a copy of the current version "{activeVersionName}".
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="name" className="text-right">
+              Name
+            </Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="col-span-3"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={handleCreate}>Create Version</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+
+const Header: React.FC<HeaderProps> = ({ versions, activeVersionId, onVersionChange, onCreateVersion }) => {
   const { toast } = useToast();
+  const [isCreateVersionOpen, setIsCreateVersionOpen] = useState(false);
 
   const handleExport = () => {
     toast({
@@ -31,22 +90,29 @@ const Header: React.FC = () => {
         description: "A shareable link has been copied to your clipboard.",
     });
   }
+  
+  const activeVersion = versions.find(v => v.id === activeVersionId);
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-card px-4 md:px-6 z-10 shrink-0">
       <div className="flex items-center gap-4">
         <GitBranch className="h-7 w-7 text-primary" />
         <h1 className="text-xl font-semibold text-foreground">DataFlow Canvas</h1>
-        <Select defaultValue="v1.2-prod">
-          <SelectTrigger className="w-40 h-9">
-            <SelectValue placeholder="Select version" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="v1.2-prod">v1.2 (Production)</SelectItem>
-            <SelectItem value="v1.3-dev">v1.3 (Development)</SelectItem>
-            <SelectItem value="v1.1-archived">v1.1 (Archived)</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-1">
+          <Select value={activeVersionId} onValueChange={onVersionChange}>
+            <SelectTrigger className="w-48 h-9">
+              <SelectValue placeholder="Select version" />
+            </SelectTrigger>
+            <SelectContent>
+              {versions.map(version => (
+                <SelectItem key={version.id} value={version.id}>{version.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setIsCreateVersionOpen(true)}>
+            <PlusCircle className="w-5 h-5" />
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-4">
@@ -67,6 +133,15 @@ const Header: React.FC = () => {
         <Button variant="outline" size="sm" onClick={handleExport}><Download className="mr-2" /> Export</Button>
         <Button size="sm" onClick={handleShare}><Share2 className="mr-2" /> Share</Button>
       </div>
+
+      {activeVersion && (
+         <CreateVersionDialog 
+          isOpen={isCreateVersionOpen}
+          onOpenChange={setIsCreateVersionOpen}
+          onCreate={onCreateVersion}
+          activeVersionName={activeVersion.name}
+        />
+      )}
     </header>
   );
 };

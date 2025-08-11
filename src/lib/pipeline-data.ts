@@ -78,6 +78,19 @@ export interface PipelineNode {
   operation?: Operation;
 }
 
+export interface Connector {
+  from: string;
+  to: string;
+}
+
+export interface PipelineVersion {
+  id: string;
+  name: string;
+  nodes: PipelineNode[];
+  connectors: Connector[];
+}
+
+
 export function getJoinOutputFields(leftNode: PipelineNode, rightNode: PipelineNode, joinType: JoinType): Field[] {
     const leftFields = leftNode.outputFields || [];
     const rightFields = rightNode.outputFields || [];
@@ -98,7 +111,7 @@ export function getJoinOutputFields(leftNode: PipelineNode, rightNode: PipelineN
     }
 }
 
-export const nodes: PipelineNode[] = [
+export const initialNodes: PipelineNode[] = [
   { 
     id: 'source-1', 
     name: 'Customer DB', 
@@ -110,6 +123,18 @@ export const nodes: PipelineNode[] = [
       { name: 'last_name', type: 'string' },
       { name: 'email', type: 'string' },
       { name: 'is_active', type: 'boolean' },
+    ]
+  },
+    { 
+    id: 'source-2', 
+    name: 'Orders DB', 
+    type: 'source', 
+    position: { x: 50, y: 350 },
+    outputFields: [
+      { name: 'order_id', type: 'integer' },
+      { name: 'customer_id', type: 'integer' },
+      { name: 'amount', type: 'float' },
+      { name: 'order_date', type: 'date' },
     ]
   },
   { 
@@ -149,7 +174,7 @@ export const nodes: PipelineNode[] = [
         type: 'join',
         settings: {
             leftNodeId: 'source-1',
-            rightNodeId: 'source-2', // Placeholder, assuming another source exists
+            rightNodeId: 'source-2',
             joinType: 'inner',
             condition: {
                 leftField: 'id',
@@ -163,6 +188,10 @@ export const nodes: PipelineNode[] = [
       { name: 'last_name', type: 'string' },
       { name: 'email', type: 'string' },
       { name: 'is_active', type: 'boolean' },
+      { name: 'order_id', type: 'integer' },
+      { name: 'customer_id', type: 'integer' },
+      { name: 'amount', type: 'float' },
+      { name: 'order_date', type: 'date' },
     ],
     outputFields: [
       { name: 'id', type: 'integer' },
@@ -171,7 +200,9 @@ export const nodes: PipelineNode[] = [
       { name: 'email', type: 'string' },
       { name: 'is_active', type: 'boolean' },
       { name: 'order_id', type: 'integer' },
+      { name: 'customer_id', type: 'integer' },
       { name: 'amount', type: 'float' },
+      { name: 'order_date', type: 'date' },
     ]
   },
   { 
@@ -182,7 +213,7 @@ export const nodes: PipelineNode[] = [
     operation: { 
         type: 'group_by', 
         settings: {
-            groupByFields: ['id'],
+            groupByFields: ['id', 'first_name', 'last_name'],
             aggregations: [
                 { field: 'amount', type: 'sum', newName: 'total_spend' }
             ]
@@ -195,10 +226,14 @@ export const nodes: PipelineNode[] = [
       { name: 'email', type: 'string' },
       { name: 'is_active', type: 'boolean' },
       { name: 'order_id', type: 'integer' },
+      { name: 'customer_id', type: 'integer' },
       { name: 'amount', type: 'float' },
+      { name: 'order_date', type: 'date' },
     ],
     outputFields: [
         { name: 'id', type: 'integer' },
+        { name: 'first_name', type: 'string' },
+        { name: 'last_name', type: 'string' },
         { name: 'total_spend', type: 'float' },
     ]
   },
@@ -209,23 +244,36 @@ export const nodes: PipelineNode[] = [
     position: { x: 950, y: 150 },
     inputFields: [
         { name: 'id', type: 'integer' },
+        { name: 'first_name', type: 'string' },
+        { name: 'last_name', type: 'string' },
         { name: 'total_spend', type: 'float' },
     ]
   },
 ];
 
-export interface Connector {
-  from: string;
-  to: string;
-}
-
-export const connectors: Connector[] = [
+export const initialConnectors: Connector[] = [
   { from: 'source-1', to: 'transform-1' },
   { from: 'source-1', to: 'transform-2' },
-  { from: 'transform-1', to: 'transform-3' },
+  { from: 'source-2', to: 'transform-2' },
   { from: 'transform-2', to: 'transform-3' },
   { from: 'transform-3', to: 'dest-1' },
 ];
+
+export const initialVersions: PipelineVersion[] = [
+  {
+    id: 'v1',
+    name: 'v1.0 (Production)',
+    nodes: initialNodes,
+    connectors: initialConnectors,
+  },
+    {
+    id: 'v2',
+    name: 'v1.1 (Development)',
+    nodes: JSON.parse(JSON.stringify(initialNodes)).map((n: PipelineNode) => ({...n, id: `${n.id}-v2`})),
+    connectors: JSON.parse(JSON.stringify(initialConnectors)).map((c: Connector) => ({from: `${c.from}-v2`, to: `${c.to}-v2`})),
+  },
+];
+
 
 export interface TransformationItem {
     name: string;
