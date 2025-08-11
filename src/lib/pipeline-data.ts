@@ -303,6 +303,11 @@ export interface TransformationItem {
     description?: string;
 }
 
+export interface TransformationCategory {
+  category: string;
+  items: TransformationItem[];
+}
+
 export const transformations = {
     sources: [
         { name: 'Database Source', icon: Database, description: "Connect to a SQL database." },
@@ -319,84 +324,150 @@ export const transformations = {
         { name: 'Union', icon: Combine, operationType: 'union', description: "Combiner les lignes de deux sources de données." },
         { name: 'Passe-plat (No-op)', icon: ArrowRightLeft, operationType: 'no_op', description: "A pass-through transformation that doesn't modify the data." },
     ],
-    advanced: [
-        { name: 'Déduplication', icon: Trash2, operationType: 'deduplication' },
-        { name: 'Gestion des valeurs manquantes', icon: Replace, operationType: 'handle_missing_values' },
-        { name: 'Normalisation des formats', icon: Settings, operationType: 'normalize_formats' },
-        { name: 'Correction des erreurs typographiques', icon: SpellCheck, operationType: 'fix_typos' },
-        { name: 'Validation et contrôle qualité', icon: CheckSquare, operationType: 'quality_control' },
-        { name: 'Standardisation des chaînes', icon: CaseSensitive, operationType: 'standardize_strings' },
-        { name: 'Pivot/Unpivot', icon: UnfoldVertical, operationType: 'pivot_unpivot' },
-        { name: 'Split/Merge colonnes', icon: Columns, operationType: 'split_merge_columns' },
-        { name: 'Transposition', icon: ArrowRightLeft, operationType: 'transpose' },
-        { name: 'Dénormalisation/Normalisation', icon: GitCommit, operationType: 'denormalize' },
-        { name: 'Nested to flat', icon: FileJson, operationType: 'nested_to_flat' },
-        { name: 'Array operations', icon: Rows, operationType: 'array_operations' },
-        { name: 'Agrégations numériques', icon: Sigma, operationType: 'numeric_aggregation' },
-        { name: 'Window functions', icon: Rows, operationType: 'window_functions' },
-        { name: 'Binning', icon: BoxSelect, operationType: 'binning' },
-        { name: 'Percentiles et quantiles', icon: BarChart3, operationType: 'percentiles' },
-        { name: 'Agrégations temporelles', icon: Clock, operationType: 'temporal_aggregation' },
-        { name: 'Self joins', icon: GitPullRequest, operationType: 'self_join' },
-        { name: 'Fuzzy matching', icon: Bot, operationType: 'fuzzy_matching' },
-        { name: 'Intersect/Except', icon: Unplug, operationType: 'intersect_except' },
-        { name: 'Lookup enrichment', icon: Search, operationType: 'lookup_enrichment' },
-        { name: 'Filtres temporels', icon: CalendarDays, operationType: 'temporal_filter' },
-        { name: 'Filtres par expression régulière', icon: Pilcrow, operationType: 'regex_filter' },
-        { name: 'Top N/Bottom N', icon: SortAsc, operationType: 'top_n' },
-        { name: 'Échantillonnage', icon: Shuffle, operationType: 'sampling' },
-        { name: 'Distinct/Unique', icon: GitCommit, operationType: 'distinct' },
-        { name: 'Opérations arithmétiques', icon: FunctionSquare, operationType: 'arithmetic' },
-        { name: 'Fonctions mathématiques', icon: Sigma, operationType: 'math_functions' },
-        { name: 'Calculs conditionnels', icon: Milestone, operationType: 'conditional_calculation' },
-        { name: 'Calculs de colonnes dérivées', icon: Plus, operationType: 'derived_columns' },
-        { name: 'Conversions d\'unités', icon: Replace, operationType: 'unit_conversion' },
-        { name: 'Formules personnalisées', icon: Pencil, operationType: 'custom_formula' },
-        { name: 'Extraction de composants', icon: Timer, operationType: 'date_part_extraction' },
-        { name: 'Calculs de durée', icon: Clock, operationType: 'duration_calculation' },
-        { name: 'Formatage de dates', icon: CalendarDays, operationType: 'date_formatting' },
-        { name: 'Décalages temporels', icon: ArrowRightLeft, operationType: 'time_shifting' },
-        { name: 'Agrégations roulantes', icon: Rows, operationType: 'rolling_aggregations' },
-        { name: 'Gestion des fuseaux horaires', icon: Globe, operationType: 'timezone_handling' },
-        { name: 'Manipulation de chaînes', icon: FileText, operationType: 'string_manipulation' },
-        { name: 'Recherche et extraction', icon: Search, operationType: 'text_search_extract' },
-        { name: 'Analyse de sentiment', icon: Bot, operationType: 'sentiment_analysis' },
-        { name: 'Tokenisation', icon: WholeWord, operationType: 'tokenization' },
-        { name: 'Normalisation linguistique', icon: SpellCheck, operationType: 'linguistic_normalization' },
-        { name: 'Détection de langue', icon: Globe, operationType: 'language_detection' },
-        { name: 'One-hot encoding', icon: Hash, operationType: 'one_hot_encoding' },
-        { name: 'Label encoding', icon: Pilcrow, operationType: 'label_encoding' },
-        { name: 'Binning numérique', icon: BoxSelect, operationType: 'numeric_binning' },
-        { name: 'Feature scaling', icon: Sigma, operationType: 'feature_scaling' },
-        { name: 'Hachage', icon: Fingerprint, operationType: 'hashing' },
-        { name: 'Mapping personnalisé', icon: GitCompare, operationType: 'custom_mapping' },
-        { name: 'Géocoding', icon: Globe, operationType: 'geocoding' },
-        { name: 'API calls', icon: Unplug, operationType: 'api_calls' },
-        { name: 'Lookup tables', icon: Search, operationType: 'lookup_tables' },
-        { name: 'Master data matching', icon: GitCompare, operationType: 'master_data_matching' },
-        { name: 'Scoring et classification', icon: Bot, operationType: 'scoring_classification' },
-        { name: 'Validation externe', icon: CheckSquare, operationType: 'external_validation' },
-        { name: 'Anonymisation', icon: Fingerprint, operationType: 'anonymization' },
-        { name: 'Pseudonymisation', icon: Replace, operationType: 'pseudonymization' },
-        { name: 'Masquage de données', icon: EyeOff, operationType: 'data_masking' },
-        { name: 'Chiffrement/Déchiffrement', icon: KeyRound, operationType: 'encryption' },
-        { name: 'Tokenisation', icon: Lock, operationType: 'security_tokenization' },
-        { name: 'Audit trail', icon: ClipboardList, operationType: 'audit_trail' },
-        { name: 'Routage conditionnel', icon: GitBranch, operationType: 'conditional_routing' },
-        { name: 'Transformations multi-branches', icon: Milestone, operationType: 'multi_branch' },
-        { name: 'Validation avec exceptions', icon: CheckSquare, operationType: 'validation_with_exceptions' },
-        { name: 'Switch/Case statements', icon: CaseSensitive, operationType: 'switch_case' },
-        { name: 'Transformations en cascade', icon: Rows, operationType: 'cascading_transforms' },
-        { name: 'Conversion de types', icon: Replace, operationType: 'type_conversion' },
-        { name: 'Parsing de formats', icon: FileJson, operationType: 'format_parsing' },
-        { name: 'Sérialisation', icon: Code, operationType: 'serialization' },
-        { name: 'Compression/Décompression', icon: DatabaseBackup, operationType: 'compression' },
-        { name: 'Conversion d\'encodage', icon: Pilcrow, operationType: 'encoding_conversion' },
-        { name: 'Z-score, outlier detection', icon: TestTube, operationType: 'outlier_detection' },
-        { name: 'Distributions et histogrammes', icon: BarChart3, operationType: 'histogram' },
-        { name: 'Corrélations et covariances', icon: Blend, operationType: 'correlation' },
-        { name: 'Tests statistiques automatisés', icon: Bot, operationType: 'statistical_tests' },
-        { name: 'Sampling strategies', icon: Shuffle, operationType: 'sampling_strategies' },
-        { name: 'Data profiling', icon: Database, operationType: 'data_profiling' },
-    ]
 };
+
+export const advancedTransformations: TransformationCategory[] = [
+    {
+        category: 'Nettoyage et Qualité',
+        items: [
+            { name: 'Déduplication', icon: Trash2, operationType: 'deduplication', description: 'Supprimer les doublons.' },
+            { name: 'Gestion des valeurs manquantes', icon: Replace, operationType: 'handle_missing_values', description: 'Remplacer ou supprimer les valeurs nulles.' },
+            { name: 'Normalisation des formats', icon: Settings, operationType: 'normalize_formats', description: 'Standardiser les formats de données (dates, nombres...).' },
+            { name: 'Correction des erreurs typographiques', icon: SpellCheck, operationType: 'fix_typos', description: 'Corriger les fautes de frappe courantes.' },
+            { name: 'Validation et contrôle qualité', icon: CheckSquare, operationType: 'quality_control', description: 'Valider les données contre des règles définies.' },
+            { name: 'Standardisation des chaînes', icon: CaseSensitive, operationType: 'standardize_strings', description: 'Mettre en majuscules, minuscules, etc.' },
+        ]
+    },
+    {
+        category: 'Transformations structurelles',
+        items: [
+            { name: 'Pivot/Unpivot', icon: UnfoldVertical, operationType: 'pivot_unpivot', description: 'Pivoter des lignes en colonnes et vice-versa.' },
+            { name: 'Split/Merge colonnes', icon: Columns, operationType: 'split_merge_columns', description: 'Diviser ou fusionner des colonnes.' },
+            { name: 'Transposition', icon: ArrowRightLeft, operationType: 'transpose', description: 'Inverser les lignes et les colonnes.' },
+            { name: 'Dénormalisation/Normalisation', icon: GitCommit, operationType: 'denormalize', description: 'Modifier la structure de la base de données.' },
+            { name: 'Nested to flat', icon: FileJson, operationType: 'nested_to_flat', description: 'Aplatir des structures JSON ou imbriquées.' },
+            { name: 'Array operations', icon: Rows, operationType: 'array_operations', description: 'Opérations sur les tableaux (explode, etc.).' },
+        ]
+    },
+    {
+        category: 'Agrégations et calculs',
+        items: [
+            { name: 'Agrégations numériques', icon: Sigma, operationType: 'numeric_aggregation', description: 'Calculs statistiques avancés.' },
+            { name: 'Window functions', icon: Rows, operationType: 'window_functions', description: 'Calculs sur des fenêtres de données (ex: moyenne mobile).' },
+            { name: 'Binning', icon: BoxSelect, operationType: 'binning', description: 'Regrouper des valeurs en intervalles.' },
+            { name: 'Percentiles et quantiles', icon: BarChart3, operationType: 'percentiles', description: 'Calculer des percentiles.' },
+            { name: 'Agrégations temporelles', icon: Clock, operationType: 'temporal_aggregation', description: 'Agréger des données par période de temps.' },
+            { name: 'Self joins', icon: GitPullRequest, operationType: 'self_join', description: 'Joindre une table avec elle-même.' },
+        ]
+    },
+    {
+        category: 'Enrichissement et filtres avancés',
+        items: [
+            { name: 'Fuzzy matching', icon: Bot, operationType: 'fuzzy_matching', description: 'Faire correspondre des chaînes de caractères similaires.' },
+            { name: 'Intersect/Except', icon: Unplug, operationType: 'intersect_except', description: 'Opérations d\'ensemble sur les données.' },
+            { name: 'Lookup enrichment', icon: Search, operationType: 'lookup_enrichment', description: 'Enrichir des données à partir d\'une table de référence.' },
+            { name: 'Filtres temporels', icon: CalendarDays, operationType: 'temporal_filter', description: 'Filtrer par dates ou périodes.' },
+            { name: 'Filtres par expression régulière', icon: Pilcrow, operationType: 'regex_filter', description: 'Filtrer en utilisant des expressions régulières.' },
+            { name: 'Top N/Bottom N', icon: SortAsc, operationType: 'top_n', description: 'Sélectionner les N premières ou dernières lignes.' },
+            { name: 'Échantillonnage', icon: Shuffle, operationType: 'sampling', description: 'Prélever un échantillon de données.' },
+            { name: 'Distinct/Unique', icon: GitCommit, operationType: 'distinct', description: 'Obtenir les valeurs uniques.' },
+        ]
+    },
+    {
+        category: 'Fonctions personnalisées et calculs',
+        items: [
+            { name: 'Opérations arithmétiques', icon: FunctionSquare, operationType: 'arithmetic', description: 'Addition, soustraction, etc.' },
+            { name: 'Fonctions mathématiques', icon: Sigma, operationType: 'math_functions', description: 'Fonctions mathématiques (log, exp...).' },
+            { name: 'Calculs conditionnels', icon: Milestone, operationType: 'conditional_calculation', description: 'Calculs basés sur des conditions (IF/ELSE).' },
+            { name: 'Calculs de colonnes dérivées', icon: Plus, operationType: 'derived_columns', description: 'Créer de nouvelles colonnes à partir d\'autres.' },
+            { name: 'Conversions d\'unités', icon: Replace, operationType: 'unit_conversion', description: 'Convertir des unités de mesure.' },
+            { name: 'Formules personnalisées', icon: Pencil, operationType: 'custom_formula', description: 'Appliquer une formule personnalisée.' },
+        ]
+    },
+    {
+        category: 'Données temporelles',
+        items: [
+            { name: 'Extraction de composants', icon: Timer, operationType: 'date_part_extraction', description: 'Extraire année, mois, jour, etc.' },
+            { name: 'Calculs de durée', icon: Clock, operationType: 'duration_calculation', description: 'Calculer des durées entre deux dates.' },
+            { name: 'Formatage de dates', icon: CalendarDays, operationType: 'date_formatting', description: 'Changer le format d\'affichage des dates.' },
+            { name: 'Décalages temporels', icon: ArrowRightLeft, operationType: 'time_shifting', description: 'Décaler des données dans le temps.' },
+            { name: 'Agrégations roulantes', icon: Rows, operationType: 'rolling_aggregations', description: 'Agréger des données sur une fenêtre glissante.' },
+            { name: 'Gestion des fuseaux horaires', icon: Globe, operationType: 'timezone_handling', description: 'Convertir entre fuseaux horaires.' },
+        ]
+    },
+    {
+        category: 'Traitement de texte et NLP',
+        items: [
+            { name: 'Manipulation de chaînes', icon: FileText, operationType: 'string_manipulation', description: 'Concaténation, sous-chaîne, etc.' },
+            { name: 'Recherche et extraction', icon: Search, operationType: 'text_search_extract', description: 'Extraire du texte avec des motifs.' },
+            { name: 'Analyse de sentiment', icon: Bot, operationType: 'sentiment_analysis', description: 'Déterminer le sentiment d\'un texte.' },
+            { name: 'Tokenisation', icon: WholeWord, operationType: 'tokenization', description: 'Diviser le texte en mots ou phrases.' },
+            { name: 'Normalisation linguistique', icon: SpellCheck, operationType: 'linguistic_normalization', description: 'Lemmatisation, etc.' },
+            { name: 'Détection de langue', icon: Globe, operationType: 'language_detection', description: 'Identifier la langue d\'un texte.' },
+        ]
+    },
+    {
+        category: 'Machine Learning et préparation des données',
+        items: [
+            { name: 'One-hot encoding', icon: Hash, operationType: 'one_hot_encoding', description: 'Convertir des variables catégorielles en format binaire.' },
+            { name: 'Label encoding', icon: Pilcrow, operationType: 'label_encoding', description: 'Attribuer une valeur numérique à chaque catégorie.' },
+            { name: 'Binning numérique', icon: BoxSelect, operationType: 'numeric_binning', description: 'Convertir des variables numériques en catégories.' },
+            { name: 'Feature scaling', icon: Sigma, operationType: 'feature_scaling', description: 'Mettre à l\'échelle les caractéristiques (min-max, standard...).' },
+            { name: 'Hachage', icon: Fingerprint, operationType: 'hashing', description: 'Hacher des caractéristiques.' },
+            { name: 'Mapping personnalisé', icon: GitCompare, operationType: 'custom_mapping', description: 'Appliquer des mappages personnalisés.' },
+        ]
+    },
+    {
+        category: 'Intégration et enrichissement externe',
+        items: [
+            { name: 'Géocoding', icon: Globe, operationType: 'geocoding', description: 'Convertir des adresses en coordonnées GPS.' },
+            { name: 'API calls', icon: Unplug, operationType: 'api_calls', description: 'Appeler des API externes pour enrichir les données.' },
+            { name: 'Lookup tables', icon: Search, operationType: 'lookup_tables', description: 'Rechercher des valeurs dans des tables externes.' },
+            { name: 'Master data matching', icon: GitCompare, operationType: 'master_data_matching', description: 'Faire correspondre avec des données de référence.' },
+            { name: 'Scoring et classification', icon: Bot, operationType: 'scoring_classification', description: 'Appliquer un modèle de scoring.' },
+            { name: 'Validation externe', icon: CheckSquare, operationType: 'external_validation', description: 'Valider des données via un service externe.' },
+        ]
+    },
+    {
+        category: 'Sécurité et conformité',
+        items: [
+            { name: 'Anonymisation', icon: Fingerprint, operationType: 'anonymization', description: 'Supprimer les informations personnelles.' },
+            { name: 'Pseudonymisation', icon: Replace, operationType: 'pseudonymization', description: 'Remplacer les identifiants par des pseudonymes.' },
+            { name: 'Masquage de données', icon: EyeOff, operationType: 'data_masking', description: 'Masquer des parties de données sensibles.' },
+            { name: 'Chiffrement/Déchiffrement', icon: KeyRound, operationType: 'encryption', description: 'Chiffrer ou déchiffrer des données.' },
+            { name: 'Tokenisation', icon: Lock, operationType: 'security_tokenization', description: 'Remplacer des données sensibles par des jetons.' },
+            { name: 'Audit trail', icon: ClipboardList, operationType: 'audit_trail', description: 'Générer une piste d\'audit.' },
+        ]
+    },
+    {
+        category: 'Logique de flux et de contrôle',
+        items: [
+            { name: 'Routage conditionnel', icon: GitBranch, operationType: 'conditional_routing', description: 'Orienter les données selon des conditions.' },
+            { name: 'Transformations multi-branches', icon: Milestone, operationType: 'multi_branch', description: 'Appliquer différentes transformations en parallèle.' },
+            { name: 'Validation avec exceptions', icon: CheckSquare, operationType: 'validation_with_exceptions', description: 'Gérer les exceptions de validation.' },
+            { name: 'Switch/Case statements', icon: CaseSensitive, operationType: 'switch_case', description: 'Logique de type switch/case.' },
+            { name: 'Transformations en cascade', icon: Rows, operationType: 'cascading_transforms', description: 'Enchaîner plusieurs transformations simples.' },
+        ]
+    },
+    {
+        category: 'Formatage et conversion de types',
+        items: [
+            { name: 'Conversion de types', icon: Replace, operationType: 'type_conversion', description: 'Convertir le type de données (string, int...).' },
+            { name: 'Parsing de formats', icon: FileJson, operationType: 'format_parsing', description: 'Analyser des formats complexes (JSON, XML...).' },
+            { name: 'Sérialisation', icon: Code, operationType: 'serialization', description: 'Convertir des données en format série.' },
+            { name: 'Compression/Décompression', icon: DatabaseBackup, operationType: 'compression', description: 'Compresser ou décompresser des données.' },
+            { name: 'Conversion d\'encodage', icon: Pilcrow, operationType: 'encoding_conversion', description: 'Changer l\'encodage des caractères.' },
+        ]
+    },
+    {
+        category: 'Analyses statistiques',
+        items: [
+            { name: 'Z-score, outlier detection', icon: TestTube, operationType: 'outlier_detection', description: 'Détecter les valeurs aberrantes.' },
+            { name: 'Distributions et histogrammes', icon: BarChart3, operationType: 'histogram', description: 'Générer des histogrammes.' },
+            { name: 'Corrélations et covariances', icon: Blend, operationType: 'correlation', description: 'Calculer les corrélations.' },
+            { name: 'Tests statistiques automatisés', icon: Bot, operationType: 'statistical_tests', description: 'Effectuer des tests statistiques.' },
+            { name: 'Sampling strategies', icon: Shuffle, operationType: 'sampling_strategies', description: 'Stratégies d\'échantillonnage avancées.' },
+            { name: 'Data profiling', icon: Database, operationType: 'data_profiling', description: 'Analyser le profil des données.' },
+        ]
+    }
+];

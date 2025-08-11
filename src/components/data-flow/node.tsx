@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal, GitCompare, Group as GroupIcon, ChevronDown, ArrowRightLeft, Filter, SortAsc, Table, Combine, Server, Pin } from 'lucide-react';
 import Port from './port';
-import { TransformationItem, PipelineNode, Field, Operation, transformations } from '@/lib/pipeline-data';
+import { TransformationItem, PipelineNode, Field, Operation, transformations, advancedTransformations } from '@/lib/pipeline-data';
 import FilterOperation from '@/components/operations/filter-operation';
 import JoinOperation from '@/components/operations/join-operation';
 import GroupByOperation from '@/components/operations/group-by-operation';
@@ -57,9 +57,10 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
   const getIconForOperation = (op?: Operation) => {
     if(!op || type !== 'transformation') return typeConfig[type].icon || Cog;
 
+    const advancedItems = Array.isArray(advancedTransformations) ? advancedTransformations.flatMap(c => c.items) : [];
     const allTransformations = [
       ...transformations.common,
-      ...transformations.advanced.flatMap(c => c.items)
+      ...advancedItems
     ];
     const transformationInfo = allTransformations.find(t => t.operationType === op.type);
     

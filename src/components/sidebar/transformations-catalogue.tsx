@@ -3,9 +3,9 @@
 
 import React, { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
-import { transformations, TransformationItem } from '@/lib/pipeline-data';
+import { transformations, TransformationItem, advancedTransformations } from '@/lib/pipeline-data';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, type Icon } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -60,7 +60,13 @@ const TransformationsCatalogue: React.FC = () => {
 
   const filteredTransformations = useMemo(() => {
     if (!searchTerm) {
-      return transformations;
+      return {
+        sources: transformations.sources,
+        dataset: transformations.dataset,
+        destination: transformations.destination,
+        common: transformations.common,
+        advanced: advancedTransformations,
+      };
     }
 
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
@@ -70,18 +76,19 @@ const TransformationsCatalogue: React.FC = () => {
         item.description?.toLowerCase().includes(lowerCaseSearchTerm)
     );
 
+    const filteredAdvanced = advancedTransformations
+      .map(category => ({
+        ...category,
+        items: filterItems(category.items)
+      }))
+      .filter(category => category.items.length > 0);
+
     return {
       sources: filterItems(transformations.sources),
-      dataset: transformations.dataset.name.toLowerCase().includes(lowerCaseSearchTerm) || 
-        transformations.dataset.description?.toLowerCase().includes(lowerCaseSearchTerm)
-        ? transformations.dataset
-        : { name: '', icon: (() => null) as Icon, type: 'dataset' as const, description: '' },
-      destination: transformations.destination.name.toLowerCase().includes(lowerCaseSearchTerm) ||
-        transformations.destination.description?.toLowerCase().includes(lowerCaseSearchTerm)
-        ? transformations.destination
-        : { name: '', icon: (() => null) as Icon, type: 'destination' as const, description: '' },
+      dataset: filterItems([transformations.dataset])[0] || { name: '', icon: () => null, type: 'dataset', description: ''},
+      destination: filterItems([transformations.destination])[0] || { name: '', icon: () => null, type: 'destination', description: ''},
       common: filterItems(transformations.common),
-      advanced: filterItems(transformations.advanced),
+      advanced: filteredAdvanced,
     };
   }, [searchTerm]);
 
@@ -112,9 +119,14 @@ const TransformationsCatalogue: React.FC = () => {
                                 <AccordionTrigger className="text-sm font-semibold text-muted-foreground hover:no-underline px-2 py-2">
                                     Transformations avancées
                                 </AccordionTrigger>
-                                <AccordionContent className="p-1 space-y-1">
-                                    {filteredTransformations.advanced.map((item) => (
-                                        <DraggableItem key={item.operationType} item={{...item, type: 'transformation'}} />
+                                <AccordionContent className="p-1 space-y-4">
+                                    {filteredTransformations.advanced.map((category) => (
+                                      <div key={category.category} className="space-y-1">
+                                        <h4 className="px-2 text-xs font-semibold text-muted-foreground/80">{category.category}</h4>
+                                        {category.items.map(item => (
+                                           <DraggableItem key={item.operationType} item={{...item, type: 'transformation'}} />
+                                        ))}
+                                      </div>
                                     ))}
                                 </AccordionContent>
                             </AccordionItem>
