@@ -221,45 +221,50 @@ export default function DataFlowCanvas() {
 
   const handleSaveConnectionFields = (fromNodeId: string, toNodeId: string, selectedFields: Field[]) => {
       setConnectors(prev => [...prev, { from: fromNodeId, to: toNodeId }]);
-      setNodes(prev => prev.map(node => {
-        if (node.id === toNodeId) {
-            const currentInputFields = node.inputFields || [];
-            const newFields = selectedFields.filter(sf => !currentInputFields.some(cif => cif.name === sf.name));
-            const finalFields = [...currentInputFields, ...newFields];
-            
-            let finalOutputFields = node.outputFields;
+      setNodes(prev => {
+        const allNodes = [...prev];
+        const toNodeIndex = allNodes.findIndex(n => n.id === toNodeId);
+        if (toNodeIndex === -1) return prev;
 
-            // If it's a join node, we need to handle inputs and operation settings differently
-            if (node.operation?.type === 'join') {
-                const joinOp = node.operation as JoinOperation;
-                const fromNode = nodes.find(n => n.id === fromNodeId);
+        let updatedNode = { ...allNodes[toNodeIndex] };
 
-                // This is a simplified logic. It assumes first two connections are left and right.
-                if (!joinOp.settings.leftNodeId) {
-                    joinOp.settings.leftNodeId = fromNodeId;
-                } else if (!joinOp.settings.rightNodeId) {
-                    joinOp.settings.rightNodeId = fromNodeId;
-                }
+        // Combine new fields with existing ones, avoiding duplicates
+        const currentInputFields = updatedNode.inputFields || [];
+        const newFields = selectedFields.filter(sf => !currentInputFields.some(cif => cif.name === sf.name));
+        updatedNode.inputFields = [...currentInputFields, ...newFields];
+        
+        // Handle operation-specific logic
+        if (updatedNode.operation?.type === 'join') {
+            const joinOp = { ...updatedNode.operation } as JoinOperation;
+            const fromNode = allNodes.find(n => n.id === fromNodeId);
 
-                const leftNode = nodes.find(n => n.id === joinOp.settings.leftNodeId);
-                const rightNode = nodes.find(n => n.id === joinOp.settings.rightNodeId);
-
-                if(leftNode && rightNode) {
-                  finalOutputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
-                }
-
-                return { ...node, inputFields: finalFields, outputFields: finalOutputFields, operation: joinOp };
-
-            } else if (node.type === 'transformation' && (!node.outputFields || node.outputFields.length === 0)) {
-                finalOutputFields = finalFields;
-            } else if (node.type === 'dataset') {
-                finalOutputFields = finalFields;
+            // Assign fromNode to left or right if available
+            if (fromNode && !joinOp.settings.leftNodeId) {
+                joinOp.settings.leftNodeId = fromNode.id;
+            } else if (fromNode && !joinOp.settings.rightNodeId) {
+                joinOp.settings.rightNodeId = fromNode.id;
             }
+            
+            updatedNode.operation = joinOp;
 
-            return { ...node, inputFields: finalFields, outputFields: finalOutputFields };
+            const leftNode = allNodes.find(n => n.id === joinOp.settings.leftNodeId);
+            const rightNode = allNodes.find(n => n.id === joinOp.settings.rightNodeId);
+            
+            // Re-calculate input fields based on both left and right nodes
+            updatedNode.inputFields = [...(leftNode?.outputFields || []), ...(rightNode?.outputFields || [])];
+
+            if(leftNode && rightNode) {
+              updatedNode.outputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
+            }
+        } else if (updatedNode.type === 'transformation' && (!updatedNode.outputFields || updatedNode.outputFields.length === 0)) {
+            updatedNode.outputFields = updatedNode.inputFields;
+        } else if (updatedNode.type === 'dataset') {
+            updatedNode.outputFields = updatedNode.inputFields;
         }
-        return node;
-    }));
+
+        allNodes[toNodeIndex] = updatedNode;
+        return allNodes;
+      });
     setConnectionForFields(null);
 };
 

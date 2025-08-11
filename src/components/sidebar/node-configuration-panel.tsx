@@ -132,20 +132,23 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
 
   const handleSave = () => {
     const newConfig: Partial<PipelineNode> = { name: nodeName };
+    
+    // We create a temporary operation object to update before setting the state.
+    let tempOperation = operation;
+
     if (node.type === 'transformation') {
         newConfig.operation = operation;
-        if(operation?.type === 'filter') {
+        if(tempOperation?.type === 'filter') {
             newConfig.outputFields = inputFields;
-        } else if (operation?.type === 'join') {
-            const joinOp = operation as JoinOperation;
+        } else if (tempOperation?.type === 'join') {
+            const joinOp = tempOperation as JoinOperation;
             const leftNode = nodes.find(n => n.id === joinOp.settings.leftNodeId);
             const rightNode = nodes.find(n => n.id === joinOp.settings.rightNodeId);
             if (leftNode && rightNode) {
               newConfig.outputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
             }
-            setOperation(newConfig.operation)
-        } else if (operation?.type === 'group_by') {
-            const groupOp = operation as GroupByOperation;
+        } else if (tempOperation?.type === 'group_by') {
+            const groupOp = tempOperation as GroupByOperation;
             const newOutputFields: Field[] = [];
             groupOp.settings.groupByFields.forEach(fieldName => {
                 const field = inputFields.find(f => f.name === fieldName);
@@ -187,6 +190,35 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
     });
     onClose();
   }
+
+  const handleOperationUpdate = (updatedOperation: Operation) => {
+    setOperation(updatedOperation);
+    // Dynamically update output schema on operation change
+    if (updatedOperation.type === 'join') {
+        const joinOp = updatedOperation as JoinOperation;
+        const leftNode = nodes.find(n => n.id === joinOp.settings.leftNodeId);
+        const rightNode = nodes.find(n => n.id === joinOp.settings.rightNodeId);
+        if (leftNode && rightNode) {
+            setOutputFields(getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType));
+        }
+    }
+     if (updatedOperation.type === 'group_by') {
+        const groupOp = updatedOperation as GroupByOperation;
+        const newOutputFields: Field[] = [];
+        groupOp.settings.groupByFields.forEach(fieldName => {
+            const field = inputFields.find(f => f.name === fieldName);
+            if(field) newOutputFields.push(field);
+        });
+        groupOp.settings.aggregations.forEach(agg => {
+            const originalField = inputFields.find(f => f.name === agg.field);
+            newOutputFields.push({ name: agg.newName, type: originalField?.type || 'unknown' });
+        });
+        setOutputFields(newOutputFields);
+    }
+    if(updatedOperation.type === 'filter') {
+        setOutputFields(inputFields);
+    }
+  }
   
   const renderConfigContent = () => {
     switch(node.type) {
@@ -222,7 +254,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                         <FilterOperationEditor 
                             operation={operation as FilterOperation}
                             inputFields={inputFields}
-                            onUpdate={(op) => setOperation(op)}
+                            onUpdate={handleOperationUpdate}
                         />
                     );
                 case 'join':
@@ -232,7 +264,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                                 operation={operation as JoinOperation}
                                 leftNode={sourceNodesForJoin.left}
                                 rightNode={sourceNodesForJoin.right}
-                                onUpdate={(op) => setOperation(op)}
+                                onUpdate={handleOperationUpdate}
                             />
                         );
                      }
@@ -242,7 +274,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                         <GroupByOperationEditor
                             operation={operation as GroupByOperation}
                             inputFields={inputFields}
-                            onUpdate={(op) => setOperation(op)}
+                            onUpdate={handleOperationUpdate}
                         />
                     );
                 default:
