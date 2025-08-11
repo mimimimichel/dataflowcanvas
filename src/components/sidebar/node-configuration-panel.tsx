@@ -6,11 +6,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFo
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { PipelineNode, Field } from '@/lib/pipeline-data';
-import { AreaChart, SlidersHorizontal, Trash2, PlusCircle } from 'lucide-react';
+import { Trash2, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Table as UiTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -33,23 +32,6 @@ interface NodeConfigurationPanelProps {
   onSave: (nodeId: string, newConfig: Partial<PipelineNode>) => void;
   onDelete: (nodeId: string) => void;
 }
-
-const StatsDisplay: React.FC<{ node: PipelineNode }> = ({ node }) => (
-  <div className="space-y-4 text-sm mt-4">
-    <div className="flex justify-between">
-      <span className="text-muted-foreground">Records Processed (24h):</span>
-      <span className="font-medium">1,234,567</span>
-    </div>
-    <div className="flex justify-between">
-      <span className="text-muted-foreground">Average Latency:</span>
-      <span className="font-medium">120ms</span>
-    </div>
-    <div className="flex justify-between">
-      <span className="text-muted-foreground">Last Run:</span>
-      <span className="font-medium">5 minutes ago</span>
-    </div>
-  </div>
-);
 
 const SchemaEditor: React.FC<{ fields: Field[], onFieldsChange: (fields: Field[]) => void, isEditable: boolean }> = ({ fields, onFieldsChange, isEditable }) => {
   const handleFieldChange = (index: number, field: keyof Field, value: string) => {
@@ -237,26 +219,15 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
           </SheetDescription>
         </SheetHeader>
         <Separator />
-        <div className="flex-1 overflow-y-auto pr-6 -mr-6">
-            <Tabs defaultValue='stats' className="w-full mt-4">
-            <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="stats"><AreaChart className="mr-2"/> Statistics</TabsTrigger>
-                <TabsTrigger value="config"><SlidersHorizontal className="mr-2"/> Configuration</TabsTrigger>
-            </TabsList>
-            <TabsContent value="stats">
-                <StatsDisplay node={node} />
-            </TabsContent>
-            <TabsContent value="config">
-                <div className="space-y-4">
-                <div className="grid w-full items-center gap-1.5">
-                    <Label htmlFor="node-name">Node Name</Label>
-                    <Input type="text" id="node-name" value={nodeName} onChange={(e) => setNodeName(e.target.value)} />
-                </div>
-                <Separator className="my-4"/>
-                {renderConfigContent()}
-                </div>
-            </TabsContent>
-            </Tabs>
+        <div className="flex-1 overflow-y-auto pr-6 -mr-6 py-4">
+          <div className="space-y-4">
+            <div className="grid w-full items-center gap-1.5">
+                <Label htmlFor="node-name">Node Name</Label>
+                <Input type="text" id="node-name" value={nodeName} onChange={(e) => setNodeName(e.target.value)} />
+            </div>
+            <Separator className="my-4"/>
+            {renderConfigContent()}
+          </div>
         </div>
         <SheetFooter className="mt-6 border-t pt-4">
             <div className="flex justify-between w-full">
