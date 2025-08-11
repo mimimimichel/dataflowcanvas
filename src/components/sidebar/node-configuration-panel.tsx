@@ -106,18 +106,20 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
   const [draftNode, setDraftNode] = useState<Partial<PipelineNode>>({});
 
   useEffect(() => {
-    setDraftNode({});
-  }, [node]);
+    if(isOpen) {
+        setDraftNode({});
+    }
+  }, [isOpen, node]);
 
   const sourceNodesForJoin = useMemo(() => {
-    const operation = draftNode?.operation || node?.operation;
+    const operation = node?.operation;
     if (!node || operation?.type !== 'join') return { left: undefined, right: undefined };
     
     const joinOp = operation as JoinOperation;
     const left = nodes.find(n => n.id === joinOp.settings.leftNodeId);
     const right = nodes.find(n => n.id === joinOp.settings.rightNodeId);
     return { left, right };
-  }, [node, draftNode, nodes]);
+  }, [node, nodes]);
 
   if (!node) return null;
 
@@ -147,20 +149,20 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
   
   const handleOperationUpdate = (updatedOperation: Operation) => {
     const newConfig: Partial<PipelineNode> = { operation: updatedOperation };
-
+    const effectiveOperation = { ...displayNode.operation, ...updatedOperation };
     const effectiveInputFields = displayNode.inputFields || [];
 
-    if (updatedOperation.type === 'filter') {
+    if (effectiveOperation.type === 'filter') {
       newConfig.outputFields = effectiveInputFields;
-    } else if (updatedOperation.type === 'join') {
-      const joinOp = updatedOperation as JoinOperation;
+    } else if (effectiveOperation.type === 'join') {
+      const joinOp = effectiveOperation as JoinOperation;
       const leftNode = nodes.find(n => n.id === joinOp.settings.leftNodeId);
       const rightNode = nodes.find(n => n.id === joinOp.settings.rightNodeId);
       if (leftNode && rightNode) {
         newConfig.outputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
       }
-    } else if (updatedOperation.type === 'group_by') {
-      const groupOp = updatedOperation as GroupByOperation;
+    } else if (effectiveOperation.type === 'group_by') {
+      const groupOp = effectiveOperation as GroupByOperation;
       const newOutputFields: Field[] = [];
       groupOp.settings.groupByFields.forEach(fieldName => {
           const field = effectiveInputFields.find(f => f.name === fieldName);
@@ -200,15 +202,16 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
         );
       case 'transformation':
         const renderOperationEditor = () => {
-            if (!displayNode.operation) {
+            const operation = displayNode.operation;
+            if (!operation) {
                 return <p className="text-sm text-muted-foreground">No operation configured for this transformation.</p>;
             }
 
-            switch(displayNode.operation.type) {
+            switch(operation.type) {
                 case 'filter':
                     return (
                         <FilterOperationEditor 
-                            operation={displayNode.operation as FilterOperation}
+                            operation={operation as FilterOperation}
                             inputFields={displayNode.inputFields || []}
                             onUpdate={handleOperationUpdate}
                         />
@@ -218,7 +221,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                      if (left && right) {
                         return (
                             <JoinOperationEditor
-                                operationSettings={displayNode.operation as JoinOperation}
+                                operationSettings={operation as JoinOperation}
                                 leftNode={left}
                                 rightNode={right}
                                 onUpdate={handleOperationUpdate}
@@ -230,13 +233,13 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                 case 'group_by':
                     return (
                         <GroupByOperationEditor
-                            operation={displayNode.operation as GroupByOperation}
+                            operation={operation as GroupByOperation}
                             inputFields={displayNode.inputFields || []}
                             onUpdate={handleOperationUpdate}
                         />
                     );
                 default:
-                    return <p className="text-sm text-muted-foreground">Configuration for '{displayNode.operation.type}' is not yet available.</p>;
+                    return <p className="text-sm text-muted-foreground">Configuration for '{operation.type}' is not yet available.</p>;
             }
         };
 

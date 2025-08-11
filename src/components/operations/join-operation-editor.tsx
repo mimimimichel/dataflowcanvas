@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { PipelineNode, JoinOperation as JoinOperationType, JoinType } from '@/lib/pipeline-data';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Label } from '../ui/label';
 
 interface JoinOperationEditorProps {
@@ -81,11 +81,11 @@ const JoinOperationEditor: React.FC<JoinOperationEditorProps> = ({ operationSett
             </SelectTrigger>
             <SelectContent>
                 <SelectGroup>
-                    <Label className="px-2 py-1.5 text-xs font-semibold">{leftNode.name}</Label>
+                    <SelectLabel className="px-2 py-1.5 text-xs font-semibold">{leftNode.name}</SelectLabel>
                     {renderFieldOptions(leftNode)}
                 </SelectGroup>
                  <SelectGroup>
-                    <Label className="px-2 py-1.5 text-xs font-semibold">{rightNode.name}</Label>
+                    <SelectLabel className="px-2 py-1.5 text-xs font-semibold">{rightNode.name}</SelectLabel>
                     {renderFieldOptions(rightNode)}
                 </SelectGroup>
             </SelectContent>
@@ -102,11 +102,11 @@ const JoinOperationEditor: React.FC<JoinOperationEditorProps> = ({ operationSett
             </SelectTrigger>
             <SelectContent>
                 <SelectGroup>
-                    <Label className="px-2 py-1.5 text-xs font-semibold">{leftNode.name}</Label>
+                    <SelectLabel className="px-2 py-1.5 text-xs font-semibold">{leftNode.name}</SelectLabel>
                     {renderFieldOptions(leftNode)}
                 </SelectGroup>
                  <SelectGroup>
-                    <Label className="px-2 py-1.5 text-xs font-semibold">{rightNode.name}</Label>
+                    <SelectLabel className="px-2 py-1.5 text-xs font-semibold">{rightNode.name}</SelectLabel>
                     {renderFieldOptions(rightNode)}
                 </SelectGroup>
             </SelectContent>
