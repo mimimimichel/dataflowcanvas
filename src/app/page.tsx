@@ -221,49 +221,46 @@ export default function DataFlowCanvas() {
 
   const handleSaveConnectionFields = (fromNodeId: string, toNodeId: string, selectedFields: Field[]) => {
       setConnectors(prev => [...prev, { from: fromNodeId, to: toNodeId }]);
-      setNodes(prev => {
-        const allNodes = [...prev];
-        const toNodeIndex = allNodes.findIndex(n => n.id === toNodeId);
-        if (toNodeIndex === -1) return prev;
+      setNodes(prevNodes => {
+        const newNodes = [...prevNodes];
+        const toNodeIndex = newNodes.findIndex(n => n.id === toNodeId);
+        if (toNodeIndex === -1) return prevNodes;
 
-        let updatedNode = { ...allNodes[toNodeIndex] };
-
-        // Combine new fields with existing ones, avoiding duplicates
-        const currentInputFields = updatedNode.inputFields || [];
-        const newFields = selectedFields.filter(sf => !currentInputFields.some(cif => cif.name === sf.name));
-        updatedNode.inputFields = [...currentInputFields, ...newFields];
+        const toNode = { ...newNodes[toNodeIndex] };
         
-        // Handle operation-specific logic
-        if (updatedNode.operation?.type === 'join') {
-            const joinOp = { ...updatedNode.operation } as JoinOperation;
-            const fromNode = allNodes.find(n => n.id === fromNodeId);
+        const currentInputFields = toNode.inputFields || [];
+        const newFields = selectedFields.filter(sf => !currentInputFields.some(cif => cif.name === sf.name));
+        toNode.inputFields = [...currentInputFields, ...newFields];
+        
+        if (toNode.operation?.type === 'join') {
+            const joinOp = { ...toNode.operation } as JoinOperation;
+            const fromNode = newNodes.find(n => n.id === fromNodeId);
 
-            // Assign fromNode to left or right if available
-            if (fromNode && !joinOp.settings.leftNodeId) {
-                joinOp.settings.leftNodeId = fromNode.id;
-            } else if (fromNode && !joinOp.settings.rightNodeId) {
-                joinOp.settings.rightNodeId = fromNode.id;
+            if (fromNode) {
+                if (!joinOp.settings.leftNodeId) {
+                    joinOp.settings.leftNodeId = fromNode.id;
+                } else if (!joinOp.settings.rightNodeId) {
+                    joinOp.settings.rightNodeId = fromNode.id;
+                }
             }
-            
-            updatedNode.operation = joinOp;
+            toNode.operation = joinOp;
 
-            const leftNode = allNodes.find(n => n.id === joinOp.settings.leftNodeId);
-            const rightNode = allNodes.find(n => n.id === joinOp.settings.rightNodeId);
-            
-            // Re-calculate input fields based on both left and right nodes
-            updatedNode.inputFields = [...(leftNode?.outputFields || []), ...(rightNode?.outputFields || [])];
+            const leftNode = newNodes.find(n => n.id === joinOp.settings.leftNodeId);
+            const rightNode = newNodes.find(n => n.id === joinOp.settings.rightNodeId);
 
+            toNode.inputFields = [...(leftNode?.outputFields || []), ...(rightNode?.outputFields || [])];
+            
             if(leftNode && rightNode) {
-              updatedNode.outputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
+              toNode.outputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
             }
-        } else if (updatedNode.type === 'transformation' && (!updatedNode.outputFields || updatedNode.outputFields.length === 0)) {
-            updatedNode.outputFields = updatedNode.inputFields;
-        } else if (updatedNode.type === 'dataset') {
-            updatedNode.outputFields = updatedNode.inputFields;
+        } else if (toNode.type === 'transformation' && (!toNode.outputFields || toNode.outputFields.length === 0)) {
+            toNode.outputFields = toNode.inputFields;
+        } else if (toNode.type === 'dataset') {
+            toNode.outputFields = toNode.inputFields;
         }
 
-        allNodes[toNodeIndex] = updatedNode;
-        return allNodes;
+        newNodes[toNodeIndex] = toNode;
+        return newNodes;
       });
     setConnectionForFields(null);
 };
@@ -397,36 +394,44 @@ export default function DataFlowCanvas() {
     setConnectors(prev => prev.filter(c => !(c.from === connector.from && c.to === connector.to)));
 
     const fromNode = nodes.find(n => n.id === connector.from);
-    const toNode = nodes.find(n => n.id === connector.to);
-    const fromNodeFields = fromNode?.outputFields?.map(f => f.name) || [];
     
     setNodes(prev => prev.map(n => {
       if (n.id === connector.to) {
-        const remainingFields = n.inputFields?.filter(f => !fromNodeFields.includes(f.name));
-        let updatedNode = {...n, inputFields: remainingFields};
+        let updatedNode = {...n};
         
-        if (n.type === 'dataset') {
-            updatedNode.outputFields = remainingFields;
+        if (updatedNode.inputFields) {
+            const fromNodeFields = fromNode?.outputFields?.map(f => f.name) || [];
+            updatedNode.inputFields = updatedNode.inputFields.filter(f => !fromNodeFields.includes(f.name));
         }
 
-        if (n.operation?.type === 'join') {
-            const joinOp = n.operation as JoinOperation;
+        if (updatedNode.type === 'dataset') {
+            updatedNode.outputFields = updatedNode.inputFields;
+        }
+
+        if (updatedNode.operation?.type === 'join') {
+            const joinOp = {...updatedNode.operation} as JoinOperation;
+            let wasModified = false;
             if (joinOp.settings.leftNodeId === connector.from) {
                 joinOp.settings.leftNodeId = '';
+                wasModified = true;
             }
             if (joinOp.settings.rightNodeId === connector.from) {
                 joinOp.settings.rightNodeId = '';
+                wasModified = true;
             }
-            const leftNode = nodes.find(node => node.id === joinOp.settings.leftNodeId);
-            const rightNode = nodes.find(node => node.id === joinOp.settings.rightNodeId);
-            if (leftNode && rightNode) {
-              updatedNode.outputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
-            } else {
-              updatedNode.outputFields = leftNode?.outputFields || rightNode?.outputFields || [];
-            }
-             updatedNode.operation = joinOp;
-        }
 
+            if(wasModified) {
+              const leftNode = nodes.find(node => node.id === joinOp.settings.leftNodeId);
+              const rightNode = nodes.find(node => node.id === joinOp.settings.rightNodeId);
+              
+              if (leftNode && rightNode) {
+                updatedNode.outputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
+              } else {
+                updatedNode.outputFields = leftNode?.outputFields || rightNode?.outputFields || [];
+              }
+               updatedNode.operation = joinOp;
+            }
+        }
         return updatedNode;
       }
       return n;
