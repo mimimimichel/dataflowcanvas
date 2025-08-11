@@ -53,12 +53,14 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ onA
             <SidebarGroup className="p-2">
                 <SidebarGroupLabel>Sources</SidebarGroupLabel>
                  <SidebarMenu>
-                    <SidebarMenuItem>
-                         <DraggableSidebarMenuButton item={{...transformations.source, type: 'source'}}>
-                            <transformations.source.icon />
-                            {transformations.source.name}
-                        </DraggableSidebarMenuButton>
-                    </SidebarMenuItem>
+                    {transformations.sources.map((source) => (
+                        <SidebarMenuItem key={source.name}>
+                            <DraggableSidebarMenuButton item={{...source, type: 'source'}}>
+                                <source.icon />
+                                {source.name}
+                            </DraggableSidebarMenuButton>
+                        </SidebarMenuItem>
+                    ))}
                 </SidebarMenu>
             </SidebarGroup>
             

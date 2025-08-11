@@ -137,7 +137,10 @@ export interface TransformationItem {
 }
 
 export const transformations = {
-    source: { name: 'Database Source', icon: Database },
+    sources: [
+        { name: 'Database Source', icon: Database },
+        { name: 'File Source', icon: FileText }
+    ],
     dataset: { name: 'Intermediate Dataset', icon: Layers },
     destination: { name: 'Data Warehouse', icon: DatabaseZap },
     categories: [
