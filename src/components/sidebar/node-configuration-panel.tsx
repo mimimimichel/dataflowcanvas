@@ -136,14 +136,17 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
   if (!node) return null;
 
   const handleSave = () => {
-    const newConfig: Partial<PipelineNode> = { name: nodeName };
+    const newConfig: Partial<PipelineNode> = { name: nodeName, inputFields };
     if (node.type === 'transformation') {
         newConfig.rule = rule;
         newConfig.outputFields = outputFields;
-        // inputFields are managed by connections, so we don't save them here
     }
     if (node.type === 'source') {
         newConfig.outputFields = outputFields;
+    }
+    if (node.type === 'dataset') {
+      newConfig.inputFields = inputFields;
+      newConfig.outputFields = inputFields; // a dataset's output is its input
     }
      if (node.type === 'destination') {
         // inputFields are managed by connections
@@ -189,6 +192,14 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
             <h3 className="text-md font-medium mb-2">Output Schema</h3>
              <p className="text-sm text-muted-foreground mb-2">Define the fields produced by this transformation.</p>
             <SchemaEditor fields={outputFields} onFieldsChange={setOutputFields} isEditable={true} />
+          </>
+        );
+       case 'dataset':
+        return (
+          <>
+            <h3 className="text-md font-medium mb-2">Dataset Schema</h3>
+            <p className="text-sm text-muted-foreground mb-2">The schema is defined by its inputs. You can rename fields here.</p>
+            <SchemaEditor fields={inputFields} onFieldsChange={setInputFields} isEditable={true} />
           </>
         );
       case 'destination':
@@ -267,5 +278,3 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
 };
 
 export default NodeConfigurationPanel;
-
-    

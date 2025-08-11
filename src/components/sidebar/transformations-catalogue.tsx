@@ -62,7 +62,7 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ onA
                 </SidebarMenu>
             </SidebarGroup>
             
-            <Accordion type="multiple" className="px-2 w-full">
+            <Accordion type="multiple" className="px-2 w-full" defaultValue={['TRANSFORMATIONS DE NETTOYAGE (Data Cleaning)']}>
                 {transformations.categories.map(category => (
                     <AccordionItem value={category.name} key={category.name} className="border-none">
                         <AccordionTrigger className="p-2 text-xs font-medium text-sidebar-foreground/70 hover:no-underline hover:bg-muted rounded-md [&[data-state=open]>svg]:rotate-180">
@@ -84,6 +84,18 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ onA
                 ))}
             </Accordion>
            
+            <SidebarGroup className="p-2">
+                <SidebarGroupLabel>Datasets</SidebarGroupLabel>
+                 <SidebarMenu>
+                    <SidebarMenuItem>
+                        <DraggableSidebarMenuButton item={{...transformations.dataset, type: 'dataset'}}>
+                            <transformations.dataset.icon />
+                            {transformations.dataset.name}
+                        </DraggableSidebarMenuButton>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+            </SidebarGroup>
+            
             <SidebarGroup className="p-2">
                 <SidebarGroupLabel>Destinations</SidebarGroupLabel>
                  <SidebarMenu>

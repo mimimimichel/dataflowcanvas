@@ -37,7 +37,7 @@ export default function DataFlowCanvas() {
   const isConnectingRef = useRef(false);
 
   const [connectionForFields, setConnectionForFields] = useState<{fromNodeId: string, toNodeId: string} | null>(null);
-  const [svgDimensions, setSvgDimensions] = useState<SvgDimensions>({ width: '100%', height: '100%', top: 0, left: 0 });
+  const [svgDimensions, setSvgDimensions] = useState<SvgDimensions>({ width: 0, height: 0, top: 0, left: 0 });
 
   const handleNodeClick = (id: string) => {
     setSelectedNodeId(id);
@@ -54,8 +54,8 @@ export default function DataFlowCanvas() {
         x: (position.x - canvasRect.left - pan.x) / zoom,
         y: (position.y - canvasRect.top - pan.y) / zoom,
       },
-      inputFields: item.type === 'destination' || item.type === 'transformation' ? [] : undefined,
-      outputFields: item.type === 'source' || item.type === 'transformation' ? [{name: 'new_field', type: 'string'}] : undefined,
+      inputFields: item.type === 'destination' || item.type === 'transformation' || item.type === 'dataset' ? [] : undefined,
+      outputFields: item.type === 'source' || item.type === 'transformation' || item.type === 'dataset' ? [] : undefined,
       rule: item.type === 'transformation' ? 'SELECT * FROM input' : '',
     };
     setNodes((prev) => [...prev, newNode]);
@@ -174,7 +174,9 @@ export default function DataFlowCanvas() {
       if (node.id === toNodeId) {
         const currentInputFields = node.inputFields || [];
         const newFields = selectedFields.filter(sf => !currentInputFields.some(cif => cif.name === sf.name));
-        return { ...node, inputFields: [...currentInputFields, ...newFields] };
+        const finalFields = [...currentInputFields, ...newFields];
+        const newOutputFields = node.type === 'dataset' ? finalFields : node.outputFields;
+        return { ...node, inputFields: finalFields, outputFields: newOutputFields };
       }
       return node;
     }));
@@ -223,7 +225,17 @@ export default function DataFlowCanvas() {
   };
   
   const handleNodeConfigChange = (nodeId: string, newConfig: Partial<PipelineNode>) => {
-    setNodes(prevNodes => prevNodes.map(n => n.id === nodeId ? { ...n, ...newConfig } : n));
+    setNodes(prevNodes => prevNodes.map(n => {
+      if (n.id === nodeId) {
+        const updatedNode = { ...n, ...newConfig };
+        // For datasets, input and output schemas are the same
+        if (updatedNode.type === 'dataset') {
+          updatedNode.outputFields = updatedNode.inputFields;
+        }
+        return updatedNode;
+      }
+      return n;
+    }));
   };
   
   const handleDeleteNode = (nodeId: string) => {
@@ -259,10 +271,13 @@ export default function DataFlowCanvas() {
   }, [nodes, selectedNodeId]);
 
   useEffect(() => {
+    if (!canvasRef.current) return;
+    
     if (nodes.length === 0) {
       setSvgDimensions({ width: '100%', height: '100%', top: 0, left: 0 });
       return;
     }
+    
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     nodes.forEach(node => {
       minX = Math.min(minX, node.position.x);
@@ -276,14 +291,16 @@ export default function DataFlowCanvas() {
     const finalMinY = minY - padding;
     const width = maxX - minX + (padding * 2);
     const height = maxY - minY + (padding * 2);
+    
+    const canvasRect = canvasRef.current.getBoundingClientRect();
 
     setSvgDimensions({ 
       left: finalMinX,
       top: finalMinY,
-      width: Math.max(width, window.innerWidth), 
-      height: Math.max(height, window.innerHeight)
+      width: Math.max(width, canvasRect.width / zoom), 
+      height: Math.max(height, canvasRect.height / zoom)
     });
-  }, [nodes]);
+  }, [nodes, zoom]);
   
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -388,5 +405,3 @@ export default function DataFlowCanvas() {
     </SidebarProvider>
   );
 }
-
-    

@@ -3,12 +3,11 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Database, Cog, DatabaseZap, Icon } from 'lucide-react';
+import { Database, Cog, DatabaseZap, Icon, Layers } from 'lucide-react';
 import Port from './port';
 
-export type NodeType = 'source' | 'transformation' | 'destination';
+export type NodeType = 'source' | 'transformation' | 'destination' | 'dataset';
 
 interface NodeProps {
   id: string;
@@ -26,6 +25,7 @@ const typeConfig: Record<NodeType, { icon: Icon; color: string; }> = {
   source: { icon: Database, color: 'bg-blue-500' },
   transformation: { icon: Cog, color: 'bg-purple-500' },
   destination: { icon: DatabaseZap, color: 'bg-green-500' },
+  dataset: { icon: Layers, color: 'bg-yellow-500' },
 };
 
 const Node: React.FC<NodeProps> = ({ id, name, type, position, onClick, onMouseDown, onMouseUp, onPortMouseDown, isSelected }) => {

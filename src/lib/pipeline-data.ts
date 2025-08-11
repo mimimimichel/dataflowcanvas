@@ -7,7 +7,7 @@ import {
   Timer, Clock, WholeWord, SpellCheck, Globe, Hash, KeyRound, Lock, GitBranch,
   Milestone, DatabaseBackup, TestTube, FileJson, GitPullRequest, Settings,
   FileText, FunctionSquare, Pilcrow, Pencil, Search, GitCompare, EyeOff,
-  Fingerprint, Bot, Group, Shuffle, Blend, BoxSelect, Code, Unplug
+  Fingerprint, Bot, Group, Shuffle, Blend, BoxSelect, Code, Unplug, Layers
 } from 'lucide-react';
 import type { NodeType } from '@/components/data-flow/node';
 
@@ -138,6 +138,7 @@ export interface TransformationItem {
 
 export const transformations = {
     source: { name: 'Database Source', icon: Database },
+    dataset: { name: 'Intermediate Dataset', icon: Layers },
     destination: { name: 'Data Warehouse', icon: DatabaseZap },
     categories: [
         {
