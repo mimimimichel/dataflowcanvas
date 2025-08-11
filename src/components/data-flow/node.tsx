@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -17,6 +18,7 @@ interface NodeProps {
   quality: number;
   position: { x: number; y: number };
   onClick: () => void;
+  onMouseDown: (event: React.MouseEvent) => void;
   isSelected: boolean;
 }
 
@@ -32,7 +34,7 @@ const statusConfig: Record<NodeStatus, { icon: Icon; color: string; text: string
   error: { icon: XCircle, color: 'text-red-500', text: 'Error' },
 };
 
-const Node: React.FC<NodeProps> = ({ name, type, status, quality, position, onClick, isSelected }) => {
+const Node: React.FC<NodeProps> = ({ name, type, status, quality, position, onClick, onMouseDown, isSelected }) => {
   const TypeIcon = typeConfig[type].icon;
   const StatusIcon = statusConfig[status].icon;
   
@@ -41,10 +43,11 @@ const Node: React.FC<NodeProps> = ({ name, type, status, quality, position, onCl
       className="absolute transition-all duration-300"
       style={{ top: position.y, left: position.x }}
       onClick={onClick}
+      onMouseDown={onMouseDown}
     >
       <Card
         className={cn(
-          'w-52 h-24 shadow-lg hover:shadow-xl transition-shadow cursor-pointer border-2',
+          'w-52 h-24 shadow-lg hover:shadow-xl transition-shadow cursor-grab active:cursor-grabbing border-2',
           isSelected ? 'border-primary shadow-2xl scale-105' : 'border-transparent'
         )}
       >

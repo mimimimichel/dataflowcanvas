@@ -16,10 +16,14 @@ export default function DataFlowCanvas() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'consumer' | 'engineer'>('consumer');
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [isPanning, setIsPanning] = useState(false);
   
   const canvasRef = useRef<HTMLDivElement>(null);
+  
+  const isPanningRef = useRef(false);
   const panStartRef = useRef({ x: 0, y: 0 });
+
+  const draggingNodeIdRef = useRef<string | null>(null);
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
 
   const handleNodeClick = (id: string) => {
     setSelectedNodeId(id);
@@ -35,34 +39,51 @@ export default function DataFlowCanvas() {
       status: 'healthy',
       quality: 100,
       position: {
-        x: position.x - canvasRect.left,
-        y: position.y - canvasRect.top,
+        x: position.x - canvasRect.left - pan.x,
+        y: position.y - canvasRect.top - pan.y,
       },
     };
     setNodes((prev) => [...prev, newNode]);
-  }, []);
+  }, [pan.x, pan.y]);
+
+  const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
+    e.stopPropagation();
+    draggingNodeIdRef.current = nodeId;
+    const node = nodes.find(n => n.id === nodeId);
+    if(node) {
+      dragOffsetRef.current = {
+        x: e.clientX - node.position.x - pan.x,
+        y: e.clientY - node.position.y - pan.y,
+      };
+    }
+  };
   
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Only pan when clicking on the canvas background, not on a node
-    if (e.target === e.currentTarget) {
-      setIsPanning(true);
-      panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
-      e.currentTarget.style.cursor = 'grabbing';
+    if (e.target === e.currentTarget && canvasRef.current) {
+        isPanningRef.current = true;
+        panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+        canvasRef.current.style.cursor = 'grabbing';
     }
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (isPanning) {
+    if (draggingNodeIdRef.current) {
+      const nodeId = draggingNodeIdRef.current;
+      const newX = e.clientX - dragOffsetRef.current.x - pan.x;
+      const newY = e.clientY - dragOffsetRef.current.y - pan.y;
+      setNodes(prevNodes => prevNodes.map(n => n.id === nodeId ? { ...n, position: { x: newX, y: newY } } : n));
+    } else if (isPanningRef.current) {
       const newX = e.clientX - panStartRef.current.x;
       const newY = e.clientY - panStartRef.current.y;
       setPan({ x: newX, y: newY });
     }
   };
 
-  const handleMouseUp = (e: React.MouseEvent) => {
-    if (isPanning) {
-      setIsPanning(false);
-      e.currentTarget.style.cursor = 'grab';
+  const handleMouseUp = () => {
+    isPanningRef.current = false;
+    draggingNodeIdRef.current = null;
+    if (canvasRef.current) {
+      canvasRef.current.style.cursor = 'grab';
     }
   };
 
@@ -71,11 +92,10 @@ export default function DataFlowCanvas() {
     const itemString = e.dataTransfer.getData('application/json');
     if (itemString) {
       const item = JSON.parse(itemString);
-      // We adjust the position by the current pan to place it correctly.
-      const position = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+      const position = { x: e.clientX, y: e.clientY };
       handleAddNode(item, position);
     }
-  }, [handleAddNode, pan.x, pan.y]);
+  }, [handleAddNode]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -97,7 +117,7 @@ export default function DataFlowCanvas() {
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp} // Use mouseUp to ensure panning stops
+            onMouseLeave={handleMouseUp}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
           >
@@ -116,6 +136,7 @@ export default function DataFlowCanvas() {
                   key={node.id}
                   {...node}
                   onClick={() => handleNodeClick(node.id)}
+                  onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
                   isSelected={selectedNodeId === node.id}
                 />
               ))}
