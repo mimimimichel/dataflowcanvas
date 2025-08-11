@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { PipelineNode, Field, Operation, FilterOperation, JoinOperation, GroupByOperation, getJoinOutputFields } from '@/lib/pipeline-data';
+import { PipelineNode, Field, Operation, FilterOperation, JoinOperation, GroupByOperation, SortOperation, getJoinOutputFields } from '@/lib/pipeline-data';
 import { Trash2, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Table as UiTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -25,6 +25,7 @@ import {
 import FilterOperationEditor from '@/components/operations/filter-operation-editor';
 import JoinOperationEditor from '@/components/operations/join-operation-editor';
 import GroupByOperationEditor from '@/components/operations/group-by-operation-editor';
+import SortOperationEditor from '@/components/operations/sort-operation-editor';
 
 
 interface NodeConfigurationPanelProps {
@@ -112,14 +113,14 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
   }, [isOpen, node]);
 
   const sourceNodesForJoin = useMemo(() => {
-    const operation = node?.operation;
+    const operation = draftNode.operation || node?.operation;
     if (!node || operation?.type !== 'join') return { left: undefined, right: undefined };
     
     const joinOp = operation as JoinOperation;
     const left = nodes.find(n => n.id === joinOp.settings.leftNodeId);
     const right = nodes.find(n => n.id === joinOp.settings.rightNodeId);
     return { left, right };
-  }, [node, nodes]);
+  }, [node, nodes, draftNode.operation]);
 
   if (!node) return null;
 
@@ -152,7 +153,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
     const effectiveOperation = { ...displayNode.operation, ...updatedOperation };
     const effectiveInputFields = displayNode.inputFields || [];
 
-    if (effectiveOperation.type === 'filter') {
+    if (effectiveOperation.type === 'filter' || effectiveOperation.type === 'sort') {
       newConfig.outputFields = effectiveInputFields;
     } else if (effectiveOperation.type === 'join') {
       const joinOp = effectiveOperation as JoinOperation;
@@ -234,6 +235,14 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                     return (
                         <GroupByOperationEditor
                             operation={operation as GroupByOperation}
+                            inputFields={displayNode.inputFields || []}
+                            onUpdate={handleOperationUpdate}
+                        />
+                    );
+                case 'sort':
+                    return (
+                        <SortOperationEditor
+                            operation={operation as SortOperation}
                             inputFields={displayNode.inputFields || []}
                             onUpdate={handleOperationUpdate}
                         />

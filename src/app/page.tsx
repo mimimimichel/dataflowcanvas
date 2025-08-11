@@ -7,7 +7,7 @@ import TransformationsCatalogue from '@/components/sidebar/transformations-catal
 import NodeConfigurationPanel from '@/components/sidebar/node-configuration-panel';
 import Node from '@/components/data-flow/node';
 import Connector from '@/components/data-flow/connector';
-import { initialVersions, PipelineNode, TransformationItem, Connector as ConnectorType, Field, Operation, FilterOperation, JoinOperation, GroupByOperation, getJoinOutputFields, PipelineVersion } from '@/lib/pipeline-data';
+import { initialVersions, PipelineNode, TransformationItem, Connector as ConnectorType, Field, Operation, FilterOperation, JoinOperation, GroupByOperation, SortOperation, getJoinOutputFields, PipelineVersion } from '@/lib/pipeline-data';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import ConnectionFieldsModal from '@/components/data-flow/connection-fields-modal';
@@ -108,6 +108,14 @@ export default function DataFlowCanvas() {
                         aggregations: []
                     }
                 } as GroupByOperation;
+                break;
+            case 'sort':
+                operation = {
+                    type: 'sort',
+                    settings: {
+                        conditions: []
+                    }
+                } as SortOperation;
                 break;
             default:
                 operation = { type: item.operationType, settings: {} };
@@ -240,10 +248,11 @@ export default function DataFlowCanvas() {
   }
 
   const handleSaveConnectionFields = (fromNodeId: string, toNodeId: string, selectedFields: Field[]) => {
-      const updatedConnectors = [...connectors, { from: fromNodeId, to: toNodeId }];
-      setConnectors(updatedConnectors);
+    const newConnection = { from: fromNodeId, to: toNodeId };
+    const updatedConnectors = [...connectors, newConnection];
+    setConnectors(updatedConnectors);
 
-      setNodes(currentNodes => {
+    setNodes(currentNodes => {
         const toNodeIndex = currentNodes.findIndex(n => n.id === toNodeId);
         if (toNodeIndex === -1) return currentNodes;
 
@@ -254,27 +263,27 @@ export default function DataFlowCanvas() {
             const joinOp = { ...toNode.operation } as JoinOperation;
             const parentConnections = updatedConnectors.filter(c => c.to === toNodeId);
             const parentIds = parentConnections.map(c => c.from);
-            
-            joinOp.settings.leftNodeId = parentIds[0] || '';
-            joinOp.settings.rightNodeId = parentIds[1] || '';
 
-            const leftParentNode = newNodes.find(n => n.id === joinOp.settings.leftNodeId);
-            const rightParentNode = newNodes.find(n => n.id === joinOp.settings.rightNodeId);
-            
+            const leftParentNode = newNodes.find(n => n.id === parentIds[0]);
+            const rightParentNode = newNodes.find(n => n.id === parentIds[1]);
+
+            joinOp.settings.leftNodeId = leftParentNode?.id || '';
+            joinOp.settings.rightNodeId = rightParentNode?.id || '';
+
             const combinedInputFields = [
                 ...(leftParentNode?.outputFields || []),
                 ...(rightParentNode?.outputFields || [])
             ];
             toNode.inputFields = combinedInputFields;
             
-            if(leftParentNode && rightParentNode) {
-              toNode.outputFields = getJoinOutputFields(leftParentNode, rightParentNode, joinOp.settings.joinType);
+            if (leftParentNode && rightParentNode) {
+                toNode.outputFields = getJoinOutputFields(leftParentNode, rightParentNode, joinOp.settings.joinType);
             } else if (leftParentNode) {
-              toNode.outputFields = leftParentNode.outputFields;
+                toNode.outputFields = leftParentNode.outputFields;
             } else if (rightParentNode) {
-              toNode.outputFields = rightParentNode.outputFields;
+                toNode.outputFields = rightParentNode.outputFields;
             } else {
-              toNode.outputFields = [];
+                toNode.outputFields = [];
             }
             toNode.operation = joinOp;
         } else {
@@ -291,7 +300,7 @@ export default function DataFlowCanvas() {
 
         newNodes[toNodeIndex] = toNode;
         return newNodes;
-      });
+    });
 
     setConnectionForFields(null);
 };
@@ -362,6 +371,7 @@ export default function DataFlowCanvas() {
           } else if (currentNode.operation) {
             switch(currentNode.operation.type) {
               case 'filter':
+              case 'sort':
                 newOutputFields = currentNode.inputFields || [];
                 break;
               case 'join': {
@@ -435,7 +445,7 @@ export default function DataFlowCanvas() {
   const handleDeleteNode = (nodeId: string) => {
     const nodeToDelete = nodes.find(n => n.id === nodeId);
     if (!nodeToDelete) return;
-    
+
     const downstreamConnectors = connectors.filter(c => c.from === nodeId);
     const downstreamNodeIds = downstreamConnectors.map(c => c.to);
     const fieldsToRemove = new Set(nodeToDelete.outputFields?.map(f => f.name) || []);

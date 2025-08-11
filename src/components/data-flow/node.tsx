@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal, GitCompare, Group as GroupIcon, ChevronDown, ArrowRightLeft, Filter, SortAsc, Table, Combine } from 'lucide-react';
 import Port from './port';
-import { TransformationItem, PipelineNode, Field, Operation } from '@/lib/pipeline-data';
+import { TransformationItem, PipelineNode, Field, Operation, transformations } from '@/lib/pipeline-data';
 import FilterOperation from '@/components/operations/filter-operation';
 import JoinOperation from '@/components/operations/join-operation';
 import GroupByOperation from '@/components/operations/group-by-operation';
+import SortOperation from '@/components/operations/sort-operation';
 
 export type NodeType = 'source' | 'transformation' | 'destination' | 'dataset';
 
@@ -55,16 +56,14 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
   
   const getIconForOperation = (op?: Operation) => {
     if(!op || type !== 'transformation') return typeConfig[type].icon || Cog;
-    switch(op.type){
-        case 'filter': return Filter;
-        case 'join': return GitCompare;
-        case 'group_by': return GroupIcon;
-        case 'sort': return SortAsc;
-        case 'select_columns': return Table;
-        case 'union': return Combine;
-        case 'no_op': return ArrowRightLeft;
-        default: return typeConfig[type].icon || Cog;
-    }
+
+    const allTransformations = [
+      ...transformations.common,
+      ...transformations.advanced.flatMap(c => c.items)
+    ];
+    const transformationInfo = allTransformations.find(t => t.operationType === op.type);
+    
+    return transformationInfo?.icon || typeConfig[type].icon || Cog;
   }
   
   const TypeIcon = getIconForOperation(operation);
@@ -91,6 +90,8 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
                     return <JoinOperation operation={operation} nodes={nodes} />;
                 case 'group_by':
                     return <GroupByOperation operation={operation} />;
+                case 'sort':
+                    return <SortOperation operation={operation} />;
                 case 'no_op':
                     return <SchemaOverview fields={inputFields || []} />;
                 default:

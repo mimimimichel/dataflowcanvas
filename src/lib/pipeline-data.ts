@@ -17,7 +17,7 @@ export interface Field {
   type: string;
 }
 
-export type OperationType = 'filter' | 'join' | 'group_by' | string;
+export type OperationType = 'filter' | 'join' | 'group_by' | 'sort' | string;
 
 export interface BaseOperation {
     type: OperationType;
@@ -65,8 +65,22 @@ export interface GroupByOperation extends BaseOperation {
     }
 }
 
+export type SortDirection = 'asc' | 'desc';
 
-export type Operation = FilterOperation | JoinOperation | GroupByOperation | BaseOperation;
+export interface SortCondition {
+    field: string;
+    direction: SortDirection;
+}
+
+export interface SortOperation extends BaseOperation {
+    type: 'sort';
+    settings: {
+        conditions: SortCondition[];
+    }
+}
+
+
+export type Operation = FilterOperation | JoinOperation | GroupByOperation | SortOperation | BaseOperation;
 
 export interface PipelineNode {
   id: string;
