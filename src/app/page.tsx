@@ -8,7 +8,6 @@ import NodeConfigurationPanel from '@/components/sidebar/node-configuration-pane
 import Node from '@/components/data-flow/node';
 import Connector from '@/components/data-flow/connector';
 import { initialVersions, PipelineNode, TransformationItem, Connector as ConnectorType, Field, Operation, FilterOperation, JoinOperation, GroupByOperation, SortOperation, getJoinOutputFields, PipelineVersion } from '@/lib/pipeline-data';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import ConnectionFieldsModal from '@/components/data-flow/connection-fields-modal';
 
@@ -591,7 +590,6 @@ export default function DataFlowCanvas() {
   const connectionModalSourceNode = nodes.find(n => n.id === connectionForFields?.fromNodeId);
 
   return (
-    <SidebarProvider>
       <div className="flex h-screen w-full flex-col bg-background font-body">
         <Header 
           versions={versions} 
@@ -601,76 +599,74 @@ export default function DataFlowCanvas() {
         />
         <div className="flex flex-1 overflow-hidden">
           <TransformationsCatalogue />
-          <SidebarInset>
-            <main
-              className="flex-1 relative overflow-hidden cursor-grab"
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onWheel={handleWheel}
-              ref={canvasRef}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
+          <main
+            className="flex-1 relative overflow-hidden cursor-grab"
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onWheel={handleWheel}
+            ref={canvasRef}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+          >
+            <div
+              className="absolute top-0 left-0"
+              style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'top left' }}
             >
-              <div
-                className="absolute top-0 left-0"
-                style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'top left' }}
+              <svg
+                  className={cn('absolute pointer-events-none overflow-visible')}
+                  style={{
+                    left: svgDimensions.left,
+                    top: svgDimensions.top,
+                    width: svgDimensions.width,
+                    height: svgDimensions.height
+                  }}
               >
-                <svg
-                    className={cn('absolute pointer-events-none overflow-visible')}
-                    style={{
-                      left: svgDimensions.left,
-                      top: svgDimensions.top,
-                      width: svgDimensions.width,
-                      height: svgDimensions.height
-                    }}
-                >
-                    {connectors.map((connector, index) => {
-                      const fromNode = nodes.find((n) => n.id === connector.from);
-                      const toNode = nodes.find((n) => n.id === connector.to);
-                      if (!fromNode || !toNode) return null;
-                      return (
-                        <Connector 
-                          key={`${connector.from}-${connector.to}-${index}`} 
-                          from={{ x: fromNode.position.x - svgDimensions.left, y: fromNode.position.y - svgDimensions.top }} 
-                          to={{ x: toNode.position.x - svgDimensions.left, y: toNode.position.y - svgDimensions.top }}
-                          isSelected={selectedConnector?.from === connector.from && selectedConnector?.to === connector.to}
-                          onClick={() => handleConnectorClick(connector)}
-                        />
-                      );
-                    })}
-                    {newConnector && (() => {
-                      const fromNode = nodes.find(n => n.id === newConnector.from);
-                      if (!fromNode) return null;
-                      return (
-                        <Connector 
-                          from={{ x: fromNode.position.x - svgDimensions.left, y: fromNode.position.y - svgDimensions.top }} 
-                          to={{ x: newConnector.to.x - svgDimensions.left, y: newConnector.to.y - svgDimensions.top }} 
-                          className="opacity-50" 
-                        />
-                      );
-                    })()}
-                </svg>
+                  {connectors.map((connector, index) => {
+                    const fromNode = nodes.find((n) => n.id === connector.from);
+                    const toNode = nodes.find((n) => n.id === connector.to);
+                    if (!fromNode || !toNode) return null;
+                    return (
+                      <Connector 
+                        key={`${connector.from}-${connector.to}-${index}`} 
+                        from={{ x: fromNode.position.x - svgDimensions.left, y: fromNode.position.y - svgDimensions.top }} 
+                        to={{ x: toNode.position.x - svgDimensions.left, y: toNode.position.y - svgDimensions.top }}
+                        isSelected={selectedConnector?.from === connector.from && selectedConnector?.to === connector.to}
+                        onClick={() => handleConnectorClick(connector)}
+                      />
+                    );
+                  })}
+                  {newConnector && (() => {
+                    const fromNode = nodes.find(n => n.id === newConnector.from);
+                    if (!fromNode) return null;
+                    return (
+                      <Connector 
+                        from={{ x: fromNode.position.x - svgDimensions.left, y: fromNode.position.y - svgDimensions.top }} 
+                        to={{ x: newConnector.to.x - svgDimensions.left, y: newConnector.to.y - svgDimensions.top }} 
+                        className="opacity-50" 
+                      />
+                    );
+                  })()}
+              </svg>
 
-                {nodes.map((node) => (
-                  <Node
-                    key={node.id}
-                    {...node}
-                    nodes={nodes}
-                    onSelect={() => handleNodeSelect(node.id)}
-                    onConfigOpen={() => handleOpenConfig(node.id)}
-                    onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
-                    onMouseUp={(e) => handleNodeMouseUp(e, node.id)}
-                    onPortMouseDown={(e) => handlePortMouseDown(e, node.id)}
-                    onAddNode={handleAddNode}
-                    isSelected={selectedNodeId === node.id}
-                    onUpdateOperation={handleUpdateOperation}
-                  />
-                ))}
-              </div>
-            </main>
-          </SidebarInset>
+              {nodes.map((node) => (
+                <Node
+                  key={node.id}
+                  {...node}
+                  nodes={nodes}
+                  onSelect={() => handleNodeSelect(node.id)}
+                  onConfigOpen={() => handleOpenConfig(node.id)}
+                  onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
+                  onMouseUp={(e) => handleNodeMouseUp(e, node.id)}
+                  onPortMouseDown={(e) => handlePortMouseDown(e, node.id)}
+                  onAddNode={handleAddNode}
+                  isSelected={selectedNodeId === node.id}
+                  onUpdateOperation={handleUpdateOperation}
+                />
+              ))}
+            </div>
+          </main>
         </div>
         <NodeConfigurationPanel
           key={selectedNodeId}
@@ -691,6 +687,5 @@ export default function DataFlowCanvas() {
             />
         )}
       </div>
-    </SidebarProvider>
   );
 }

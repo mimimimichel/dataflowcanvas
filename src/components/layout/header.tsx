@@ -11,7 +11,6 @@ import { PipelineVersion } from '@/lib/pipeline-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { SidebarTrigger } from '../ui/sidebar';
 
 interface HeaderProps {
   versions: PipelineVersion[];
@@ -95,9 +94,8 @@ const Header: React.FC<HeaderProps> = ({ versions, activeVersionId, onVersionCha
   const activeVersion = versions.find(v => v.id === activeVersionId);
 
   return (
-    <header className="relative flex h-16 items-center justify-between border-b bg-card px-4 md:px-6 shrink-0">
+    <header className="flex h-16 items-center justify-between border-b bg-card px-4 md:px-6 shrink-0">
       <div className="flex items-center gap-4">
-        <SidebarTrigger />
         <GitBranch className="h-7 w-7 text-primary" />
         <h1 className="text-xl font-semibold text-foreground">DataFlow Canvas</h1>
         <div className="flex items-center gap-1">
@@ -149,5 +147,3 @@ const Header: React.FC<HeaderProps> = ({ versions, activeVersionId, onVersionCha
 };
 
 export default Header;
-
-    
