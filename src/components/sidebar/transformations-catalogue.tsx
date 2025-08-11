@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { Sidebar, SidebarHeader, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
 import { Input } from '@/components/ui/input';
 import { transformations, TransformationItem } from '@/lib/pipeline-data';
-import { Search } from 'lucide-react';
+import { Search, EyeOff } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface TransformationsCatalogueProps {
   onAddNode: (item: TransformationItem, position: { x: number; y: number }) => void;
@@ -14,13 +14,28 @@ const DraggableSidebarMenuButton: React.FC<{item: TransformationItem, children: 
         e.dataTransfer.setData('application/json', JSON.stringify(item));
     };
 
-    return (
+    const button = (
         <div draggable onDragStart={handleDragStart}>
             <SidebarMenuButton className="cursor-grab">
                 {children}
             </SidebarMenuButton>
         </div>
     );
+
+    if (item.category) {
+        return (
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>{button}</TooltipTrigger>
+                    <TooltipContent side="right" align="center">
+                        <p>{item.category}</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        );
+    }
+    
+    return button;
 };
 
 const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ onAddNode }) => {
@@ -44,19 +59,23 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ onA
                     </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarGroup>
-             <SidebarGroup>
-                <SidebarGroupLabel>Transformations</SidebarGroupLabel>
-                 <SidebarMenu>
-                    {transformations.transform.map((item) => (
-                        <SidebarMenuItem key={item.name}>
-                            <DraggableSidebarMenuButton item={{...item, type: 'transformation'}}>
-                                <item.icon />
-                                {item.name}
-                            </DraggableSidebarMenuButton>
-                        </SidebarMenuItem>
-                    ))}
-                </SidebarMenu>
-            </SidebarGroup>
+            
+            {transformations.categories.map(category => (
+                 <SidebarGroup key={category.name}>
+                    <SidebarGroupLabel>{category.name}</SidebarGroupLabel>
+                     <SidebarMenu>
+                        {category.items.map((item) => (
+                            <SidebarMenuItem key={item.name}>
+                                <DraggableSidebarMenuButton item={{...item, type: 'transformation', category: category.name}}>
+                                    <item.icon />
+                                    {item.name}
+                                </DraggableSidebarMenuButton>
+                            </SidebarMenuItem>
+                        ))}
+                    </SidebarMenu>
+                </SidebarGroup>
+            ))}
+           
             <SidebarGroup>
                 <SidebarGroupLabel>Destinations</SidebarGroupLabel>
                  <SidebarMenu>
@@ -74,3 +93,5 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ onA
 };
 
 export default TransformationsCatalogue;
+
+    
