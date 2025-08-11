@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { cn } from '@/lib/utils';
 
@@ -13,16 +14,14 @@ interface ConnectorProps {
 }
 
 const Connector: React.FC<ConnectorProps> = ({ from, to, className }) => {
-  const padding = 10;
-  const fromWithNodeOffset = { x: from.x + 180, y: from.y + 40 }; // width of node + padding
-  const toWithNodeOffset = { x: to.x - padding, y: to.y + 40 }; // padding
+  const fromWithNodeOffset = { x: from.x + 208, y: from.y + 48 }; // width of node
+  const toWithNodeOffset = { x: to.x, y: to.y + 48 };
 
   const path = `M ${fromWithNodeOffset.x} ${fromWithNodeOffset.y} C ${fromWithNodeOffset.x + 50} ${fromWithNodeOffset.y} ${toWithNodeOffset.x - 50} ${toWithNodeOffset.y} ${toWithNodeOffset.x} ${toWithNodeOffset.y}`;
   
   return (
     <svg
-      className={cn('absolute top-0 left-0 w-full h-full pointer-events-none', className)}
-      style={{ overflow: 'visible' }}
+      className={cn('absolute top-0 left-0 w-[1px] h-[1px] pointer-events-none overflow-visible', className)}
     >
       <path
         d={path}
