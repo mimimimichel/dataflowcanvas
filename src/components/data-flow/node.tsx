@@ -171,7 +171,10 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
         <Button 
             variant="ghost" 
             size="icon" 
-            className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100"
+            className={cn(
+                "absolute h-7 w-7 opacity-0 group-hover:opacity-100",
+                isExpanded ? "top-1 right-1" : "bottom-1 right-9"
+            )}
             onClick={handleConfigClick}
         >
             <SlidersHorizontal className="w-4 h-4" />
