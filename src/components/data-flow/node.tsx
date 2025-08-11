@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils';
 import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal } from 'lucide-react';
 import Port from './port';
 import { TransformationItem, PipelineNode, Field } from '@/lib/pipeline-data';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 export type NodeType = 'source' | 'transformation' | 'destination' | 'dataset';
 
@@ -34,7 +33,7 @@ const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
         return <p className="text-xs text-muted-foreground text-center p-2">No fields defined</p>;
     }
     return (
-        <ScrollArea className="h-24 p-2 bg-muted rounded-md">
+        <div className="p-2 bg-muted rounded-md">
             <div className="space-y-1">
                 {fields.map(field => (
                     <div key={field.name} className="flex justify-between items-center text-xs">
@@ -43,7 +42,7 @@ const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
                     </div>
                 ))}
             </div>
-        </ScrollArea>
+        </div>
     );
 };
 
