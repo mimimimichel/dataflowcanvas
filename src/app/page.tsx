@@ -26,6 +26,7 @@ export default function DataFlowCanvas() {
 
   const draggingNodeIdRef = useRef<string | null>(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
+  const isConnectingRef = useRef(false);
 
   const handleNodeClick = (id: string) => {
     setSelectedNodeId(id);
@@ -50,13 +51,29 @@ export default function DataFlowCanvas() {
 
   const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
     e.stopPropagation();
-    draggingNodeIdRef.current = nodeId;
     const node = nodes.find(n => n.id === nodeId);
-    if(node && canvasRef.current) {
-        dragOffsetRef.current = {
-            x: e.clientX / zoom - node.position.x,
-            y: e.clientY / zoom - node.position.y,
-        };
+    if (!node) return;
+
+    if (e.shiftKey || (e.target as HTMLElement).closest('[data-port]')) {
+      isConnectingRef.current = true;
+      if (!canvasRef.current) return;
+        const canvasRect = canvasRef.current.getBoundingClientRect();
+        setNewConnector({ 
+            from: nodeId, 
+            to: { 
+                x: (e.clientX - canvasRect.left - pan.x) / zoom,
+                y: (e.clientY - canvasRect.top - pan.y) / zoom,
+            } 
+        });
+
+    } else {
+        draggingNodeIdRef.current = nodeId;
+        if(canvasRef.current) {
+            dragOffsetRef.current = {
+                x: e.clientX / zoom - node.position.x,
+                y: e.clientY / zoom - node.position.y,
+            };
+        }
     }
   };
   
@@ -74,7 +91,7 @@ export default function DataFlowCanvas() {
       const newX = e.clientX / zoom - dragOffsetRef.current.x;
       const newY = e.clientY / zoom - dragOffsetRef.current.y;
       setNodes(prevNodes => prevNodes.map(n => n.id === nodeId ? { ...n, position: { x: newX, y: newY } } : n));
-    } else if (newConnector) {
+    } else if (isConnectingRef.current && newConnector) {
       if (!canvasRef.current) return;
       const canvasRect = canvasRef.current.getBoundingClientRect();
       setNewConnector({
@@ -94,20 +111,16 @@ export default function DataFlowCanvas() {
   const handleMouseUp = (e: React.MouseEvent) => {
     isPanningRef.current = false;
     draggingNodeIdRef.current = null;
+    isConnectingRef.current = false;
+    setNewConnector(null);
     if (canvasRef.current) {
       canvasRef.current.style.cursor = 'grab';
     }
-    setNewConnector(null);
   };
   
-  const handlePortMouseDown = (e: React.MouseEvent, nodeId: string) => {
+  const handleNodeMouseUp = (e: React.MouseEvent, toNodeId: string) => {
     e.stopPropagation();
-    setNewConnector({ from: nodeId, to: { x: 0, y: 0 } });
-  }
-
-  const handlePortMouseUp = (e: React.MouseEvent, toNodeId: string) => {
-    e.stopPropagation();
-    if (newConnector && newConnector.from !== toNodeId) {
+    if (isConnectingRef.current && newConnector && newConnector.from !== toNodeId) {
       const newConn = { from: newConnector.from, to: toNodeId };
       setConnectors(prev => {
         if (prev.some(c => c.from === newConn.from && c.to === newConn.to)) {
@@ -116,6 +129,7 @@ export default function DataFlowCanvas() {
         return [...prev, newConn];
       });
     }
+    isConnectingRef.current = false;
     setNewConnector(null);
   }
 
@@ -134,6 +148,7 @@ export default function DataFlowCanvas() {
   };
 
   const handleWheel = (e: React.WheelEvent) => {
+    if (e.target !== canvasRef.current) return;
     e.preventDefault();
     const zoomFactor = 1.1;
     const newZoom = e.deltaY < 0 ? zoom * zoomFactor : zoom / zoomFactor;
@@ -182,8 +197,7 @@ export default function DataFlowCanvas() {
                   {...node}
                   onClick={() => handleNodeClick(node.id)}
                   onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
-                  onPortMouseDown={(e) => handlePortMouseDown(e, node.id)}
-                  onPortMouseUp={(e) => handlePortMouseUp(e, node.id)}
+                  onMouseUp={(e) => handleNodeMouseUp(e, node.id)}
                   isSelected={selectedNodeId === node.id}
                 />
               ))}

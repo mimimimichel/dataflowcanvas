@@ -20,8 +20,7 @@ interface NodeProps {
   position: { x: number; y: number };
   onClick: () => void;
   onMouseDown: (event: React.MouseEvent) => void;
-  onPortMouseDown: (event: React.MouseEvent) => void;
-  onPortMouseUp: (event: React.MouseEvent) => void;
+  onMouseUp: (event: React.MouseEvent) => void;
   isSelected: boolean;
 }
 
@@ -37,7 +36,7 @@ const statusConfig: Record<NodeStatus, { icon: Icon; color: string; text: string
   error: { icon: XCircle, color: 'text-red-500', text: 'Error' },
 };
 
-const Node: React.FC<NodeProps> = ({ name, type, status, quality, position, onClick, onMouseDown, isSelected, onPortMouseDown, onPortMouseUp }) => {
+const Node: React.FC<NodeProps> = ({ name, type, status, quality, position, onClick, onMouseDown, onMouseUp, isSelected }) => {
   const TypeIcon = typeConfig[type].icon;
   const StatusIcon = statusConfig[status].icon;
   
@@ -47,6 +46,7 @@ const Node: React.FC<NodeProps> = ({ name, type, status, quality, position, onCl
       style={{ top: position.y, left: position.x }}
       onClick={onClick}
       onMouseDown={onMouseDown}
+      onMouseUp={onMouseUp}
     >
       <Card
         className={cn(
@@ -56,8 +56,7 @@ const Node: React.FC<NodeProps> = ({ name, type, status, quality, position, onCl
       >
         {type !== 'source' && (
           <Port 
-            type="in" 
-            onMouseUp={onPortMouseUp} 
+            type="in"
           />
         )}
         <CardHeader className="p-3">
@@ -84,8 +83,7 @@ const Node: React.FC<NodeProps> = ({ name, type, status, quality, position, onCl
         </CardContent>
         {type !== 'destination' && (
           <Port 
-            type="out" 
-            onMouseDown={onPortMouseDown}
+            type="out"
           />
         )}
       </Card>

@@ -11,6 +11,7 @@ const Port: React.FC<PortProps> = ({ type, ...props }) => {
   return (
     <div
       {...props}
+      data-port="true"
       onMouseDown={(e) => {
         e.stopPropagation();
         if (props.onMouseDown) props.onMouseDown(e);
