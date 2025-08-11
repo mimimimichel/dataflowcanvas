@@ -1,9 +1,11 @@
+
 import React from 'react';
 import { Sidebar, SidebarHeader, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
 import { Input } from '@/components/ui/input';
 import { transformations, TransformationItem } from '@/lib/pipeline-data';
-import { Search, EyeOff } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 interface TransformationsCatalogueProps {
   onAddNode: (item: TransformationItem, position: { x: number; y: number }) => void;
@@ -15,8 +17,8 @@ const DraggableSidebarMenuButton: React.FC<{item: TransformationItem, children: 
     };
 
     const button = (
-        <div draggable onDragStart={handleDragStart}>
-            <SidebarMenuButton className="cursor-grab">
+        <div draggable onDragStart={handleDragStart} className="w-full">
+            <SidebarMenuButton className="cursor-grab w-full justify-start">
                 {children}
             </SidebarMenuButton>
         </div>
@@ -47,8 +49,8 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ onA
                 <Input placeholder="Search transformations..." className="pl-8" />
             </div>
         </SidebarHeader>
-        <SidebarContent>
-            <SidebarGroup>
+        <SidebarContent className="p-0">
+            <SidebarGroup className="p-2">
                 <SidebarGroupLabel>Sources</SidebarGroupLabel>
                  <SidebarMenu>
                     <SidebarMenuItem>
@@ -60,23 +62,29 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ onA
                 </SidebarMenu>
             </SidebarGroup>
             
-            {transformations.categories.map(category => (
-                 <SidebarGroup key={category.name}>
-                    <SidebarGroupLabel>{category.name}</SidebarGroupLabel>
-                     <SidebarMenu>
-                        {category.items.map((item) => (
-                            <SidebarMenuItem key={item.name}>
-                                <DraggableSidebarMenuButton item={{...item, type: 'transformation', category: category.name}}>
-                                    <item.icon />
-                                    {item.name}
-                                </DraggableSidebarMenuButton>
-                            </SidebarMenuItem>
-                        ))}
-                    </SidebarMenu>
-                </SidebarGroup>
-            ))}
+            <Accordion type="multiple" className="px-2 w-full">
+                {transformations.categories.map(category => (
+                    <AccordionItem value={category.name} key={category.name} className="border-none">
+                        <AccordionTrigger className="p-2 text-xs font-medium text-sidebar-foreground/70 hover:no-underline hover:bg-muted rounded-md [&[data-state=open]>svg]:rotate-180">
+                            <span className="flex-1 text-left">{category.name}</span>
+                        </AccordionTrigger>
+                        <AccordionContent className="p-0 pl-2">
+                             <SidebarMenu className="py-2">
+                                {category.items.map((item) => (
+                                    <SidebarMenuItem key={item.name}>
+                                        <DraggableSidebarMenuButton item={{...item, type: 'transformation', category: category.name}}>
+                                            <item.icon />
+                                            {item.name}
+                                        </DraggableSidebarMenuButton>
+                                    </SidebarMenuItem>
+                                ))}
+                            </SidebarMenu>
+                        </AccordionContent>
+                    </AccordionItem>
+                ))}
+            </Accordion>
            
-            <SidebarGroup>
+            <SidebarGroup className="p-2">
                 <SidebarGroupLabel>Destinations</SidebarGroupLabel>
                  <SidebarMenu>
                     <SidebarMenuItem>
@@ -93,5 +101,3 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ onA
 };
 
 export default TransformationsCatalogue;
-
-    
