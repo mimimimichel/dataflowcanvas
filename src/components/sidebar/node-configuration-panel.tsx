@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { PipelineNode, Field, Operation, FilterOperation, JoinOperation, Connector, GroupByOperation, getJoinOutputFields } from '@/lib/pipeline-data';
+import { PipelineNode, Field, Operation, FilterOperation, JoinOperation, GroupByOperation, getJoinOutputFields } from '@/lib/pipeline-data';
 import { Trash2, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Table as UiTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -30,7 +30,6 @@ import GroupByOperationEditor from '@/components/operations/group-by-operation-e
 interface NodeConfigurationPanelProps {
   node: PipelineNode | undefined;
   nodes: PipelineNode[];
-  connectors: Connector[];
   isOpen: boolean;
   onClose: () => void;
   onSave: (nodeId: string, newConfig: Partial<PipelineNode>) => void;
@@ -102,32 +101,31 @@ const SchemaEditor: React.FC<{ fields: Field[], onFieldsChange: (fields: Field[]
   );
 };
 
-const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, nodes, connectors, isOpen, onClose, onSave, onDelete }) => {
+const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, nodes, isOpen, onClose, onSave, onDelete }) => {
   const { toast } = useToast();
-  const [currentNode, setCurrentNode] = useState<Partial<PipelineNode> | undefined>();
+  // draftNode holds local edits. It's initialized with the node prop.
+  const [draftNode, setDraftNode] = useState<Partial<PipelineNode> | undefined>(node);
 
+  // When the selected node changes externally, we reset the draft
   useEffect(() => {
-    if (node) {
-      // Create a deep copy to avoid direct state mutation
-      setCurrentNode(JSON.parse(JSON.stringify(node)));
-    }
+    setDraftNode(node);
   }, [node]);
 
   const sourceNodesForJoin = useMemo(() => {
-    if (!currentNode || currentNode.operation?.type !== 'join') return { left: undefined, right: undefined };
-    const joinOp = currentNode.operation as JoinOperation;
+    if (!draftNode || draftNode.operation?.type !== 'join') return { left: undefined, right: undefined };
+    const joinOp = draftNode.operation as JoinOperation;
     const left = nodes.find(n => n.id === joinOp.settings.leftNodeId);
     const right = nodes.find(n => n.id === joinOp.settings.rightNodeId);
     return { left, right };
-  }, [currentNode, nodes]);
+  }, [draftNode, nodes]);
 
-  if (!node || !currentNode) return null;
+  if (!node || !draftNode) return null;
 
   const handleSave = () => {
-    onSave(node.id, currentNode);
+    onSave(node.id, draftNode);
     toast({
       title: "Configuration Saved",
-      description: `Changes to "${currentNode.name}" have been saved.`
+      description: `Changes to "${draftNode.name || node.name}" have been saved.`
     });
     onClose();
   }
@@ -142,14 +140,18 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
   }
 
   const handleUpdate = (field: keyof PipelineNode, value: any) => {
-    setCurrentNode(prev => (prev ? { ...prev, [field]: value } : undefined));
+    setDraftNode(prev => (prev ? { ...prev, [field]: value } : undefined));
   };
   
   const handleOperationUpdate = (updatedOperation: Operation) => {
     const newConfig: Partial<PipelineNode> = { operation: updatedOperation };
 
+    // This logic should probably live in the main page state reducer, 
+    // but for now, we calculate it here for the draft state.
+    const effectiveInputFields = draftNode.inputFields || node.inputFields || [];
+
     if (updatedOperation.type === 'filter') {
-      newConfig.outputFields = currentNode.inputFields;
+      newConfig.outputFields = effectiveInputFields;
     } else if (updatedOperation.type === 'join') {
       const joinOp = updatedOperation as JoinOperation;
       const leftNode = nodes.find(n => n.id === joinOp.settings.leftNodeId);
@@ -157,29 +159,32 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
       if (leftNode && rightNode) {
         newConfig.outputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
       }
-    } else if (updatedOperation.type === 'group_by' && currentNode.inputFields) {
+    } else if (updatedOperation.type === 'group_by') {
       const groupOp = updatedOperation as GroupByOperation;
       const newOutputFields: Field[] = [];
       groupOp.settings.groupByFields.forEach(fieldName => {
-          const field = currentNode.inputFields!.find(f => f.name === fieldName);
+          const field = effectiveInputFields.find(f => f.name === fieldName);
           if(field) newOutputFields.push(field);
       });
       groupOp.settings.aggregations.forEach(agg => {
-          const originalField = currentNode.inputFields!.find(f => f.name === agg.field);
+          const originalField = effectiveInputFields.find(f => f.name === agg.field);
           newOutputFields.push({ name: agg.newName, type: originalField?.type || 'unknown' });
       });
       newConfig.outputFields = newOutputFields;
     }
     
-    setCurrentNode(prev => (prev ? { ...prev, ...newConfig } : undefined));
+    setDraftNode(prev => (prev ? { ...prev, ...newConfig } : undefined));
   }
   
   const renderConfigContent = () => {
-    switch(currentNode.type) {
+    // Use draftNode for displaying values, but fall back to node for initial render
+    const displayNode = draftNode || node;
+
+    switch(displayNode.type) {
       case 'source':
         return (
           <>
-             {currentNode.name === 'File Source' && (
+             {displayNode.name === 'File Source' && (
               <div className="space-y-4">
                 <div className="grid w-full items-center gap-1.5">
                   <Label htmlFor="file-path">File Path</Label>
@@ -193,21 +198,21 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
               </div>
             )}
             <h3 className="text-md font-medium mb-2">Output Schema</h3>
-            <SchemaEditor fields={currentNode.outputFields || []} onFieldsChange={(fields) => handleUpdate('outputFields', fields)} isEditable={true} />
+            <SchemaEditor fields={displayNode.outputFields || []} onFieldsChange={(fields) => handleUpdate('outputFields', fields)} isEditable={true} />
           </>
         );
       case 'transformation':
         const renderOperationEditor = () => {
-            if (!currentNode.operation) {
+            if (!displayNode.operation) {
                 return <p className="text-sm text-muted-foreground">No operation configured for this transformation.</p>;
             }
 
-            switch(currentNode.operation.type) {
+            switch(displayNode.operation.type) {
                 case 'filter':
                     return (
                         <FilterOperationEditor 
-                            operation={currentNode.operation as FilterOperation}
-                            inputFields={currentNode.inputFields || []}
+                            operation={displayNode.operation as FilterOperation}
+                            inputFields={displayNode.inputFields || []}
                             onUpdate={handleOperationUpdate}
                         />
                     );
@@ -215,7 +220,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                      if (sourceNodesForJoin.left && sourceNodesForJoin.right) {
                         return (
                             <JoinOperationEditor
-                                operation={currentNode.operation as JoinOperation}
+                                operation={displayNode.operation as JoinOperation}
                                 leftNode={sourceNodesForJoin.left}
                                 rightNode={sourceNodesForJoin.right}
                                 onUpdate={handleOperationUpdate}
@@ -226,20 +231,20 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                 case 'group_by':
                     return (
                         <GroupByOperationEditor
-                            operation={currentNode.operation as GroupByOperation}
-                            inputFields={currentNode.inputFields || []}
+                            operation={displayNode.operation as GroupByOperation}
+                            inputFields={displayNode.inputFields || []}
                             onUpdate={handleOperationUpdate}
                         />
                     );
                 default:
-                    return <p className="text-sm text-muted-foreground">Configuration for '{currentNode.operation.type}' is not yet available.</p>;
+                    return <p className="text-sm text-muted-foreground">Configuration for '{displayNode.operation.type}' is not yet available.</p>;
             }
         };
 
         return (
           <>
             <h3 className="text-md font-medium mb-2">Input Schema</h3>
-            <SchemaEditor fields={currentNode.inputFields || []} onFieldsChange={(fields) => handleUpdate('inputFields', fields)} isEditable={false} />
+            <SchemaEditor fields={displayNode.inputFields || []} onFieldsChange={(fields) => handleUpdate('inputFields', fields)} isEditable={false} />
             <Separator className="my-4"/>
             <h3 className="text-md font-medium mb-2">Transformation Operation</h3>
             {renderOperationEditor()}
@@ -247,7 +252,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
             <h3 className="text-md font-medium mb-2">Output Schema</h3>
              <p className="text-sm text-muted-foreground mb-2">The output schema is automatically determined by the operation.</p>
             <SchemaEditor 
-                fields={currentNode.outputFields || []} 
+                fields={displayNode.outputFields || []} 
                 onFieldsChange={(fields) => handleUpdate('outputFields', fields)} 
                 isEditable={false} 
             />
@@ -258,14 +263,14 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
           <>
             <h3 className="text-md font-medium mb-2">Dataset Schema</h3>
             <p className="text-sm text-muted-foreground mb-2">The schema is defined by its inputs. You can rename fields here.</p>
-            <SchemaEditor fields={currentNode.inputFields || []} onFieldsChange={(fields) => handleUpdate('inputFields', fields)} isEditable={true} />
+            <SchemaEditor fields={displayNode.inputFields || []} onFieldsChange={(fields) => handleUpdate('inputFields', fields)} isEditable={true} />
           </>
         );
       case 'destination':
         return (
           <>
             <h3 className="text-md font-medium mb-2">Input Schema</h3>
-            <SchemaEditor fields={currentNode.inputFields || []} onFieldsChange={(fields) => handleUpdate('inputFields', fields)} isEditable={false} />
+            <SchemaEditor fields={displayNode.inputFields || []} onFieldsChange={(fields) => handleUpdate('inputFields', fields)} isEditable={false} />
           </>
         );
       default:
@@ -277,7 +282,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="sm:max-w-lg w-full flex flex-col">
         <SheetHeader className="mb-4">
-          <SheetTitle className="text-xl">Configure: {currentNode.name}</SheetTitle>
+          <SheetTitle className="text-xl">Configure: {draftNode.name || node.name}</SheetTitle>
           <SheetDescription>
             Modify configurations, rules, and schemas for this node.
           </SheetDescription>
@@ -287,7 +292,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
           <div className="space-y-4">
             <div className="grid w-full items-center gap-1.5">
                 <Label htmlFor="node-name">Node Name</Label>
-                <Input type="text" id="node-name" value={currentNode.name} onChange={(e) => handleUpdate('name', e.target.value)} />
+                <Input type="text" id="node-name" value={draftNode.name || ''} onChange={(e) => handleUpdate('name', e.target.value)} />
             </div>
             <Separator className="my-4"/>
             {renderConfigContent()}
@@ -304,7 +309,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
                             This action cannot be undone. This will permanently delete the
-                            <strong> {currentNode.name} </strong> node and remove its connections.
+                            <strong> {draftNode.name || node.name} </strong> node and remove its connections.
                         </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>

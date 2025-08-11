@@ -223,10 +223,12 @@ export default function DataFlowCanvas() {
       setConnectors(prev => [...prev, { from: fromNodeId, to: toNodeId }]);
       setNodes(prevNodes => {
         const newNodes = [...prevNodes];
+        const fromNode = newNodes.find(n => n.id === fromNodeId);
         const toNodeIndex = newNodes.findIndex(n => n.id === toNodeId);
-        if (toNodeIndex === -1) return prevNodes;
 
-        const toNode = { ...newNodes[toNodeIndex] };
+        if (toNodeIndex === -1 || !fromNode) return prevNodes;
+
+        let toNode = { ...newNodes[toNodeIndex] };
         
         const currentInputFields = toNode.inputFields || [];
         const newFields = selectedFields.filter(sf => !currentInputFields.some(cif => cif.name === sf.name));
@@ -234,20 +236,19 @@ export default function DataFlowCanvas() {
         
         if (toNode.operation?.type === 'join') {
             const joinOp = { ...toNode.operation } as JoinOperation;
-            const fromNode = newNodes.find(n => n.id === fromNodeId);
-
-            if (fromNode) {
-                if (!joinOp.settings.leftNodeId) {
-                    joinOp.settings.leftNodeId = fromNode.id;
-                } else if (!joinOp.settings.rightNodeId) {
-                    joinOp.settings.rightNodeId = fromNode.id;
-                }
+            
+            // Assign to left or right node id
+            if (!joinOp.settings.leftNodeId) {
+                joinOp.settings.leftNodeId = fromNode.id;
+            } else if (!joinOp.settings.rightNodeId) {
+                joinOp.settings.rightNodeId = fromNode.id;
             }
             toNode.operation = joinOp;
 
             const leftNode = newNodes.find(n => n.id === joinOp.settings.leftNodeId);
             const rightNode = newNodes.find(n => n.id === joinOp.settings.rightNodeId);
-
+            
+            // Update input fields based on both potential sources
             toNode.inputFields = [...(leftNode?.outputFields || []), ...(rightNode?.outputFields || [])];
             
             if(leftNode && rightNode) {
@@ -308,46 +309,70 @@ export default function DataFlowCanvas() {
   };
   
   const handleNodeConfigChange = (nodeId: string, newConfig: Partial<PipelineNode>) => {
-    setNodes(prevNodes => prevNodes.map(n => {
-      if (n.id === nodeId) {
-        const updatedNode = { ...n, ...newConfig };
-        // For datasets, input and output schemas are the same
-        if (updatedNode.type === 'dataset') {
-          updatedNode.outputFields = updatedNode.inputFields;
-        }
-        // For filter operations, output schema is the same as input
-        if (updatedNode.operation?.type === 'filter') {
-          updatedNode.outputFields = updatedNode.inputFields;
-        }
-        // For join operation, output is combination of inputs
-        if (updatedNode.operation?.type === 'join') {
-            const joinOp = updatedNode.operation as JoinOperation;
-            const leftNode = nodes.find(ln => ln.id === joinOp.settings.leftNodeId);
-            const rightNode = nodes.find(rn => rn.id === joinOp.settings.rightNodeId);
-            if (leftNode && rightNode) {
-              updatedNode.outputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
-            }
-        }
-        
-        if (updatedNode.operation?.type === 'group_by') {
-            const groupOp = updatedNode.operation as GroupByOperation;
-            const newOutputFields: Field[] = [];
-            groupOp.settings.groupByFields.forEach(fieldName => {
-                const field = updatedNode.inputFields?.find(f => f.name === fieldName);
-                if(field) newOutputFields.push(field);
-            });
-            groupOp.settings.aggregations.forEach(agg => {
-                // This is simplified, in reality type would depend on agg type (e.g. count is int)
-                const originalField = updatedNode.inputFields?.find(f => f.name === agg.field);
-                newOutputFields.push({ name: agg.newName, type: originalField?.type || 'unknown' });
-            });
-            updatedNode.outputFields = newOutputFields;
-        }
+    setNodes(prevNodes => {
+      const updatedNodes = prevNodes.map(n => {
+        if (n.id === nodeId) {
+          const updatedNode = { ...n, ...newConfig };
+          // For datasets, input and output schemas are the same
+          if (updatedNode.type === 'dataset') {
+            updatedNode.outputFields = updatedNode.inputFields;
+          }
+          // For filter operations, output schema is the same as input
+          if (updatedNode.operation?.type === 'filter') {
+            updatedNode.outputFields = updatedNode.inputFields;
+          }
+          // For join operation, output is combination of inputs
+          if (updatedNode.operation?.type === 'join') {
+              const joinOp = updatedNode.operation as JoinOperation;
+              const leftNode = prevNodes.find(ln => ln.id === joinOp.settings.leftNodeId);
+              const rightNode = prevNodes.find(rn => rn.id === joinOp.settings.rightNodeId);
+              if (leftNode && rightNode) {
+                updatedNode.outputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
+              }
+          }
+          
+          if (updatedNode.operation?.type === 'group_by') {
+              const groupOp = updatedNode.operation as GroupByOperation;
+              const newOutputFields: Field[] = [];
+              groupOp.settings.groupByFields.forEach(fieldName => {
+                  const field = updatedNode.inputFields?.find(f => f.name === fieldName);
+                  if(field) newOutputFields.push(field);
+              });
+              groupOp.settings.aggregations.forEach(agg => {
+                  // This is simplified, in reality type would depend on agg type (e.g. count is int)
+                  const originalField = updatedNode.inputFields?.find(f => f.name === agg.field);
+                  newOutputFields.push({ name: agg.newName, type: originalField?.type || 'unknown' });
+              });
+              updatedNode.outputFields = newOutputFields;
+          }
 
-        return updatedNode;
+          return updatedNode;
+        }
+        return n;
+      });
+
+      // After a node is updated, we might need to update its downstream nodes
+      const downstreamNodesToUpdate = connectors
+        .filter(c => c.from === nodeId)
+        .map(c => c.to);
+
+      if (downstreamNodesToUpdate.length > 0) {
+        return updatedNodes.map(n => {
+          if (downstreamNodesToUpdate.includes(n.id)) {
+            // Re-calculate input fields for downstream nodes
+            const incomingConnectors = connectors.filter(c => c.to === n.id);
+            const inputFields = incomingConnectors.flatMap(c => {
+              const sourceNode = updatedNodes.find(un => un.id === c.from);
+              return sourceNode?.outputFields || [];
+            });
+            return { ...n, inputFields };
+          }
+          return n;
+        });
       }
-      return n;
-    }));
+
+      return updatedNodes;
+    });
   };
   
     const handleUpdateOperation = (nodeId: string, operation: Operation) => {
@@ -363,26 +388,37 @@ export default function DataFlowCanvas() {
     const nodeToDelete = nodes.find(n => n.id === nodeId);
     if (!nodeToDelete) return;
 
-    setNodes(prev => prev.filter(n => n.id !== nodeId));
-    
+    // Get connectors to and from the node being deleted
     const relatedConnectors = connectors.filter(c => c.from === nodeId || c.to === nodeId);
-    setConnectors(prev => prev.filter(c => c.from !== nodeId && c.to !== nodeId));
-    
-    relatedConnectors.forEach(conn => {
-        if (conn.from === nodeId) { // Deleting a source node, update downstream nodes
-            const downstreamNode = nodes.find(n => n.id === conn.to);
-            if (downstreamNode && downstreamNode.inputFields) {
-                 const sourceFields = nodeToDelete.outputFields?.map(f => f.name) || [];
-                 setNodes(prev => prev.map(n => {
-                     if (n.id === conn.to) {
-                         const remainingFields = n.inputFields?.filter(f => !sourceFields.includes(f.name))
-                         return {...n, inputFields: remainingFields, outputFields: n.type === 'dataset' ? remainingFields : n.outputFields };
-                     }
-                     return n;
-                 }));
+    const downstreamConnectors = relatedConnectors.filter(c => c.from === nodeId);
+
+    // Get the fields that will be removed from downstream nodes
+    const fieldsToRemove = new Set(nodeToDelete.outputFields?.map(f => f.name) || []);
+
+    // Update downstream nodes
+    const downstreamNodeIds = downstreamConnectors.map(c => c.to);
+    setNodes(prev => prev.map(n => {
+        if (downstreamNodeIds.includes(n.id)) {
+            let updatedNode = { ...n };
+            // Remove the fields from the deleted node
+            updatedNode.inputFields = updatedNode.inputFields?.filter(f => !fieldsToRemove.has(f.name));
+            
+            // If it's a join node, clear the corresponding source ID
+            if (updatedNode.operation?.type === 'join') {
+                const joinOp = { ...updatedNode.operation } as JoinOperation;
+                if (joinOp.settings.leftNodeId === nodeId) joinOp.settings.leftNodeId = '';
+                if (joinOp.settings.rightNodeId === nodeId) joinOp.settings.rightNodeId = '';
+                updatedNode.operation = joinOp;
             }
+
+            // TODO: Recalculate output fields for this downstream node
+            return updatedNode;
         }
-    });
+        return n;
+    }).filter(n => n.id !== nodeId)); // Finally, remove the node itself
+
+    // Remove all related connectors
+    setConnectors(prev => prev.filter(c => c.from !== nodeId && c.to !== nodeId));
 
     if(selectedNodeId === nodeId) {
       setSelectedNodeId(null);
@@ -394,16 +430,22 @@ export default function DataFlowCanvas() {
     setConnectors(prev => prev.filter(c => !(c.from === connector.from && c.to === connector.to)));
 
     const fromNode = nodes.find(n => n.id === connector.from);
+    const toNode = nodes.find(n => n.id === connector.to);
+
+    if (!fromNode || !toNode) return;
+
+    const fieldsToRemove = new Set(fromNode.outputFields?.map(f => f.name) || []);
     
     setNodes(prev => prev.map(n => {
       if (n.id === connector.to) {
         let updatedNode = {...n};
         
-        if (updatedNode.inputFields && fromNode?.outputFields) {
-            const fromNodeFieldNames = new Set(fromNode.outputFields.map(f => f.name));
-            updatedNode.inputFields = updatedNode.inputFields.filter(f => !fromNodeFieldNames.has(f.name));
+        // Remove input fields from the source node
+        if (updatedNode.inputFields) {
+            updatedNode.inputFields = updatedNode.inputFields.filter(f => !fieldsToRemove.has(f.name));
         }
 
+        // Handle schema updates based on node type
         if (updatedNode.type === 'dataset' || (updatedNode.operation?.type === 'filter')) {
             updatedNode.outputFields = updatedNode.inputFields;
         }
@@ -427,6 +469,7 @@ export default function DataFlowCanvas() {
               if (leftNode && rightNode) {
                 updatedNode.outputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
               } else {
+                // If one side is disconnected, output schema is the remaining side's output
                 updatedNode.outputFields = leftNode?.outputFields || rightNode?.outputFields || [];
               }
                updatedNode.operation = joinOp;
@@ -571,9 +614,9 @@ export default function DataFlowCanvas() {
           </main>
         </div>
         <NodeConfigurationPanel
+          key={selectedNodeId}
           node={selectedNode}
           nodes={nodes}
-          connectors={connectors}
           isOpen={isConfigPanelOpen}
           onClose={() => setIsConfigPanelOpen(false)}
           onSave={handleNodeConfigChange}
