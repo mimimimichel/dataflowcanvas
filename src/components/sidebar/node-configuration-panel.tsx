@@ -136,7 +136,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
   if (!node) return null;
 
   const handleSave = () => {
-    const newConfig: Partial<PipelineNode> = { name: nodeName, inputFields };
+    const newConfig: Partial<PipelineNode> = { name: nodeName };
     if (node.type === 'transformation') {
         newConfig.rule = rule;
         newConfig.outputFields = outputFields;
@@ -149,7 +149,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
       newConfig.outputFields = inputFields; // a dataset's output is its input
     }
      if (node.type === 'destination') {
-        // inputFields are managed by connections
+        newConfig.inputFields = inputFields;
     }
 
     onSave(node.id, newConfig);
@@ -174,6 +174,19 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
       case 'source':
         return (
           <>
+             {node.name === 'File Source' && (
+              <div className="space-y-4">
+                <div className="grid w-full items-center gap-1.5">
+                  <Label htmlFor="file-path">File Path</Label>
+                  <Input type="text" id="file-path" placeholder="/path/to/your/file.csv" />
+                </div>
+                <div className="grid w-full items-center gap-1.5">
+                  <Label htmlFor="file-type">File Type</Label>
+                  <Input type="text" id="file-type" placeholder="e.g., CSV, JSON, Parquet" />
+                </div>
+                <Separator/>
+              </div>
+            )}
             <h3 className="text-md font-medium mb-2">Output Schema</h3>
             <SchemaEditor fields={outputFields} onFieldsChange={setOutputFields} isEditable={true} />
           </>
@@ -278,3 +291,5 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
 };
 
 export default NodeConfigurationPanel;
+
+    
