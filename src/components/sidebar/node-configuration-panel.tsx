@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
-import { PipelineNode, Field } from '@/lib/pipeline-data';
+import { PipelineNode, Field, Operation, FilterOperation } from '@/lib/pipeline-data';
 import { Trash2, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Table as UiTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -23,6 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import FilterOperationEditor from '@/components/operations/filter-operation-editor';
 
 
 interface NodeConfigurationPanelProps {
@@ -101,7 +101,7 @@ const SchemaEditor: React.FC<{ fields: Field[], onFieldsChange: (fields: Field[]
 const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, isOpen, onClose, onSave, onDelete }) => {
   const { toast } = useToast();
   const [nodeName, setNodeName] = useState('');
-  const [rule, setRule] = useState('');
+  const [operation, setOperation] = useState<Operation | undefined>();
   const [outputFields, setOutputFields] = useState<Field[]>([]);
   const [inputFields, setInputFields] = useState<Field[]>([]);
 
@@ -109,7 +109,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
   useEffect(() => {
     if (node) {
       setNodeName(node.name);
-      setRule(node.rule || '');
+      setOperation(node.operation);
       setOutputFields(node.outputFields || []);
       setInputFields(node.inputFields || []);
     }
@@ -120,7 +120,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
   const handleSave = () => {
     const newConfig: Partial<PipelineNode> = { name: nodeName };
     if (node.type === 'transformation') {
-        newConfig.rule = rule;
+        newConfig.operation = operation;
         newConfig.outputFields = outputFields;
     }
     if (node.type === 'source') {
@@ -179,10 +179,20 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
             <h3 className="text-md font-medium mb-2">Input Schema</h3>
             <SchemaEditor fields={inputFields} onFieldsChange={setInputFields} isEditable={false} />
             <Separator className="my-4"/>
-            <div className="space-y-2">
-                <Label htmlFor="transform-rule">Transformation Rule (SQL-like)</Label>
-                <Textarea id="transform-rule" value={rule} onChange={e => setRule(e.target.value)} rows={6} />
-            </div>
+            <h3 className="text-md font-medium mb-2">Transformation Operation</h3>
+            {operation?.type === 'filter' && (
+              <FilterOperationEditor 
+                operation={operation as FilterOperation}
+                inputFields={inputFields}
+                onUpdate={(op) => setOperation(op)}
+              />
+            )}
+            {operation?.type === 'join' && (
+               <p className="text-sm text-muted-foreground">Join configuration is not yet available in this panel.</p>
+            )}
+            {!operation && (
+              <p className="text-sm text-muted-foreground">No operation configured for this transformation.</p>
+            )}
             <Separator className="my-4"/>
             <h3 className="text-md font-medium mb-2">Output Schema</h3>
              <p className="text-sm text-muted-foreground mb-2">Define the fields produced by this transformation.</p>

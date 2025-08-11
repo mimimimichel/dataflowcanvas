@@ -69,7 +69,6 @@ export default function DataFlowCanvas() {
       },
       inputFields: item.type === 'destination' || item.type === 'transformation' || item.type === 'dataset' ? [] : undefined,
       outputFields: item.type === 'source' || item.type === 'transformation' || item.type === 'dataset' ? [] : undefined,
-      rule: item.type === 'transformation' ? 'SELECT * FROM input' : '',
     };
     setNodes((prev) => [...prev, newNode]);
   }, [pan.x, pan.y, zoom]);

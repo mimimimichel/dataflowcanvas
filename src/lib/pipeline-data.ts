@@ -54,7 +54,6 @@ export interface PipelineNode {
   position: { x: number; y: number };
   inputFields?: Field[];
   outputFields?: Field[];
-  rule?: string; // Kept for advanced mode, but UI will prefer operations
   operation?: Operation;
 }
 
@@ -77,7 +76,6 @@ export const nodes: PipelineNode[] = [
     name: 'Filter Inactive', 
     type: 'transformation', 
     position: { x: 350, y: 50 },
-    rule: "SELECT * FROM input WHERE is_active = true",
     operation: {
         type: 'filter',
         settings: {
@@ -106,7 +104,6 @@ export const nodes: PipelineNode[] = [
     name: 'Join Orders', 
     type: 'transformation', 
     position: { x: 350, y: 250 },
-    rule: "SELECT *, o.order_id, o.amount FROM input c JOIN orders o ON c.id = o.customer_id",
     operation: {
         type: 'join',
         settings: {
@@ -141,7 +138,6 @@ export const nodes: PipelineNode[] = [
     name: 'Aggregate Spend', 
     type: 'transformation', 
     position: { x: 650, y: 150 },
-    rule: "SELECT customer_id, SUM(amount) as total_spend FROM input GROUP BY customer_id",
     inputFields: [
        { name: 'id', type: 'integer' },
       { name: 'first_name', type: 'string' },
