@@ -158,6 +158,7 @@ export const transformations = {
         {
             name: "TRANSFORMATIONS STRUCTURELLES",
             items: [
+                { name: 'Passe-plat (No-op)', icon: ArrowRightLeft },
                 { name: 'Pivot/Unpivot', icon: UnfoldVertical },
                 { name: 'Split/Merge colonnes', icon: Columns },
                 { name: 'Transposition', icon: ArrowRightLeft },
