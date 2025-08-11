@@ -1,3 +1,4 @@
+
 import type { Icon } from 'lucide-react';
 import { Database, Filter, Combine, BarChart3, DatabaseZap } from 'lucide-react';
 import type { NodeType, NodeStatus } from '@/components/data-flow/node';
@@ -31,6 +32,12 @@ export const connectors: Connector[] = [
   { from: 'transform-2', to: 'transform-3' },
   { from: 'transform-3', to: 'dest-1' },
 ];
+
+export interface TransformationItem {
+    name: string;
+    icon: Icon;
+    type: NodeType;
+}
 
 export const transformations = {
     source: { name: 'Database Source', icon: Database },

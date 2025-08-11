@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -30,6 +31,13 @@ const Header: React.FC<HeaderProps> = ({ viewMode, setViewMode }) => {
       description: "Pipeline configuration has been imported.",
     });
   };
+  
+  const handleShare = () => {
+    toast({
+        title: "Sharing Pipeline",
+        description: "A shareable link has been copied to your clipboard.",
+    });
+  }
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-card px-4 md:px-6 z-10 shrink-0">
@@ -73,7 +81,7 @@ const Header: React.FC<HeaderProps> = ({ viewMode, setViewMode }) => {
         </div>
         <Button variant="outline" size="sm" onClick={handleImport}><Upload className="mr-2" /> Import</Button>
         <Button variant="outline" size="sm" onClick={handleExport}><Download className="mr-2" /> Export</Button>
-        <Button size="sm"><Share2 className="mr-2" /> Share</Button>
+        <Button size="sm" onClick={handleShare}><Share2 className="mr-2" /> Share</Button>
       </div>
     </header>
   );

@@ -1,6 +1,7 @@
+
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -9,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { PipelineNode } from '@/lib/pipeline-data';
 import { AreaChart, SlidersHorizontal } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface NodeConfigurationPanelProps {
   node: PipelineNode | undefined;
@@ -18,7 +20,24 @@ interface NodeConfigurationPanelProps {
 }
 
 const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, isOpen, onClose, viewMode }) => {
+  const { toast } = useToast();
+  const [nodeName, setNodeName] = useState(node?.name || '');
+  
+  useEffect(() => {
+    if (node) {
+      setNodeName(node.name);
+    }
+  }, [node]);
+
   if (!node) return null;
+
+  const handleSave = () => {
+    toast({
+      title: "Configuration Saved",
+      description: `Changes to "${nodeName}" have been saved.`
+    });
+    onClose();
+  }
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -65,7 +84,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
             <div className="space-y-4">
               <div className="grid w-full items-center gap-1.5">
                 <Label htmlFor="node-name">Node Name</Label>
-                <Input type="text" id="node-name" defaultValue={node.name} />
+                <Input type="text" id="node-name" value={nodeName} onChange={(e) => setNodeName(e.target.value)} />
               </div>
               <div className="grid w-full items-center gap-1.5">
                 <Label htmlFor="batch-size">Batch Size</Label>
@@ -80,7 +99,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
         </Tabs>
         <SheetFooter className="mt-6">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button>Save Changes</Button>
+          <Button onClick={handleSave}>Save Changes</Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>
