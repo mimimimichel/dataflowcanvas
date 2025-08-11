@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Database, Cog, DatabaseZap, CheckCircle2, AlertTriangle, XCircle, Icon } from 'lucide-react';
+import Port from './port';
 
 export type NodeType = 'source' | 'transformation' | 'destination';
 export type NodeStatus = 'healthy' | 'warning' | 'error';
@@ -19,6 +20,8 @@ interface NodeProps {
   position: { x: number; y: number };
   onClick: () => void;
   onMouseDown: (event: React.MouseEvent) => void;
+  onPortMouseDown: (event: React.MouseEvent) => void;
+  onPortMouseUp: (event: React.MouseEvent) => void;
   isSelected: boolean;
 }
 
@@ -34,23 +37,29 @@ const statusConfig: Record<NodeStatus, { icon: Icon; color: string; text: string
   error: { icon: XCircle, color: 'text-red-500', text: 'Error' },
 };
 
-const Node: React.FC<NodeProps> = ({ name, type, status, quality, position, onClick, onMouseDown, isSelected }) => {
+const Node: React.FC<NodeProps> = ({ name, type, status, quality, position, onClick, onMouseDown, isSelected, onPortMouseDown, onPortMouseUp }) => {
   const TypeIcon = typeConfig[type].icon;
   const StatusIcon = statusConfig[status].icon;
   
   return (
     <div
-      className="absolute transition-all duration-300"
+      className="absolute transition-all duration-300 group"
       style={{ top: position.y, left: position.x }}
       onClick={onClick}
       onMouseDown={onMouseDown}
     >
       <Card
         className={cn(
-          'w-52 h-24 shadow-lg hover:shadow-xl transition-shadow cursor-grab active:cursor-grabbing border-2',
+          'w-52 h-24 shadow-lg hover:shadow-xl transition-shadow cursor-grab active:cursor-grabbing border-2 relative',
           isSelected ? 'border-primary shadow-2xl scale-105' : 'border-transparent'
         )}
       >
+        {type !== 'source' && (
+          <Port 
+            type="in" 
+            onMouseUp={onPortMouseUp} 
+          />
+        )}
         <CardHeader className="p-3">
           <div className="flex items-center gap-3">
             <div className={cn('p-2 rounded-md', typeConfig[type].color)}>
@@ -73,6 +82,12 @@ const Node: React.FC<NodeProps> = ({ name, type, status, quality, position, onCl
                 </Badge>
             </div>
         </CardContent>
+        {type !== 'destination' && (
+          <Port 
+            type="out" 
+            onMouseDown={onPortMouseDown}
+          />
+        )}
       </Card>
     </div>
   );

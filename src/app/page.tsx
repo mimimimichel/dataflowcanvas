@@ -7,16 +7,17 @@ import TransformationsCatalogue from '@/components/sidebar/transformations-catal
 import NodeConfigurationPanel from '@/components/sidebar/node-configuration-panel';
 import Node from '@/components/data-flow/node';
 import Connector from '@/components/data-flow/connector';
-import { nodes as initialNodes, connectors as initialConnectors, PipelineNode, TransformationItem } from '@/lib/pipeline-data';
+import { nodes as initialNodes, connectors as initialConnectors, PipelineNode, TransformationItem, Connector as ConnectorType } from '@/lib/pipeline-data';
 import { SidebarProvider } from '@/components/ui/sidebar';
 
 export default function DataFlowCanvas() {
   const [nodes, setNodes] = useState<PipelineNode[]>(initialNodes);
-  const [connectors, setConnectors] = useState(initialConnectors);
+  const [connectors, setConnectors] = useState<ConnectorType[]>(initialConnectors);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'consumer' | 'engineer'>('consumer');
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
+  const [newConnector, setNewConnector] = useState<{ from: string; to: { x: number; y: number } } | null>(null);
   
   const canvasRef = useRef<HTMLDivElement>(null);
   
@@ -52,7 +53,6 @@ export default function DataFlowCanvas() {
     draggingNodeIdRef.current = nodeId;
     const node = nodes.find(n => n.id === nodeId);
     if(node && canvasRef.current) {
-        const canvasRect = canvasRef.current.getBoundingClientRect();
         dragOffsetRef.current = {
             x: e.clientX / zoom - node.position.x,
             y: e.clientY / zoom - node.position.y,
@@ -74,6 +74,16 @@ export default function DataFlowCanvas() {
       const newX = e.clientX / zoom - dragOffsetRef.current.x;
       const newY = e.clientY / zoom - dragOffsetRef.current.y;
       setNodes(prevNodes => prevNodes.map(n => n.id === nodeId ? { ...n, position: { x: newX, y: newY } } : n));
+    } else if (newConnector) {
+      if (!canvasRef.current) return;
+      const canvasRect = canvasRef.current.getBoundingClientRect();
+      setNewConnector({
+        ...newConnector,
+        to: {
+          x: (e.clientX - canvasRect.left - pan.x) / zoom,
+          y: (e.clientY - canvasRect.top - pan.y) / zoom,
+        }
+      });
     } else if (isPanningRef.current) {
       const newX = e.clientX - panStartRef.current.x;
       const newY = e.clientY - panStartRef.current.y;
@@ -81,13 +91,27 @@ export default function DataFlowCanvas() {
     }
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = (e: React.MouseEvent) => {
     isPanningRef.current = false;
     draggingNodeIdRef.current = null;
     if (canvasRef.current) {
       canvasRef.current.style.cursor = 'grab';
     }
+    setNewConnector(null);
   };
+  
+  const handlePortMouseDown = (e: React.MouseEvent, nodeId: string) => {
+    e.stopPropagation();
+    setNewConnector({ from: nodeId, to: { x: 0, y: 0 } });
+  }
+
+  const handlePortMouseUp = (e: React.MouseEvent, toNodeId: string) => {
+    e.stopPropagation();
+    if (newConnector && newConnector.from !== toNodeId) {
+      setConnectors(prev => [...prev, { from: newConnector.from, to: toNodeId }]);
+    }
+    setNewConnector(null);
+  }
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -141,12 +165,19 @@ export default function DataFlowCanvas() {
                 if (!fromNode || !toNode) return null;
                 return <Connector key={`${connector.from}-${connector.to}`} from={fromNode.position} to={toNode.position} />;
               })}
+              {newConnector && (() => {
+                const fromNode = nodes.find(n => n.id === newConnector.from);
+                if (!fromNode) return null;
+                return <Connector from={fromNode.position} to={newConnector.to} className="opacity-50" />;
+              })()}
               {nodes.map((node) => (
                 <Node
                   key={node.id}
                   {...node}
                   onClick={() => handleNodeClick(node.id)}
                   onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
+                  onPortMouseDown={(e) => handlePortMouseDown(e, node.id)}
+                  onPortMouseUp={(e) => handlePortMouseUp(e, node.id)}
                   isSelected={selectedNodeId === node.id}
                 />
               ))}
