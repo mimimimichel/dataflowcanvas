@@ -10,12 +10,19 @@ import Connector from '@/components/data-flow/connector';
 import { nodes as initialNodes, connectors as initialConnectors, PipelineNode, TransformationItem, Connector as ConnectorType, Field } from '@/lib/pipeline-data';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
+import ConnectionFieldsModal from '@/components/data-flow/connection-fields-modal';
+
+type SvgDimensions = {
+  width: number | string;
+  height: number | string;
+  top: number;
+  left: number;
+};
 
 export default function DataFlowCanvas() {
   const [nodes, setNodes] = useState<PipelineNode[]>(initialNodes);
   const [connectors, setConnectors] = useState<ConnectorType[]>(initialConnectors);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'consumer' | 'engineer'>('consumer');
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [newConnector, setNewConnector] = useState<{ from: string; to: { x: number; y: number } } | null>(null);
@@ -29,6 +36,9 @@ export default function DataFlowCanvas() {
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const isConnectingRef = useRef(false);
 
+  const [connectionForFields, setConnectionForFields] = useState<{fromNodeId: string, toNodeId: string} | null>(null);
+  const [svgDimensions, setSvgDimensions] = useState<SvgDimensions>({ width: '100%', height: '100%', top: 0, left: 0 });
+
   const handleNodeClick = (id: string) => {
     setSelectedNodeId(id);
   };
@@ -40,13 +50,12 @@ export default function DataFlowCanvas() {
       id: `${item.type}-${Date.now()}`,
       name: item.name,
       type: item.type,
-      quality: 100,
       position: {
         x: (position.x - canvasRect.left - pan.x) / zoom,
         y: (position.y - canvasRect.top - pan.y) / zoom,
       },
-      inputFields: item.type === 'destination' ? [{name: 'new_field', type: 'string'}] : [],
-      outputFields: item.type === 'source' ? [{name: 'new_field', type: 'string'}] : [],
+      inputFields: item.type === 'destination' || item.type === 'transformation' ? [] : undefined,
+      outputFields: item.type === 'source' || item.type === 'transformation' ? [{name: 'new_field', type: 'string'}] : undefined,
       rule: item.type === 'transformation' ? 'SELECT * FROM input' : '',
     };
     setNodes((prev) => [...prev, newNode]);
@@ -69,7 +78,7 @@ export default function DataFlowCanvas() {
   const handlePortMouseDown = (e: React.MouseEvent, nodeId: string) => {
     e.stopPropagation();
     isConnectingRef.current = true;
-    draggingNodeIdRef.current = null; // Prevent node dragging when connecting
+    draggingNodeIdRef.current = null; 
     if (!canvasRef.current) return;
       const canvasRect = canvasRef.current.getBoundingClientRect();
       setNewConnector({ 
@@ -146,12 +155,11 @@ export default function DataFlowCanvas() {
       
       if (fromNode && toNode && fromNode.type !== 'destination' && toNode.type !== 'source') {
         const newConn = { from: newConnector.from, to: toNodeId };
-        setConnectors(prev => {
-          if (prev.some(c => c.from === newConn.from && c.to === newConn.to)) {
-            return prev;
-          }
-          return [...prev, newConn];
-        });
+        const alreadyExists = connectors.some(c => c.from === newConn.from && c.to === newConn.to);
+        
+        if (!alreadyExists) {
+            setConnectionForFields({ fromNodeId: fromNode.id, toNodeId: toNode.id });
+        }
       }
     }
     
@@ -159,6 +167,19 @@ export default function DataFlowCanvas() {
     setNewConnector(null);
     draggingNodeIdRef.current = null;
   }
+
+  const handleSaveConnectionFields = (fromNodeId: string, toNodeId: string, selectedFields: Field[]) => {
+    setConnectors(prev => [...prev, { from: fromNodeId, to: toNodeId }]);
+    setNodes(prev => prev.map(node => {
+      if (node.id === toNodeId) {
+        const currentInputFields = node.inputFields || [];
+        const newFields = selectedFields.filter(sf => !currentInputFields.some(cif => cif.name === sf.name));
+        return { ...node, inputFields: [...currentInputFields, ...newFields] };
+      }
+      return node;
+    }));
+    setConnectionForFields(null);
+  };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -206,41 +227,42 @@ export default function DataFlowCanvas() {
   };
   
   const handleDeleteNode = (nodeId: string) => {
+    const nodeToDelete = nodes.find(n => n.id === nodeId);
+    if (!nodeToDelete) return;
+
     setNodes(prev => prev.filter(n => n.id !== nodeId));
+    
+    const relatedConnectors = connectors.filter(c => c.from === nodeId || c.to === nodeId);
     setConnectors(prev => prev.filter(c => c.from !== nodeId && c.to !== nodeId));
+    
+    relatedConnectors.forEach(conn => {
+        if (conn.from === nodeId) { // Deleting a node, update downstream nodes
+            const downstreamNode = nodes.find(n => n.id === conn.to);
+            if (downstreamNode && downstreamNode.inputFields) {
+                 const sourceFields = nodeToDelete.outputFields?.map(f => f.name) || [];
+                 setNodes(prev => prev.map(n => {
+                     if (n.id === conn.to) {
+                         return {...n, inputFields: n.inputFields?.filter(f => !sourceFields.includes(f.name))};
+                     }
+                     return n;
+                 }));
+            }
+        }
+    });
+
     setSelectedNodeId(null);
   };
   
   const selectedNode = useMemo(() => {
-    if (selectedNodeId) {
-      const node = nodes.find(n => n.id === selectedNodeId);
-      if (node && node.type === 'transformation') {
-        const incomingConnections = connectors.filter(c => c.to === selectedNodeId);
-        const inputFields: Field[] = [];
-        incomingConnections.forEach(conn => {
-          const sourceNode = nodes.find(n => n.id === conn.from);
-          if (sourceNode && sourceNode.outputFields) {
-            inputFields.push(...sourceNode.outputFields);
-          }
-        });
-        
-        const uniqueInputFields = Array.from(new Map(inputFields.map(item => [item.name, item])).values());
-        
-        const originalNode = nodes.find(n => n.id === selectedNodeId);
-        if (originalNode) {
-          const updatedNode = {...originalNode, inputFields: uniqueInputFields};
-           if (JSON.stringify(originalNode) !== JSON.stringify(updatedNode)) {
-             return updatedNode;
-           }
-        }
-      }
-      return node;
-    }
-    return undefined;
-  }, [nodes, connectors, selectedNodeId]);
+    if (!selectedNodeId) return undefined;
+    return nodes.find(n => n.id === selectedNodeId);
+  }, [nodes, selectedNodeId]);
 
-  const svgDimensions = useMemo(() => {
-    if (nodes.length === 0) return { width: '100%', height: '100%', top: 0, left: 0 };
+  useEffect(() => {
+    if (nodes.length === 0) {
+      setSvgDimensions({ width: '100%', height: '100%', top: 0, left: 0 });
+      return;
+    }
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     nodes.forEach(node => {
       minX = Math.min(minX, node.position.x);
@@ -248,15 +270,22 @@ export default function DataFlowCanvas() {
       maxX = Math.max(maxX, node.position.x + 208); // node width
       maxY = Math.max(maxY, node.position.y + 96);  // node height
     });
-    return { 
-      left: minX - 50,
-      top: minY - 50,
-      width: maxX - minX + 100, 
-      height: maxY - minY + 100
-    };
+    
+    const padding = 100;
+    const finalMinX = minX - padding;
+    const finalMinY = minY - padding;
+    const width = maxX - minX + (padding * 2);
+    const height = maxY - minY + (padding * 2);
+
+    setSvgDimensions({ 
+      left: finalMinX,
+      top: finalMinY,
+      width: Math.max(width, window.innerWidth), 
+      height: Math.max(height, window.innerHeight)
+    });
   }, [nodes]);
   
-    useEffect(() => {
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeId) {
         handleDeleteNode(selectedNodeId);
@@ -266,12 +295,14 @@ export default function DataFlowCanvas() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedNodeId]);
+  }, [selectedNodeId, handleDeleteNode]);
+
+  const connectionModalSourceNode = nodes.find(n => n.id === connectionForFields?.fromNodeId);
 
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full flex-col bg-background font-body">
-        <Header viewMode={viewMode} setViewMode={setViewMode} />
+        <Header />
         <div className="flex flex-1 overflow-hidden">
           <TransformationsCatalogue onAddNode={handleAddNode} />
           <main
@@ -343,9 +374,19 @@ export default function DataFlowCanvas() {
           onClose={() => setSelectedNodeId(null)}
           onSave={handleNodeConfigChange}
           onDelete={handleDeleteNode}
-          viewMode={viewMode}
         />
+        {connectionForFields && connectionModalSourceNode && (
+            <ConnectionFieldsModal
+                isOpen={!!connectionForFields}
+                fromNode={connectionModalSourceNode}
+                toNode={nodes.find(n => n.id === connectionForFields.toNodeId)!}
+                onClose={() => setConnectionForFields(null)}
+                onSave={handleSaveConnectionFields}
+            />
+        )}
       </div>
     </SidebarProvider>
   );
 }
+
+    

@@ -5,17 +5,10 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Upload, Download, Share2, Users, GitBranch } from 'lucide-react';
+import { Upload, Download, Share2, GitBranch } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-interface HeaderProps {
-  viewMode: 'consumer' | 'engineer';
-  setViewMode: (mode: 'consumer' | 'engineer') => void;
-}
-
-const Header: React.FC<HeaderProps> = ({ viewMode, setViewMode }) => {
+const Header: React.FC = () => {
   const { toast } = useToast();
 
   const handleExport = () => {
@@ -57,15 +50,6 @@ const Header: React.FC<HeaderProps> = ({ viewMode, setViewMode }) => {
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-            <Label htmlFor="view-mode" className="text-sm font-medium text-muted-foreground">Consumer</Label>
-            <Switch
-                id="view-mode"
-                checked={viewMode === 'engineer'}
-                onCheckedChange={(checked) => setViewMode(checked ? 'engineer' : 'consumer')}
-            />
-            <Label htmlFor="view-mode" className="text-sm font-medium">Engineer</Label>
-        </div>
         <div className="flex -space-x-2">
             <Avatar className="h-8 w-8 border-2 border-card">
                 <AvatarImage src="https://i.pravatar.cc/150?u=a042581f4e29026704d" />
@@ -88,3 +72,5 @@ const Header: React.FC<HeaderProps> = ({ viewMode, setViewMode }) => {
 };
 
 export default Header;
+
+    

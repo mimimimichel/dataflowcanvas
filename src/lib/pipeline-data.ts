@@ -1,3 +1,4 @@
+
 import type { Icon } from 'lucide-react';
 import { 
   Database, Filter, Combine, BarChart3, DatabaseZap, Trash2, GitCommit, 
@@ -19,7 +20,6 @@ export interface PipelineNode {
   id: string;
   name: string;
   type: NodeType;
-  quality: number;
   position: { x: number; y: number };
   inputFields?: Field[];
   outputFields?: Field[];
@@ -31,7 +31,6 @@ export const nodes: PipelineNode[] = [
     id: 'source-1', 
     name: 'Customer DB', 
     type: 'source', 
-    quality: 99, 
     position: { x: 50, y: 150 },
     outputFields: [
       { name: 'id', type: 'integer' },
@@ -45,32 +44,75 @@ export const nodes: PipelineNode[] = [
     id: 'transform-1', 
     name: 'Filter Inactive', 
     type: 'transformation', 
-    quality: 99, 
     position: { x: 350, y: 50 },
-    rule: "SELECT * FROM input WHERE is_active = true"
+    rule: "SELECT * FROM input WHERE is_active = true",
+    inputFields: [
+      { name: 'id', type: 'integer' },
+      { name: 'first_name', type: 'string' },
+      { name: 'last_name', type: 'string' },
+      { name: 'email', type: 'string' },
+      { name: 'is_active', type: 'boolean' },
+    ],
+    outputFields: [
+       { name: 'id', type: 'integer' },
+      { name: 'first_name', type: 'string' },
+      { name: 'last_name', type: 'string' },
+      { name: 'email', type: 'string' },
+      { name: 'is_active', type: 'boolean' },
+    ]
   },
   { 
     id: 'transform-2', 
     name: 'Join Orders', 
     type: 'transformation', 
-    quality: 92, 
     position: { x: 350, y: 250 },
-    rule: "SELECT *, o.order_id, o.amount FROM input c JOIN orders o ON c.id = o.customer_id"
+    rule: "SELECT *, o.order_id, o.amount FROM input c JOIN orders o ON c.id = o.customer_id",
+    inputFields: [
+      { name: 'id', type: 'integer' },
+      { name: 'first_name', type: 'string' },
+      { name: 'last_name', type: 'string' },
+      { name: 'email', type: 'string' },
+      { name: 'is_active', type: 'boolean' },
+    ],
+    outputFields: [
+      { name: 'id', type: 'integer' },
+      { name: 'first_name', type: 'string' },
+      { name: 'last_name', type: 'string' },
+      { name: 'email', type: 'string' },
+      { name: 'is_active', type: 'boolean' },
+      { name: 'order_id', type: 'integer' },
+      { name: 'amount', type: 'float' },
+    ]
   },
   { 
     id: 'transform-3', 
     name: 'Aggregate Spend', 
     type: 'transformation', 
-    quality: 92, 
     position: { x: 650, y: 150 },
-    rule: "SELECT customer_id, SUM(amount) as total_spend FROM input GROUP BY customer_id"
+    rule: "SELECT customer_id, SUM(amount) as total_spend FROM input GROUP BY customer_id",
+    inputFields: [
+       { name: 'id', type: 'integer' },
+      { name: 'first_name', type: 'string' },
+      { name: 'last_name', type: 'string' },
+      { name: 'email', type: 'string' },
+      { name: 'is_active', type: 'boolean' },
+      { name: 'order_id', type: 'integer' },
+      { name: 'amount', type: 'float' },
+    ],
+    outputFields: [
+        { name: 'customer_id', type: 'integer' },
+        { name: 'total_spend', type: 'float' },
+    ]
   },
   { 
     id: 'dest-1', 
     name: 'Data Warehouse', 
     type: 'destination', 
-    quality: 92, 
-    position: { x: 950, y: 150 } 
+    position: { x: 950, y: 150 },
+    inputFields: [
+        { name: 'customer_id', type: 'integer' },
+        { name: 'total_spend', type: 'float' },
+    ]
   },
 ];
 

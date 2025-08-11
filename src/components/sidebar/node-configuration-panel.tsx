@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { PipelineNode, Field } from '@/lib/pipeline-data';
-import { AreaChart, SlidersHorizontal, Table, Trash2, PlusCircle } from 'lucide-react';
+import { AreaChart, SlidersHorizontal, Trash2, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Table as UiTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -32,15 +32,10 @@ interface NodeConfigurationPanelProps {
   onClose: () => void;
   onSave: (nodeId: string, newConfig: Partial<PipelineNode>) => void;
   onDelete: (nodeId: string) => void;
-  viewMode: 'consumer' | 'engineer';
 }
 
 const StatsDisplay: React.FC<{ node: PipelineNode }> = ({ node }) => (
   <div className="space-y-4 text-sm mt-4">
-    <div className="flex justify-between">
-      <span className="text-muted-foreground">Data Quality Score:</span>
-      <span className="font-medium">{node.quality}%</span>
-    </div>
     <div className="flex justify-between">
       <span className="text-muted-foreground">Records Processed (24h):</span>
       <span className="font-medium">1,234,567</span>
@@ -82,7 +77,7 @@ const SchemaEditor: React.FC<{ fields: Field[], onFieldsChange: (fields: Field[]
           </TableRow>
         </TableHeader>
         <TableBody>
-          {fields.map((field, index) => (
+          {(fields || []).map((field, index) => (
             <TableRow key={index}>
               <TableCell>
                 <Input 
@@ -121,7 +116,7 @@ const SchemaEditor: React.FC<{ fields: Field[], onFieldsChange: (fields: Field[]
   );
 };
 
-const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, isOpen, onClose, onSave, onDelete, viewMode }) => {
+const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, isOpen, onClose, onSave, onDelete }) => {
   const { toast } = useToast();
   const [nodeName, setNodeName] = useState('');
   const [rule, setRule] = useState('');
@@ -144,12 +139,14 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
     const newConfig: Partial<PipelineNode> = { name: nodeName };
     if (node.type === 'transformation') {
         newConfig.rule = rule;
+        newConfig.outputFields = outputFields;
+        // inputFields are managed by connections, so we don't save them here
     }
-    if (node.type === 'source' || node.type === 'transformation') {
+    if (node.type === 'source') {
         newConfig.outputFields = outputFields;
     }
      if (node.type === 'destination') {
-        newConfig.inputFields = inputFields;
+        // inputFields are managed by connections
     }
 
     onSave(node.id, newConfig);
@@ -168,9 +165,6 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
     });
     onClose();
   }
-
-  const isSchemaEditable = node.type === 'source' || (node.type === 'destination' && viewMode === 'engineer');
-  const isRuleEditable = node.type === 'transformation' && viewMode === 'engineer';
   
   const renderConfigContent = () => {
     switch(node.type) {
@@ -178,30 +172,30 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
         return (
           <>
             <h3 className="text-md font-medium mb-2">Output Schema</h3>
-            <SchemaEditor fields={outputFields} onFieldsChange={setOutputFields} isEditable={viewMode === 'engineer'} />
+            <SchemaEditor fields={outputFields} onFieldsChange={setOutputFields} isEditable={true} />
           </>
         );
       case 'transformation':
         return (
           <>
-            <h3 className="text-md font-medium mb-2">Input Schema (Read-only)</h3>
-            <SchemaEditor fields={inputFields} onFieldsChange={() => {}} isEditable={false} />
+            <h3 className="text-md font-medium mb-2">Input Schema</h3>
+            <SchemaEditor fields={inputFields} onFieldsChange={setInputFields} isEditable={false} />
             <Separator className="my-4"/>
             <div className="space-y-2">
                 <Label htmlFor="transform-rule">Transformation Rule (SQL-like)</Label>
-                <Textarea id="transform-rule" value={rule} onChange={e => setRule(e.target.value)} rows={6} disabled={!isRuleEditable} />
+                <Textarea id="transform-rule" value={rule} onChange={e => setRule(e.target.value)} rows={6} />
             </div>
             <Separator className="my-4"/>
-            <h3 className="text-md font-medium mb-2">Output Schema (Inferred)</h3>
-             <p className="text-sm text-muted-foreground mb-2">The output schema is typically inferred by the system after running the transformation. You can manually define it if needed.</p>
-            <SchemaEditor fields={outputFields} onFieldsChange={setOutputFields} isEditable={viewMode === 'engineer'} />
+            <h3 className="text-md font-medium mb-2">Output Schema</h3>
+             <p className="text-sm text-muted-foreground mb-2">Define the fields produced by this transformation.</p>
+            <SchemaEditor fields={outputFields} onFieldsChange={setOutputFields} isEditable={true} />
           </>
         );
       case 'destination':
         return (
           <>
             <h3 className="text-md font-medium mb-2">Input Schema</h3>
-            <SchemaEditor fields={inputFields} onFieldsChange={setInputFields} isEditable={viewMode === 'engineer'} />
+            <SchemaEditor fields={inputFields} onFieldsChange={setInputFields} isEditable={false} />
           </>
         );
       default:
@@ -215,17 +209,15 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
         <SheetHeader className="mb-4">
           <SheetTitle className="text-xl">Configure: {node.name}</SheetTitle>
           <SheetDescription>
-            {viewMode === 'engineer'
-              ? 'Modify configurations, rules, and schemas for this node.'
-              : 'View aggregated statistics and schemas for this node.'}
+            Modify configurations, rules, and schemas for this node.
           </SheetDescription>
         </SheetHeader>
         <Separator />
         <div className="flex-1 overflow-y-auto pr-6 -mr-6">
-            <Tabs defaultValue={viewMode === 'engineer' ? 'config' : 'stats'} className="w-full mt-4">
+            <Tabs defaultValue='config' className="w-full mt-4">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="stats"><AreaChart className="mr-2"/> Statistics</TabsTrigger>
-                <TabsTrigger value="config" disabled={viewMode === 'consumer'}><SlidersHorizontal className="mr-2"/> Configuration</TabsTrigger>
+                <TabsTrigger value="config"><SlidersHorizontal className="mr-2"/> Configuration</TabsTrigger>
             </TabsList>
             <TabsContent value="stats">
                 <StatsDisplay node={node} />
@@ -234,7 +226,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
                 <div className="space-y-4">
                 <div className="grid w-full items-center gap-1.5">
                     <Label htmlFor="node-name">Node Name</Label>
-                    <Input type="text" id="node-name" value={nodeName} onChange={(e) => setNodeName(e.target.value)} disabled={viewMode === 'consumer'} />
+                    <Input type="text" id="node-name" value={nodeName} onChange={(e) => setNodeName(e.target.value)} />
                 </div>
                 <Separator className="my-4"/>
                 {renderConfigContent()}
@@ -246,7 +238,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
             <div className="flex justify-between w-full">
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button variant="destructive" disabled={viewMode === 'consumer'}><Trash2 className="mr-2"/> Delete Node</Button>
+                        <Button variant="destructive"><Trash2 className="mr-2"/> Delete Node</Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                         <AlertDialogHeader>
@@ -265,7 +257,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
 
                 <div className="flex gap-2">
                     <Button variant="outline" onClick={onClose}>Cancel</Button>
-                    <Button onClick={handleSave} disabled={viewMode === 'consumer'}>Save Changes</Button>
+                    <Button onClick={handleSave}>Save Changes</Button>
                 </div>
             </div>
         </SheetFooter>
@@ -275,3 +267,5 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, i
 };
 
 export default NodeConfigurationPanel;
+
+    
