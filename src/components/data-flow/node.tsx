@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal, GitCompare, Group as GroupIcon, ChevronDown } from 'lucide-react';
+import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal, GitCompare, Group as GroupIcon, ChevronDown, ArrowRightLeft } from 'lucide-react';
 import Port from './port';
 import { TransformationItem, PipelineNode, Field, Operation } from '@/lib/pipeline-data';
 import FilterOperation from '@/components/operations/filter-operation';
@@ -58,6 +58,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
     switch(op.type){
         case 'join': return GitCompare;
         case 'group_by': return GroupIcon;
+        case 'no_op': return ArrowRightLeft;
         default: return typeConfig[type].icon || Cog;
     }
   }
@@ -86,8 +87,10 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
                     return <JoinOperation operation={operation} nodes={nodes} />;
                 case 'group_by':
                     return <GroupByOperation operation={operation} />;
+                case 'no_op':
+                    return <SchemaOverview fields={inputFields || []} />;
                 default:
-                    return <div className="p-2 text-xs font-mono bg-muted rounded-md">Unsupported operation</div>;
+                    return <div className="p-2 text-xs font-mono bg-muted rounded-md">Overview not available for this operation.</div>;
             }
         case 'source':
             return <SchemaOverview fields={outputFields || []} />;
