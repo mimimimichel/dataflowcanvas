@@ -41,11 +41,15 @@ export default function DataFlowCanvas() {
   const [connectionForFields, setConnectionForFields] = useState<{fromNodeId: string, toNodeId: string} | null>(null);
   const [svgDimensions, setSvgDimensions] = useState<SvgDimensions>({ width: 0, height: 0, top: 0, left: 0 });
 
-  const handleNodeClick = (id: string) => {
+  const handleNodeSelect = (id: string) => {
     setSelectedNodeId(id);
     setSelectedConnector(null);
-    setIsConfigPanelOpen(true);
   };
+
+  const handleOpenConfig = (nodeId: string) => {
+    setSelectedNodeId(nodeId);
+    setIsConfigPanelOpen(true);
+  }
   
   const handleConnectorClick = (connector: ConnectorType) => {
     setSelectedConnector(connector);
@@ -317,7 +321,7 @@ export default function DataFlowCanvas() {
       minX = Math.min(minX, node.position.x);
       minY = Math.min(minY, node.position.y);
       maxX = Math.max(maxX, node.position.x + 208); // node width
-      maxY = Math.max(maxY, node.position.y + 96);  // node height
+      maxY = Math.max(maxY, node.position.y + 160);  // max node height
     });
     
     const padding = 200;
@@ -413,7 +417,8 @@ export default function DataFlowCanvas() {
                 <Node
                   key={node.id}
                   {...node}
-                  onClick={() => handleNodeClick(node.id)}
+                  onSelect={() => handleNodeSelect(node.id)}
+                  onConfigOpen={() => handleOpenConfig(node.id)}
                   onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
                   onMouseUp={(e) => handleNodeMouseUp(e, node.id)}
                   onPortMouseDown={(e) => handlePortMouseDown(e, node.id)}
