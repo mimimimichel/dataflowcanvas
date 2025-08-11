@@ -221,6 +221,7 @@ export default function DataFlowCanvas() {
 
   const handleSaveConnectionFields = (fromNodeId: string, toNodeId: string, selectedFields: Field[]) => {
       setConnectors(prev => [...prev, { from: fromNodeId, to: toNodeId }]);
+      
       setNodes(prevNodes => {
         const newNodes = [...prevNodes];
         const toNodeIndex = newNodes.findIndex(n => n.id === toNodeId);
@@ -245,12 +246,26 @@ export default function DataFlowCanvas() {
             }
             toNode.operation = joinOp;
 
+            // This is the crucial fix: we need to find both parent nodes and combine their output fields.
+            const otherParentId = joinOp.settings.leftNodeId === fromNodeId ? joinOp.settings.rightNodeId : joinOp.settings.leftNodeId;
+            const fromNode = newNodes.find(n => n.id === fromNodeId);
+            const otherParentNode = newNodes.find(n => n.id === otherParentId);
+
+            const combinedInputFields = [...(fromNode?.outputFields || [])];
+            
+            if (otherParentNode) {
+                 (otherParentNode.outputFields || []).forEach(otherField => {
+                    if(!combinedInputFields.some(f => f.name === otherField.name)) {
+                        combinedInputFields.push(otherField);
+                    }
+                });
+            }
+
+            toNode.inputFields = combinedInputFields;
+            
             const leftNode = newNodes.find(n => n.id === joinOp.settings.leftNodeId);
             const rightNode = newNodes.find(n => n.id === joinOp.settings.rightNodeId);
-            
-            // Update input fields based on both potential sources
-            toNode.inputFields = [...(leftNode?.outputFields || []), ...(rightNode?.outputFields || [])];
-            
+
             if(leftNode && rightNode) {
               toNode.outputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
             }
@@ -395,7 +410,6 @@ export default function DataFlowCanvas() {
     const fieldsToRemove = new Set(nodeToDelete.outputFields?.map(f => f.name) || []);
 
     // Update downstream nodes
-    const downstreamNodeIds = downstreamConnectors.map(c => c.to);
     setNodes(prev => prev.map(n => {
         if (downstreamNodeIds.includes(n.id)) {
             let updatedNode = { ...n };
@@ -627,3 +641,5 @@ export default function DataFlowCanvas() {
     </SidebarProvider>
   );
 }
+
+    
