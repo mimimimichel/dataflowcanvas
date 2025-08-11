@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal } from 'lucide-react';
 import Port from './port';
-import { TransformationItem, PipelineNode } from '@/lib/pipeline-data';
+import { TransformationItem, PipelineNode, Field } from '@/lib/pipeline-data';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export type NodeType = 'source' | 'transformation' | 'destination' | 'dataset';
 
@@ -28,6 +29,24 @@ const typeConfig: Record<NodeType, { icon: Icon; color: string; }> = {
   dataset: { icon: Layers, color: 'bg-yellow-500' },
 };
 
+const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
+    if (!fields || fields.length === 0) {
+        return <p className="text-xs text-muted-foreground text-center p-2">No fields defined</p>;
+    }
+    return (
+        <ScrollArea className="h-24 p-2 bg-muted rounded-md">
+            <div className="space-y-1">
+                {fields.map(field => (
+                    <div key={field.name} className="flex justify-between items-center text-xs">
+                        <span className="font-mono text-foreground truncate" title={field.name}>{field.name}</span>
+                        <span className="font-mono text-muted-foreground flex-shrink-0 ml-2">{field.type}</span>
+                    </div>
+                ))}
+            </div>
+        </ScrollArea>
+    );
+};
+
 const Node: React.FC<NodeProps> = ({ id, name, type, position, rule, inputFields, outputFields, onSelect, onConfigOpen, onMouseDown, onMouseUp, onPortMouseDown, isSelected }) => {
   const TypeIcon = typeConfig[type].icon;
   const [isExpanded, setIsExpanded] = useState(false);
@@ -46,13 +65,13 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, rule, inputFields
   const renderOverview = () => {
     switch(type) {
         case 'transformation':
-            return <div className="p-2 text-xs font-mono bg-muted rounded-md overflow-hidden">{rule || 'No rule defined'}</div>;
+            return <div className="p-2 text-xs font-mono bg-muted rounded-md overflow-hidden whitespace-pre-wrap break-all">{rule || 'No rule defined'}</div>;
         case 'source':
-            return <p className="text-xs text-muted-foreground">{outputFields?.length ?? 0} output fields</p>;
+            return <SchemaOverview fields={outputFields || []} />;
         case 'destination':
-            return <p className="text-xs text-muted-foreground">{inputFields?.length ?? 0} input fields</p>;
+            return <SchemaOverview fields={inputFields || []} />;
         case 'dataset':
-             return <p className="text-xs text-muted-foreground">{inputFields?.length ?? 0} fields</p>;
+             return <SchemaOverview fields={inputFields || []} />;
         default:
             return null;
     }
