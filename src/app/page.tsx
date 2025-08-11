@@ -40,26 +40,37 @@ export default function DataFlowCanvas() {
       },
     };
     setNodes((prev) => [...prev, newNode]);
-  }, [pan]);
+  }, [pan.x, pan.y]);
   
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.target !== e.currentTarget) return;
-    setIsPanning(true);
-    panStartRef.current = { x: e.clientX, y: e.clientY };
-    e.currentTarget.style.cursor = 'grabbing';
+    // Only pan when clicking on the canvas background
+    if (e.target === mainRef.current) {
+      setIsPanning(true);
+      panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+      e.currentTarget.style.cursor = 'grabbing';
+    }
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isPanning || !mainRef.current) return;
-    const dx = e.clientX - panStartRef.current.x;
-    const dy = e.clientY - panStartRef.current.y;
-    setPan(prev => ({ x: prev.x + dx, y: prev.y + dy }));
-    panStartRef.current = { x: e.clientX, y: e.clientY };
+    if (isPanning) {
+      const newX = e.clientX - panStartRef.current.x;
+      const newY = e.clientY - panStartRef.current.y;
+      setPan({ x: newX, y: newY });
+    }
   };
 
   const handleMouseUp = (e: React.MouseEvent) => {
-    setIsPanning(false);
-    e.currentTarget.style.cursor = 'grab';
+    if (isPanning) {
+      setIsPanning(false);
+      e.currentTarget.style.cursor = 'grab';
+    }
+  };
+  
+  const handleMouseLeave = (e: React.MouseEvent) => {
+    if (isPanning) {
+      setIsPanning(false);
+      e.currentTarget.style.cursor = 'grab';
+    }
   };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -92,7 +103,7 @@ export default function DataFlowCanvas() {
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
           >
