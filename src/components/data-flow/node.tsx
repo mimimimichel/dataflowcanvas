@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal, GitCompare, Group as GroupIcon, ChevronDown, ArrowRightLeft, Filter, SortAsc, Table, Combine } from 'lucide-react';
+import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal, GitCompare, Group as GroupIcon, ChevronDown, ArrowRightLeft, Filter, SortAsc, Table, Combine, Server, Pin } from 'lucide-react';
 import Port from './port';
 import { TransformationItem, PipelineNode, Field, Operation, transformations } from '@/lib/pipeline-data';
 import FilterOperation from '@/components/operations/filter-operation';
@@ -52,7 +52,7 @@ const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
     );
 };
 
-const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputFields, outputFields, onSelect, onConfigOpen, onMouseDown, onMouseUp, onPortMouseDown, isSelected, onUpdateOperation, nodes }) => {
+const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputFields, outputFields, system, location, onSelect, onConfigOpen, onMouseDown, onMouseUp, onPortMouseDown, isSelected, onUpdateOperation, nodes }) => {
   
   const getIconForOperation = (op?: Operation) => {
     if(!op || type !== 'transformation') return typeConfig[type].icon || Cog;
@@ -121,7 +121,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
         className={cn(
           'w-64 shadow-lg hover:shadow-xl transition-all duration-300 border-2 relative flex flex-col justify-between cursor-pointer',
           isSelected ? 'border-primary shadow-2xl' : 'border-transparent',
-          isExpanded ? 'h-auto' : 'h-20'
+          isExpanded ? 'h-auto' : 'h-auto' // Always allow auto height
         )}
       >
         <div className="flex items-center gap-2 p-2">
@@ -130,6 +130,23 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
             </div>
             <p className="text-sm font-medium leading-tight text-left break-words flex-1">{name}</p>
         </div>
+
+        {(system || location) && (type === 'source' || type === 'dataset') && (
+            <div className="px-2 pb-2 space-y-1">
+                {system && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Server className="w-3.5 h-3.5 flex-shrink-0"/>
+                        <span className="truncate" title={system}>{system}</span>
+                    </div>
+                )}
+                {location && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Pin className="w-3.5 h-3.5 flex-shrink-0"/>
+                        <span className="truncate" title={location}>{location}</span>
+                    </div>
+                )}
+            </div>
+        )}
 
         {isExpanded && (
             <CardContent className="p-2 pt-0">

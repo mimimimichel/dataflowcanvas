@@ -184,20 +184,18 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
       case 'source':
         return (
           <>
-             {displayNode.name === 'File Source' && (
-              <div className="space-y-4">
-                <div className="grid w-full items-center gap-1.5">
-                  <Label htmlFor="file-path">File Path</Label>
-                  <Input type="text" id="file-path" placeholder="/path/to/your/file.csv" />
-                </div>
-                <div className="grid w-full items-center gap-1.5">
-                  <Label htmlFor="file-type">File Type</Label>
-                  <Input type="text" id="file-type" placeholder="e.g., CSV, JSON, Parquet" />
-                </div>
-                <Separator/>
+            <div className="space-y-4">
+              <div className="grid w-full items-center gap-1.5">
+                <Label htmlFor="system">System</Label>
+                <Input type="text" id="system" placeholder="e.g., PostgreSQL, S3, BigQuery" value={displayNode.system || ''} onChange={(e) => handleUpdate('system', e.target.value)} />
               </div>
-            )}
-            <h3 className="text-md font-medium mb-2">Output Schema</h3>
+              <div className="grid w-full items-center gap-1.5">
+                <Label htmlFor="location">Location</Label>
+                <Input type="text" id="location" placeholder="e.g., prod-db-1, /path/to/data" value={displayNode.location || ''} onChange={(e) => handleUpdate('location', e.target.value)} />
+              </div>
+              <Separator/>
+            </div>
+            <h3 className="text-md font-medium mb-2 mt-4">Output Schema</h3>
             <SchemaEditor fields={displayNode.outputFields || []} onFieldsChange={(fields) => handleUpdate('outputFields', fields)} isEditable={true} />
           </>
         );
@@ -272,7 +270,18 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
        case 'dataset':
         return (
           <>
-            <h3 className="text-md font-medium mb-2">Dataset Schema</h3>
+            <div className="space-y-4">
+              <div className="grid w-full items-center gap-1.5">
+                <Label htmlFor="system">System</Label>
+                <Input type="text" id="system" placeholder="e.g., In-Memory, Redis" value={displayNode.system || ''} onChange={(e) => handleUpdate('system', e.target.value)} />
+              </div>
+              <div className="grid w-full items-center gap-1.5">
+                <Label htmlFor="location">Location</Label>
+                <Input type="text" id="location" placeholder="e.g., default-cache" value={displayNode.location || ''} onChange={(e) => handleUpdate('location', e.target.value)} />
+              </div>
+              <Separator/>
+            </div>
+            <h3 className="text-md font-medium mb-2 mt-4">Dataset Schema</h3>
             <p className="text-sm text-muted-foreground mb-2">The schema is defined by its inputs. You can rename fields here.</p>
             <SchemaEditor fields={displayNode.inputFields || []} onFieldsChange={(fields) => handleUpdate('inputFields', fields)} isEditable={true} />
           </>

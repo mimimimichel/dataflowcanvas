@@ -87,6 +87,8 @@ export interface PipelineNode {
   name: string;
   type: NodeType;
   position: { x: number; y: number };
+  system?: string;
+  location?: string;
   inputFields?: Field[];
   outputFields?: Field[];
   operation?: Operation;
@@ -131,6 +133,8 @@ export const initialNodes: PipelineNode[] = [
     name: 'Customer DB', 
     type: 'source', 
     position: { x: 50, y: 150 },
+    system: 'PostgreSQL',
+    location: 'prod-customers-db',
     outputFields: [
       { name: 'id', type: 'integer' },
       { name: 'first_name', type: 'string' },
@@ -144,6 +148,8 @@ export const initialNodes: PipelineNode[] = [
     name: 'Orders DB', 
     type: 'source', 
     position: { x: 50, y: 350 },
+    system: 'PostgreSQL',
+    location: 'prod-orders-db',
     outputFields: [
       { name: 'order_id', type: 'integer' },
       { name: 'customer_id', type: 'integer' },
