@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 
 interface HeaderProps {
   activeLineage?: LineageInfo;
@@ -145,7 +146,11 @@ const Header: React.FC<HeaderProps> = ({
   }
 
   return (
-    <header className="flex h-16 items-center justify-between border-b bg-card px-4 md:px-6 shrink-0 z-30 relative shadow-sm">
+    <header className={cn(
+      "flex h-16 items-center justify-between border-b px-4 md:px-6 shrink-0 z-30 relative shadow-sm",
+      "bg-gradient-to-b from-card/95 via-card/90 to-card/80 backdrop-blur-xl",
+      "after:absolute after:inset-x-0 after:top-0 after:h-[1px] after:bg-white/5"
+    )}>
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2">
           <GitBranch className="h-6 w-6 text-primary" />
@@ -153,7 +158,7 @@ const Header: React.FC<HeaderProps> = ({
         </div>
 
         <Tabs value={activeView} onValueChange={(v) => onViewChange(v as any)} className="w-[300px]">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-2 bg-background/40">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <Library className="h-4 w-4" /> Library
             </TabsTrigger>
@@ -164,9 +169,9 @@ const Header: React.FC<HeaderProps> = ({
         </Tabs>
 
         {activeView === 'editor' && (
-          <div className="flex items-center gap-2 border-l pl-4 ml-2">
+          <div className="flex items-center gap-2 border-l border-white/10 pl-4 ml-2">
             <Select value={activeVersionId} onValueChange={onVersionChange}>
-              <SelectTrigger className="w-48 h-9 bg-background">
+              <SelectTrigger className="w-48 h-9 bg-background/50 border-white/10">
                 <SelectValue placeholder="Select version" />
               </SelectTrigger>
               <SelectContent>
@@ -183,11 +188,11 @@ const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="hidden lg:flex items-center gap-2 border-r pr-4">
-            <Button variant="outline" size="sm" onClick={onGenerateSpec} className="group h-9">
+        <div className="hidden lg:flex items-center gap-2 border-r border-white/10 pr-4">
+            <Button variant="outline" size="sm" onClick={onGenerateSpec} className="group h-9 bg-background/40 border-white/10 hover:bg-background/60">
                 <Sparkles className="mr-2 h-4 w-4 text-amber-500 group-hover:scale-110 transition-transform" /> Write Spec
             </Button>
-            <Button variant="outline" size="sm" onClick={onGeneratePython} className="h-9">
+            <Button variant="outline" size="sm" onClick={onGeneratePython} className="h-9 bg-background/40 border-white/10 hover:bg-background/60">
                 <Terminal className="mr-2 h-4 w-4" /> Foundry
             </Button>
             
@@ -198,27 +203,27 @@ const Header: React.FC<HeaderProps> = ({
               accept=".json" 
               onChange={handleFileChange}
             />
-            <Button variant="outline" size="sm" onClick={handleImportClick} className="h-9">
+            <Button variant="outline" size="sm" onClick={handleImportClick} className="h-9 bg-background/40 border-white/10 hover:bg-background/60">
               <Upload className="mr-2 h-4 w-4" /> Import
             </Button>
             
-            <Button variant="outline" size="sm" onClick={handleExport} className="h-9">
+            <Button variant="outline" size="sm" onClick={handleExport} className="h-9 bg-background/40 border-white/10 hover:bg-background/60">
               <Download className="mr-2 h-4 w-4" /> Export
             </Button>
         </div>
 
         <div className="flex items-center gap-3 pl-2">
-          <Button size="sm" onClick={handleShare} className="h-9"><Share2 className="mr-2 h-4 w-4" /> Share</Button>
+          <Button size="sm" onClick={handleShare} className="h-9 shadow-inner"><Share2 className="mr-2 h-4 w-4" /> Share</Button>
           <div className="flex -space-x-2">
-              <Avatar className="h-8 w-8 border-2 border-card">
+              <Avatar className="h-8 w-8 border-2 border-card shadow-sm">
                   <AvatarImage src="https://i.pravatar.cc/150?u=a042581f4e29026704d" />
                   <AvatarFallback>U1</AvatarFallback>
               </Avatar>
-              <Avatar className="h-8 w-8 border-2 border-card">
+              <Avatar className="h-8 w-8 border-2 border-card shadow-sm">
                   <AvatarImage src="https://i.pravatar.cc/150?u=a042581f4e29026704a" />
                   <AvatarFallback>U2</AvatarFallback>
               </Avatar>
-               <Avatar className="h-8 w-8 border-2 border-card bg-primary text-primary-foreground">
+               <Avatar className="h-8 w-8 border-2 border-card bg-primary text-primary-foreground shadow-sm">
                   <AvatarFallback>+3</AvatarFallback>
               </Avatar>
           </div>
