@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
@@ -11,7 +10,9 @@ import { initialVersions, PipelineNode, TransformationItem, Connector as Connect
 import { cn } from '@/lib/utils';
 import ConnectionFieldsModal from '@/components/data-flow/connection-fields-modal';
 import PythonCodeModal from '@/components/modals/python-code-modal';
+import SpecModal from '@/components/modals/spec-modal';
 import { generatePythonCode } from '@/lib/python-generator';
+import { generatePipelineSpec } from '@/ai/flows/generate-spec-flow';
 
 type SvgDimensions = {
   width: number | string;
@@ -50,9 +51,13 @@ export default function DataFlowCanvas() {
   const [zoom, setZoom] = useState(1);
   const [newConnector, setNewConnector] = useState<{ from: string; to: { x: number; y: number } } | null>(null);
   
-  // Python Generation State
+  // Modals State
   const [isPythonModalOpen, setIsPythonModalOpen] = useState(false);
   const [generatedPythonCode, setGeneratedPythonCode] = useState('');
+  
+  const [isSpecModalOpen, setIsSpecModalOpen] = useState(false);
+  const [generatedSpec, setGeneratedSpec] = useState('');
+  const [isSpecLoading, setIsSpecLoading] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   
@@ -534,6 +539,19 @@ export default function DataFlowCanvas() {
     setIsPythonModalOpen(true);
   };
   
+  const handleGenerateSpec = async () => {
+    setIsSpecModalOpen(true);
+    setIsSpecLoading(true);
+    try {
+      const res = await generatePipelineSpec({ nodes, connectors });
+      setGeneratedSpec(res.specification);
+    } catch (error) {
+      setGeneratedSpec("Failed to generate specification. Please try again.");
+    } finally {
+      setIsSpecLoading(false);
+    }
+  };
+  
   const selectedNode = useMemo(() => {
     if (!selectedNodeId) return undefined;
     return nodes.find(n => n.id === selectedNodeId);
@@ -609,6 +627,7 @@ export default function DataFlowCanvas() {
           onVersionChange={setActiveVersionId}
           onCreateVersion={handleCreateVersion}
           onGeneratePython={handleHandleGeneratePython}
+          onGenerateSpec={handleGenerateSpec}
         />
         <div className="flex flex-1 overflow-hidden relative">
           <TransformationsCatalogue />
@@ -703,6 +722,12 @@ export default function DataFlowCanvas() {
             isOpen={isPythonModalOpen}
             onClose={() => setIsPythonModalOpen(false)}
             code={generatedPythonCode}
+        />
+        <SpecModal
+            isOpen={isSpecModalOpen}
+            onClose={() => setIsSpecModalOpen(false)}
+            spec={generatedSpec}
+            isLoading={isSpecLoading}
         />
       </div>
   );

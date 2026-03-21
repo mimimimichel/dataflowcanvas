@@ -1,11 +1,10 @@
-
 'use client';
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Upload, Download, Share2, GitBranch, PlusCircle, Terminal } from 'lucide-react';
+import { Upload, Download, Share2, GitBranch, PlusCircle, Terminal, FileText, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PipelineVersion } from '@/lib/pipeline-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -18,6 +17,7 @@ interface HeaderProps {
   onVersionChange: (id: string) => void;
   onCreateVersion: (name: string) => void;
   onGeneratePython: () => void;
+  onGenerateSpec: () => void;
 }
 
 const CreateVersionDialog: React.FC<{
@@ -67,7 +67,7 @@ const CreateVersionDialog: React.FC<{
 };
 
 
-const Header: React.FC<HeaderProps> = ({ versions, activeVersionId, onVersionChange, onCreateVersion, onGeneratePython }) => {
+const Header: React.FC<HeaderProps> = ({ versions, activeVersionId, onVersionChange, onCreateVersion, onGeneratePython, onGenerateSpec }) => {
   const { toast } = useToast();
   const [isCreateVersionOpen, setIsCreateVersionOpen] = useState(false);
 
@@ -131,6 +131,9 @@ const Header: React.FC<HeaderProps> = ({ versions, activeVersionId, onVersionCha
             </Avatar>
         </div>
         <div className="flex items-center gap-2 border-l pl-4 ml-2">
+            <Button variant="outline" size="sm" onClick={onGenerateSpec} className="group">
+                <Sparkles className="mr-2 h-4 w-4 text-amber-500 group-hover:scale-110 transition-transform" /> Write Spec
+            </Button>
             <Button variant="outline" size="sm" onClick={onGeneratePython}>
                 <Terminal className="mr-2 h-4 w-4" /> Foundry
             </Button>
