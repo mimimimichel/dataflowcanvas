@@ -29,6 +29,8 @@ import { generatePythonCode } from '@/lib/python-generator';
 import { generatePipelineSpec } from '@/ai/flows/generate-spec-flow';
 import LineageDashboard from '@/components/dashboard/lineage-dashboard';
 import { useToast } from '@/hooks/use-toast';
+import { ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 type SvgDimensions = {
   width: number | string;
@@ -42,6 +44,7 @@ export default function MainApp() {
   const [activeView, setActiveView] = useState<'dashboard' | 'editor'>('dashboard');
   const [lineages, setLineages] = useState<LineageInfo[]>(mockLineages);
   const [activeLineageId, setActiveLineageId] = useState<string>('lineage-1');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   const activeLineage = useMemo(() => 
     lineages.find(l => l.id === activeLineageId) || lineages[0], 
@@ -730,7 +733,22 @@ export default function MainApp() {
           />
         ) : (
           <div className="flex flex-1 overflow-hidden relative">
-            <TransformationsCatalogue />
+            <TransformationsCatalogue 
+              isCollapsed={isSidebarCollapsed}
+              onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            />
+            
+            {isSidebarCollapsed && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="absolute left-4 top-4 z-40 h-8 w-8 glass-panel"
+                onClick={() => setIsSidebarCollapsed(false)}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            )}
+
             <main
               className="flex-1 relative overflow-hidden cursor-grab"
               onDrop={handleDrop}

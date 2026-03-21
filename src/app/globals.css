@@ -23,7 +23,7 @@
     --border: 217 32% 25%;
     --input: 217 32% 17%;
     --ring: 38 92% 50%;
-    --radius: 0.5rem;
+    --radius: 0.75rem;
   }
 }
 
@@ -49,6 +49,19 @@
   }
 
   .accent-glow {
-    box-shadow: 0 0 15px -3px hsl(var(--accent) / 0.3);
+    box-shadow: 0 0 20px -5px hsl(var(--accent) / 0.4);
+  }
+
+  .glass-panel {
+    @apply bg-white/[0.03] backdrop-blur-xl border border-white/10 shadow-2xl;
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
+  }
+
+  .apple-card {
+    @apply rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.08] to-transparent backdrop-blur-md transition-all duration-300;
+  }
+  
+  .apple-card:hover {
+    @apply border-white/20 bg-white/[0.12];
   }
 }

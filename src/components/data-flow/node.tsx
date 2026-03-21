@@ -119,32 +119,33 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
       <Card
         onClick={onSelect}
         className={cn(
-          'w-64 shadow-lg hover:shadow-xl transition-all duration-300 border-2 relative flex flex-col justify-between cursor-pointer backdrop-blur-md bg-card/80',
+          'w-64 shadow-2xl hover:shadow-primary/5 transition-all duration-300 border-2 relative flex flex-col justify-between cursor-pointer backdrop-blur-md bg-card/90',
+          'bg-gradient-to-br from-white/[0.05] to-transparent',
           isSelected ? 'border-accent shadow-accent/20 accent-glow scale-[1.02]' : 'border-white/20',
         )}
       >
         <div className="flex items-center gap-2 p-3">
-            <div className={cn('p-1.5 rounded-md self-start shadow-inner', typeConfig[type].color)}>
+            <div className={cn('p-1.5 rounded-lg self-start shadow-inner border border-white/10', typeConfig[type].color)}>
               <TypeIcon className="w-5 h-5 text-white" />
             </div>
             <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold leading-tight text-left truncate text-white">{name}</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">{type}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold opacity-70">{type}</p>
             </div>
         </div>
 
         {(system || location) && (type === 'source' || type === 'dataset' || type === 'destination') && (
             <div className="px-3 pb-3 space-y-1">
                 {system && (
-                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/80 bg-white/5 px-2 py-0.5 rounded">
+                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/80 bg-white/5 px-2 py-0.5 rounded border border-white/5">
                         <Server className="w-3 h-3 flex-shrink-0 text-primary"/>
-                        <span className="truncate" title={system}>{system}</span>
+                        <span className="truncate font-medium" title={system}>{system}</span>
                     </div>
                 )}
                 {location && (
-                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/80 bg-white/5 px-2 py-0.5 rounded">
+                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/80 bg-white/5 px-2 py-0.5 rounded border border-white/5">
                         <Pin className="w-3 h-3 flex-shrink-0 text-primary"/>
-                        <span className="truncate" title={location}>{location}</span>
+                        <span className="truncate font-medium" title={location}>{location}</span>
                     </div>
                 )}
             </div>
@@ -174,7 +175,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
             <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-7 w-7 bg-black/40 hover:bg-black/60 text-white rounded-full border border-white/10"
+                className="h-7 w-7 glass-panel hover:bg-white/10 text-white rounded-md border border-white/10"
                 onClick={handleConfigClick}
             >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -182,7 +183,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
             <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-7 w-7 bg-black/40 hover:bg-black/60 text-white rounded-full border border-white/10"
+                className="h-7 w-7 glass-panel hover:bg-white/10 text-white rounded-md border border-white/10"
                 onClick={handleToggleExpand}
             >
                 <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", isExpanded && "rotate-180")} />
