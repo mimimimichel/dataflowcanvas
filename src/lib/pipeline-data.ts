@@ -7,7 +7,7 @@ import {
   Milestone, DatabaseBackup, TestTube, FileJson, GitPullRequest, Settings,
   FileText, FunctionSquare, Pilcrow, Pencil, Search, GitCompare, EyeOff,
   Fingerprint, Bot, Group, Shuffle, Blend, BoxSelect, Code, Unplug, Layers,
-  Table, Activity, CheckCircle2, XCircle, Clock3, Server, Pin
+  Table, Activity, CheckCircle2, XCircle, Clock3, Server, Pin, Copy
 } from 'lucide-react';
 import type { NodeType } from '@/components/data-flow/node';
 
@@ -16,7 +16,7 @@ export interface Field {
   type: string;
 }
 
-export type OperationType = 'filter' | 'join' | 'group_by' | 'sort' | 'select_columns' | 'union' | string;
+export type OperationType = 'filter' | 'join' | 'group_by' | 'sort' | 'select_columns' | 'union' | 'no_op' | string;
 
 export interface BaseOperation {
     type: OperationType;
@@ -286,6 +286,8 @@ export const initialNodes: PipelineNode[] = [
     name: 'Data Warehouse', 
     type: 'destination', 
     position: { x: 950, y: 150 },
+    system: 'Snowflake',
+    location: 'analytics_db.mkt.customer_ltv',
     inputFields: [
         { name: 'id', type: 'integer' },
         { name: 'first_name', type: 'string' },

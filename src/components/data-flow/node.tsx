@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal, GitCompare, Group as GroupIcon, ChevronDown, ArrowRightLeft, Filter, SortAsc, Table, Combine, Server, Pin } from 'lucide-react';
+import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal, GitCompare, Group as GroupIcon, ChevronDown, ArrowRightLeft, Filter, SortAsc, Table, Combine, Server, Pin, Copy } from 'lucide-react';
 import Port from './port';
 import { TransformationItem, PipelineNode, Field, Operation, transformations, advancedTransformations, SelectColumnsOperation as SelectColumnsType, UnionOperation as UnionType } from '@/lib/pipeline-data';
 import FilterOperation from '@/components/operations/filter-operation';
@@ -76,7 +76,7 @@ const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
     );
 };
 
-const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputFields, outputFields, system, location, onSelect, onConfigOpen, onMouseDown, onMouseUp, onPortMouseDown, isSelected, onUpdateOperation, nodes }) => {
+const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputFields, outputFields, system, location, onSelect, onConfigOpen, onMouseDown, onMouseUp, onPortMouseDown, isSelected, onUpdateOperation, nodes, onAddNode }) => {
   
   const getIconForOperation = (op?: Operation) => {
     if(!op || type !== 'transformation') return typeConfig[type].icon || Cog;
@@ -101,6 +101,17 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
   const handleToggleExpand = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsExpanded(prev => !prev);
+  }
+
+  const handleDuplicate = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const item: TransformationItem = {
+        name: `${name} (Copy)`,
+        icon: TypeIcon,
+        type: type,
+        operationType: operation?.type
+    };
+    onAddNode(item, { x: position.x + 40, y: position.y + 40 });
   }
   
   const renderOverview = () => {
@@ -207,7 +218,17 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
                 variant="ghost" 
                 size="icon" 
                 className="h-7 w-7 glass-panel hover:bg-white/10 text-white rounded-md border border-white/10"
+                onClick={handleDuplicate}
+                title="Duplicate Node"
+            >
+                <Copy className="w-3.5 h-3.5" />
+            </Button>
+            <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7 glass-panel hover:bg-white/10 text-white rounded-md border border-white/10"
                 onClick={handleConfigClick}
+                title="Configuration"
             >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
             </Button>
@@ -216,6 +237,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
                 size="icon" 
                 className="h-7 w-7 glass-panel hover:bg-white/10 text-white rounded-md border border-white/10"
                 onClick={handleToggleExpand}
+                title={isExpanded ? "Collapse" : "Expand Details"}
             >
                 <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", isExpanded && "rotate-180")} />
             </Button>
