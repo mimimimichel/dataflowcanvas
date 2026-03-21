@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -9,19 +9,22 @@ import {
   Terminal, Sparkles, Library, Settings2 
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { PipelineVersion } from '@/lib/pipeline-data';
+import { PipelineVersion, LineageInfo } from '@/lib/pipeline-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface HeaderProps {
+  activeLineage?: LineageInfo;
+  activeVersion?: PipelineVersion;
   versions: PipelineVersion[];
   activeVersionId: string;
   onVersionChange: (id: string) => void;
   onCreateVersion: (name: string) => void;
   onGeneratePython: () => void;
   onGenerateSpec: () => void;
+  onImportPipeline: (data: any) => void;
   activeView: 'dashboard' | 'editor';
   onViewChange: (view: 'dashboard' | 'editor') => void;
 }
@@ -74,40 +77,72 @@ const CreateVersionDialog: React.FC<{
 
 
 const Header: React.FC<HeaderProps> = ({ 
+  activeLineage,
+  activeVersion,
   versions, 
   activeVersionId, 
   onVersionChange, 
   onCreateVersion, 
   onGeneratePython, 
   onGenerateSpec,
+  onImportPipeline,
   activeView,
   onViewChange
 }) => {
   const { toast } = useToast();
   const [isCreateVersionOpen, setIsCreateVersionOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExport = () => {
+    if (!activeVersion) return;
+    
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(activeVersion));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `pipeline_${activeLineage?.name || 'design'}_${activeVersion.name}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+
     toast({
-      title: "Exporting Pipeline",
-      description: "Your pipeline configuration has been exported as JSON.",
+      title: "Export Successful",
+      description: "Pipeline configuration has been exported as JSON.",
     });
   };
 
-  const handleImport = () => {
-    toast({
-      title: "Import Successful",
-      description: "Pipeline configuration has been imported.",
-    });
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const content = JSON.parse(e.target?.result as string);
+          onImportPipeline(content);
+        } catch (error) {
+          toast({
+            variant: "destructive",
+            title: "Import Error",
+            description: "Failed to parse design JSON.",
+          });
+        }
+      };
+      reader.readAsText(file);
+    }
   };
   
   const handleShare = () => {
-    toast({
-        title: "Sharing Pipeline",
-        description: "A shareable link has been copied to your clipboard.",
+    const shareUrl = `${window.location.origin}/share/${activeLineage?.id || 'design'}`;
+    navigator.clipboard.writeText(shareUrl).then(() => {
+        toast({
+            title: "Link Copied",
+            description: "A shareable link has been copied to your clipboard.",
+        });
     });
   }
-  
-  const activeVersion = versions.find(v => v.id === activeVersionId);
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-card px-4 md:px-6 shrink-0 z-30 relative shadow-sm">
@@ -155,8 +190,21 @@ const Header: React.FC<HeaderProps> = ({
             <Button variant="outline" size="sm" onClick={onGeneratePython} className="h-9">
                 <Terminal className="mr-2 h-4 w-4" /> Foundry
             </Button>
-            <Button variant="outline" size="sm" onClick={handleImport} className="h-9"><Upload className="mr-2 h-4 w-4" /> Import</Button>
-            <Button variant="outline" size="sm" onClick={handleExport} className="h-9"><Download className="mr-2 h-4 w-4" /> Export</Button>
+            
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept=".json" 
+              onChange={handleFileChange}
+            />
+            <Button variant="outline" size="sm" onClick={handleImportClick} className="h-9">
+              <Upload className="mr-2 h-4 w-4" /> Import
+            </Button>
+            
+            <Button variant="outline" size="sm" onClick={handleExport} className="h-9">
+              <Download className="mr-2 h-4 w-4" /> Export
+            </Button>
         </div>
 
         <div className="flex items-center gap-3 pl-2">

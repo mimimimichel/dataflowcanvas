@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
@@ -8,7 +7,6 @@ import NodeConfigurationPanel from '@/components/sidebar/node-configuration-pane
 import Node from '@/components/data-flow/node';
 import Connector from '@/components/data-flow/connector';
 import { 
-  initialVersions, 
   PipelineNode, 
   TransformationItem, 
   Connector as ConnectorType, 
@@ -30,6 +28,7 @@ import SpecModal from '@/components/modals/spec-modal';
 import { generatePythonCode } from '@/lib/python-generator';
 import { generatePipelineSpec } from '@/ai/flows/generate-spec-flow';
 import LineageDashboard from '@/components/dashboard/lineage-dashboard';
+import { useToast } from '@/hooks/use-toast';
 
 type SvgDimensions = {
   width: number | string;
@@ -39,6 +38,7 @@ type SvgDimensions = {
 };
 
 export default function DataFlowCanvas() {
+  const { toast } = useToast();
   const [activeView, setActiveView] = useState<'dashboard' | 'editor'>('dashboard');
   const [lineages, setLineages] = useState<LineageInfo[]>(mockLineages);
   const [activeLineageId, setActiveLineageId] = useState<string>('lineage-1');
@@ -600,6 +600,53 @@ export default function DataFlowCanvas() {
     setActiveVersionId(newVersion.id);
   };
 
+  const handleCreateLineage = (name: string, description: string) => {
+    const newLineage: LineageInfo = {
+      id: `lineage-${Date.now()}`,
+      name,
+      description,
+      owner: 'Me',
+      lastEdited: 'Just now',
+      versions: [{
+        id: 'v1',
+        name: 'Initial Design',
+        nodes: [],
+        connectors: []
+      }]
+    };
+    setLineages(prev => [newLineage, ...prev]);
+    setActiveLineageId(newLineage.id);
+    setActiveVersionId('v1');
+    setActiveView('editor');
+  };
+
+  const handleImportPipeline = (importData: any) => {
+    if (!importData.nodes || !importData.connectors) {
+      toast({
+        variant: "destructive",
+        title: "Import Error",
+        description: "Invalid pipeline JSON format."
+      });
+      return;
+    }
+
+    setLineages(currentLineages => currentLineages.map(l => 
+      l.id === activeLineageId ? {
+        ...l,
+        versions: l.versions.map(v => v.id === activeVersionId ? { 
+          ...v, 
+          nodes: importData.nodes, 
+          connectors: importData.connectors 
+        } : v)
+      } : l
+    ));
+
+    toast({
+      title: "Pipeline Imported",
+      description: "Design has been successfully updated from JSON."
+    });
+  };
+
   const handleSelectLineage = (id: string) => {
     const lineage = lineages.find(l => l.id === id);
     if (lineage) {
@@ -662,12 +709,15 @@ export default function DataFlowCanvas() {
   return (
       <div className="flex h-screen w-full flex-col bg-background font-body overflow-hidden">
         <Header 
+          activeLineage={activeLineage}
+          activeVersion={activeVersion}
           versions={activeLineage.versions} 
           activeVersionId={activeVersionId} 
           onVersionChange={setActiveVersionId}
           onCreateVersion={handleCreateVersion}
           onGeneratePython={handleHandleGeneratePython}
           onGenerateSpec={handleGenerateSpec}
+          onImportPipeline={handleImportPipeline}
           activeView={activeView}
           onViewChange={setActiveView}
         />
@@ -676,6 +726,7 @@ export default function DataFlowCanvas() {
           <LineageDashboard 
             lineages={lineages} 
             onSelectLineage={handleSelectLineage}
+            onCreateLineage={handleCreateLineage}
           />
         ) : (
           <div className="flex flex-1 overflow-hidden relative">
