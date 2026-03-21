@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -7,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   Upload, Download, Share2, GitBranch, PlusCircle, 
-  Terminal, Sparkles, LayoutDashboard, Settings2 
+  Terminal, Sparkles, Library, Settings2 
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PipelineVersion } from '@/lib/pipeline-data';
@@ -15,7 +14,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { cn } from '@/lib/utils';
 
 interface HeaderProps {
   versions: PipelineVersion[];
@@ -122,10 +120,10 @@ const Header: React.FC<HeaderProps> = ({
         <Tabs value={activeView} onValueChange={(v) => onViewChange(v as any)} className="w-[300px]">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
-              <LayoutDashboard className="h-4 w-4" /> Manager
+              <Library className="h-4 w-4" /> Library
             </TabsTrigger>
             <TabsTrigger value="editor" className="flex items-center gap-2">
-              <Settings2 className="h-4 w-4" /> Editor
+              <Settings2 className="h-4 w-4" /> Designer
             </TabsTrigger>
           </TabsList>
         </Tabs>

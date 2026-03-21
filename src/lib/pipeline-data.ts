@@ -1,4 +1,3 @@
-
 import type { Icon } from 'lucide-react';
 import { 
   Database, Filter, Combine, BarChart3, DatabaseZap, Trash2, GitCommit, 
@@ -8,7 +7,7 @@ import {
   Milestone, DatabaseBackup, TestTube, FileJson, GitPullRequest, Settings,
   FileText, FunctionSquare, Pilcrow, Pencil, Search, GitCompare, EyeOff,
   Fingerprint, Bot, Group, Shuffle, Blend, BoxSelect, Code, Unplug, Layers,
-  Table, Activity, CheckCircle2, XCircle, Clock3
+  Table, Activity, CheckCircle2, XCircle, Clock3, Server, Pin
 } from 'lucide-react';
 import type { NodeType } from '@/components/data-flow/node';
 
@@ -21,7 +20,6 @@ export type OperationType = 'filter' | 'join' | 'group_by' | 'sort' | string;
 
 export interface BaseOperation {
     type: OperationType;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     settings: Record<string, any>;
 }
 
@@ -79,7 +77,6 @@ export interface SortOperation extends BaseOperation {
     }
 }
 
-
 export type Operation = FilterOperation | JoinOperation | GroupByOperation | SortOperation | BaseOperation;
 
 export interface PipelineNode {
@@ -106,15 +103,12 @@ export interface PipelineVersion {
   connectors: Connector[];
 }
 
-export type LineageStatus = 'success' | 'failed' | 'running' | 'idle';
-
 export interface LineageInfo {
   id: string;
   name: string;
   owner: string;
-  status: LineageStatus;
-  lastRun: string;
-  health: number; // 0-100
+  lastEdited: string;
+  description: string;
   versions: PipelineVersion[];
 }
 
@@ -295,31 +289,23 @@ export const mockLineages: LineageInfo[] = [
     id: 'lineage-1',
     name: 'Customer Revenue Pipeline',
     owner: 'Jane Doe',
-    status: 'success',
-    lastRun: '2 hours ago',
-    health: 98,
+    lastEdited: '2 hours ago',
+    description: 'Calculates LTV based on historical orders and active customer records.',
     versions: [
       {
         id: 'v1',
         name: 'v1.0 (Production)',
         nodes: initialNodes,
         connectors: initialConnectors,
-      },
-      {
-        id: 'v2',
-        name: 'v1.1 (Staging)',
-        nodes: JSON.parse(JSON.stringify(initialNodes)).map((n: PipelineNode) => ({...n, id: `${n.id}-v2`})),
-        connectors: JSON.parse(JSON.stringify(initialConnectors)).map((c: Connector) => ({from: `${c.from}-v2`, to: `${c.to}-v2`})),
-      },
+      }
     ]
   },
   {
     id: 'lineage-2',
     name: 'Inventory Sync',
     owner: 'John Smith',
-    status: 'failed',
-    lastRun: '15 mins ago',
-    health: 45,
+    lastEdited: '3 days ago',
+    description: 'Syncs warehouse stock levels with the external marketplace API.',
     versions: [
        { id: 'v1', name: 'v1.0', nodes: [], connectors: [] }
     ]
@@ -328,9 +314,8 @@ export const mockLineages: LineageInfo[] = [
     id: 'lineage-3',
     name: 'Marketing Leads ETL',
     owner: 'Sarah Connor',
-    status: 'running',
-    lastRun: 'Now',
-    health: 100,
+    lastEdited: 'Yesterday',
+    description: 'Normalizes inbound leads from CRM and prepares for campaign scoring.',
     versions: [
        { id: 'v1', name: 'v1.0', nodes: [], connectors: [] }
     ]
