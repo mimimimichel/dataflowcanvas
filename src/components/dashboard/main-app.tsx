@@ -676,6 +676,26 @@ export default function MainApp() {
     });
   };
 
+  const handleApplyScaffold = (scaffold: any) => {
+    const newNodes: PipelineNode[] = scaffold.nodes.map((n: any, i: number) => ({
+      id: `${n.type}-${Date.now()}-${i}`,
+      name: n.name,
+      type: n.type,
+      position: { x: n.x, y: n.y },
+      inputFields: [],
+      outputFields: [],
+      operation: n.operationType ? { type: n.operationType, settings: {} } : undefined
+    }));
+
+    const newConnectors: ConnectorType[] = scaffold.connectors.map((c: any) => ({
+      from: newNodes[c.fromIndex].id,
+      to: newNodes[c.toIndex].id
+    }));
+
+    setNodes(newNodes);
+    setConnectors(newConnectors);
+  };
+
   const handleSelectLineage = (id: string) => {
     const lineage = lineages.find(l => l.id === id);
     if (lineage) {
@@ -747,6 +767,7 @@ export default function MainApp() {
           onGeneratePython={handleHandleGeneratePython}
           onGenerateSpec={handleGenerateSpec}
           onImportPipeline={handleImportPipeline}
+          onApplyScaffold={handleApplyScaffold}
           activeView={activeView}
           onViewChange={setActiveView}
         />

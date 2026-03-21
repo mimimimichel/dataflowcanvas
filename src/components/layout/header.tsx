@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   Upload, Download, Share2, GitBranch, PlusCircle, 
-  Terminal, Sparkles, Library, Settings2 
+  Terminal, Sparkles, Library, Settings2, Wand2 
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PipelineVersion, LineageInfo } from '@/lib/pipeline-data';
@@ -15,6 +15,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import AIArchitectModal from '@/components/modals/ai-architect-modal';
 
 interface HeaderProps {
   activeLineage?: LineageInfo;
@@ -26,6 +27,7 @@ interface HeaderProps {
   onGeneratePython: () => void;
   onGenerateSpec: () => void;
   onImportPipeline: (data: any) => void;
+  onApplyScaffold: (scaffold: any) => void;
   activeView: 'dashboard' | 'editor';
   onViewChange: (view: 'dashboard' | 'editor') => void;
 }
@@ -87,11 +89,13 @@ const Header: React.FC<HeaderProps> = ({
   onGeneratePython, 
   onGenerateSpec,
   onImportPipeline,
+  onApplyScaffold,
   activeView,
   onViewChange
 }) => {
   const { toast } = useToast();
   const [isCreateVersionOpen, setIsCreateVersionOpen] = useState(false);
+  const [isArchitectOpen, setIsArchitectOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExport = () => {
@@ -189,6 +193,9 @@ const Header: React.FC<HeaderProps> = ({
 
       <div className="flex items-center gap-4">
         <div className="hidden lg:flex items-center gap-2 border-r border-white/10 pr-4">
+            <Button variant="outline" size="sm" onClick={() => setIsArchitectOpen(true)} className="group h-9 bg-primary/10 border-primary/20 hover:bg-primary/20 text-primary">
+                <Wand2 className="mr-2 h-4 w-4" /> AI Architect
+            </Button>
             <Button variant="outline" size="sm" onClick={onGenerateSpec} className="group h-9 bg-background/40 border-white/10 hover:bg-background/60">
                 <Sparkles className="mr-2 h-4 w-4 text-amber-500 group-hover:scale-110 transition-transform" /> Write Spec
             </Button>
@@ -238,6 +245,12 @@ const Header: React.FC<HeaderProps> = ({
           activeVersionName={activeVersion.name}
         />
       )}
+
+      <AIArchitectModal 
+        isOpen={isArchitectOpen}
+        onClose={() => setIsArchitectOpen(false)}
+        onApplyScaffold={onApplyScaffold}
+      />
     </header>
   );
 };
