@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -28,10 +27,10 @@ interface NodeProps extends PipelineNode {
 }
 
 const typeConfig: Record<NodeType, { icon: Icon; color: string; }> = {
-  source: { icon: Database, color: 'bg-blue-500' },
-  transformation: { icon: GitCompare, color: 'bg-purple-500' },
-  destination: { icon: DatabaseZap, color: 'bg-green-500' },
-  dataset: { icon: Layers, color: 'bg-yellow-500' },
+  source: { icon: Database, color: 'bg-blue-600' },
+  transformation: { icon: GitCompare, color: 'bg-amber-600' },
+  destination: { icon: DatabaseZap, color: 'bg-emerald-600' },
+  dataset: { icon: Layers, color: 'bg-violet-600' },
 };
 
 const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
@@ -39,12 +38,12 @@ const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
         return <p className="text-xs text-muted-foreground text-center p-2">No fields defined</p>;
     }
     return (
-        <div className="p-2 bg-muted rounded-md">
+        <div className="p-2 bg-muted/30 rounded-md border border-white/5">
             <div className="space-y-1">
                 {fields.map(field => (
-                    <div key={field.name} className="flex justify-between items-center text-xs">
-                        <span className="font-mono text-foreground truncate" title={field.name}>{field.name}</span>
-                        <span className="font-mono text-muted-foreground flex-shrink-0 ml-2">{field.type}</span>
+                    <div key={field.name} className="flex justify-between items-center text-[10px]">
+                        <span className="font-mono text-foreground/80 truncate" title={field.name}>{field.name}</span>
+                        <span className="font-mono text-muted-foreground/60 flex-shrink-0 ml-2">{field.type}</span>
                     </div>
                 ))}
             </div>
@@ -83,7 +82,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
   const renderOverview = () => {
     switch(type) {
         case 'transformation':
-            if (!operation) return <div className="p-2 text-xs font-mono bg-muted rounded-md">No operation configured</div>;
+            if (!operation) return <div className="p-2 text-xs font-mono bg-muted/20 rounded-md border border-white/5">No operation configured</div>;
             switch(operation.type) {
                 case 'filter':
                     return <FilterOperation operation={operation} inputFields={inputFields || []} onUpdate={(op) => onUpdateOperation(id, op)} />;
@@ -96,7 +95,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
                 case 'no_op':
                     return <SchemaOverview fields={inputFields || []} />;
                 default:
-                    return <div className="p-2 text-xs font-mono bg-muted rounded-md">Overview not available for this operation.</div>;
+                    return <div className="p-2 text-xs font-mono bg-muted/20 rounded-md border border-white/5">Overview not available.</div>;
             }
         case 'source':
             return <SchemaOverview fields={outputFields || []} />;
@@ -120,29 +119,31 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
       <Card
         onClick={onSelect}
         className={cn(
-          'w-64 shadow-lg hover:shadow-xl transition-all duration-300 border-2 relative flex flex-col justify-between cursor-pointer',
-          isSelected ? 'border-primary shadow-2xl' : 'border-transparent',
-          isExpanded ? 'h-auto' : 'h-auto' // Always allow auto height
+          'w-64 shadow-lg hover:shadow-xl transition-all duration-300 border-2 relative flex flex-col justify-between cursor-pointer backdrop-blur-md bg-card/80',
+          isSelected ? 'border-accent shadow-accent/20 accent-glow scale-[1.02]' : 'border-white/20',
         )}
       >
-        <div className="flex items-center gap-2 p-2">
-            <div className={cn('p-1.5 rounded-md self-start', typeConfig[type].color)}>
+        <div className="flex items-center gap-2 p-3">
+            <div className={cn('p-1.5 rounded-md self-start shadow-inner', typeConfig[type].color)}>
               <TypeIcon className="w-5 h-5 text-white" />
             </div>
-            <p className="text-sm font-medium leading-tight text-left break-words flex-1">{name}</p>
+            <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold leading-tight text-left truncate text-white">{name}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">{type}</p>
+            </div>
         </div>
 
         {(system || location) && (type === 'source' || type === 'dataset' || type === 'destination') && (
-            <div className="px-2 pb-2 space-y-1">
+            <div className="px-3 pb-3 space-y-1">
                 {system && (
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Server className="w-3.5 h-3.5 flex-shrink-0"/>
+                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/80 bg-white/5 px-2 py-0.5 rounded">
+                        <Server className="w-3 h-3 flex-shrink-0 text-primary"/>
                         <span className="truncate" title={system}>{system}</span>
                     </div>
                 )}
                 {location && (
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Pin className="w-3.5 h-3.5 flex-shrink-0"/>
+                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/80 bg-white/5 px-2 py-0.5 rounded">
+                        <Pin className="w-3 h-3 flex-shrink-0 text-primary"/>
                         <span className="truncate" title={location}>{location}</span>
                     </div>
                 )}
@@ -150,7 +151,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
         )}
 
         {isExpanded && (
-            <CardContent className="p-2 pt-0">
+            <CardContent className="p-3 pt-0">
                 {renderOverview()}
             </CardContent>
         )}
@@ -169,28 +170,24 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
           />
         )}
         
-        <Button 
-            variant="ghost" 
-            size="icon" 
-            className={cn(
-                "absolute h-7 w-7 opacity-0 group-hover:opacity-100",
-                 isExpanded ? "top-1 right-1" : "top-1/2 -translate-y-1/2 right-9"
-            )}
-            onClick={handleConfigClick}
-        >
-            <SlidersHorizontal className="w-4 h-4" />
-        </Button>
-        <Button 
-            variant="ghost" 
-            size="icon" 
-            className={cn(
-                "absolute h-7 w-7",
-                isExpanded ? "bottom-1 right-1 opacity-100" : "top-1/2 -translate-y-1/2 right-1 opacity-0 group-hover:opacity-100"
-            )}
-            onClick={handleToggleExpand}
-        >
-            <ChevronDown className={cn("w-4 h-4 transition-transform", isExpanded && "rotate-180")} />
-        </Button>
+        <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7 bg-black/40 hover:bg-black/60 text-white rounded-full border border-white/10"
+                onClick={handleConfigClick}
+            >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+            </Button>
+            <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7 bg-black/40 hover:bg-black/60 text-white rounded-full border border-white/10"
+                onClick={handleToggleExpand}
+            >
+                <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", isExpanded && "rotate-180")} />
+            </Button>
+        </div>
       </Card>
     </div>
   );

@@ -16,13 +16,13 @@
     --secondary-foreground: 210 40% 98%;
     --muted: 217 32% 12%;
     --muted-foreground: 215 20% 65%;
-    --accent: 217 32% 17%;
+    --accent: 38 92% 50%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217 32% 17%;
+    --border: 217 32% 25%;
     --input: 217 32% 17%;
-    --ring: 199 89% 48%;
+    --ring: 38 92% 50%;
     --radius: 0.5rem;
   }
 }
@@ -46,5 +46,9 @@
     to {
       stroke-dashoffset: -30;
     }
+  }
+
+  .accent-glow {
+    box-shadow: 0 0 15px -3px hsl(var(--accent) / 0.3);
   }
 }

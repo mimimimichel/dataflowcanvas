@@ -38,7 +38,7 @@ const CreateLineageDialog: React.FC<{
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="border-white/20">
         <DialogHeader>
           <DialogTitle>Create New Design</DialogTitle>
           <DialogDescription>
@@ -53,6 +53,7 @@ const CreateLineageDialog: React.FC<{
               placeholder="e.g., Marketing ROI Analysis"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              className="bg-background/50 border-white/10"
             />
           </div>
           <div className="grid gap-2">
@@ -62,12 +63,13 @@ const CreateLineageDialog: React.FC<{
               placeholder="Explain the purpose of this design..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              className="bg-background/50 border-white/10"
             />
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleCreate}>Create Design</Button>
+          <Button onClick={handleCreate} className="bg-primary hover:bg-primary/90">Create Design</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -86,14 +88,14 @@ export default function LineageDashboard({ lineages, onSelectLineage, onCreateLi
   }, [lineages, searchTerm]);
 
   return (
-    <div className="flex-1 p-8 overflow-y-auto bg-muted/20">
+    <div className="flex-1 p-8 overflow-y-auto bg-muted/10">
       <div className="max-w-7xl mx-auto space-y-8">
         <div className="flex justify-between items-end">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight">Lineage Library</h2>
+            <h2 className="text-3xl font-bold tracking-tight text-white">Lineage Library</h2>
             <p className="text-muted-foreground">Browse and manage your data pipeline architecture designs.</p>
           </div>
-          <Button className="gap-2" onClick={() => setIsCreateOpen(true)}>
+          <Button className="gap-2 bg-primary hover:bg-primary/90" onClick={() => setIsCreateOpen(true)}>
             <Plus className="h-4 w-4" /> New Lineage
           </Button>
         </div>
@@ -103,30 +105,30 @@ export default function LineageDashboard({ lineages, onSelectLineage, onCreateLi
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Search lineages..." 
-              className="pl-9 bg-background" 
+              className="pl-9 bg-background border-white/10 focus:border-primary/50" 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button variant="outline" size="icon">
+          <Button variant="outline" size="icon" className="border-white/10">
             <Filter className="h-4 w-4" />
           </Button>
         </div>
 
-        <Card>
+        <Card className="border-white/20 bg-card/50 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle>Available Designs</CardTitle>
+            <CardTitle className="text-white">Available Designs</CardTitle>
             <CardDescription>Select a lineage to open it in the visual editor.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[300px]">Design Name</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Owner</TableHead>
-                  <TableHead>Last Edited</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                <TableRow className="border-white/10">
+                  <TableHead className="w-[300px] text-muted-foreground uppercase text-[10px] font-bold tracking-wider">Design Name</TableHead>
+                  <TableHead className="text-muted-foreground uppercase text-[10px] font-bold tracking-wider">Description</TableHead>
+                  <TableHead className="text-muted-foreground uppercase text-[10px] font-bold tracking-wider">Owner</TableHead>
+                  <TableHead className="text-muted-foreground uppercase text-[10px] font-bold tracking-wider">Last Edited</TableHead>
+                  <TableHead className="text-right text-muted-foreground uppercase text-[10px] font-bold tracking-wider">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -135,27 +137,27 @@ export default function LineageDashboard({ lineages, onSelectLineage, onCreateLi
                     return (
                       <TableRow 
                         key={lineage.id} 
-                        className="cursor-pointer hover:bg-muted/50 transition-colors" 
+                        className="cursor-pointer hover:bg-white/5 transition-colors border-white/5" 
                         onClick={() => onSelectLineage(lineage.id)}
                       >
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-md bg-primary/10">
+                            <div className="p-2 rounded-md bg-primary/20 border border-primary/30">
                               <GitBranch className="h-4 w-4 text-primary" />
                             </div>
                             <div className="flex flex-col">
-                              <span>{lineage.name}</span>
-                              <span className="text-xs text-muted-foreground font-mono">{lineage.id}</span>
+                              <span className="text-white">{lineage.name}</span>
+                              <span className="text-[10px] text-muted-foreground font-mono">{lineage.id}</span>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell className="max-w-xs">
                           <p className="text-sm text-muted-foreground truncate">{lineage.description}</p>
                         </TableCell>
-                        <TableCell className="text-sm">{lineage.owner}</TableCell>
+                        <TableCell className="text-sm text-foreground/80">{lineage.owner}</TableCell>
                         <TableCell className="text-muted-foreground text-sm">{lineage.lastEdited}</TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" className="gap-2">
+                          <Button variant="ghost" size="sm" className="gap-2 text-primary hover:text-primary hover:bg-primary/10">
                             Edit <ArrowUpRight className="h-3 w-3" />
                           </Button>
                         </TableCell>
