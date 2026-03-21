@@ -28,11 +28,31 @@ interface NodeProps extends PipelineNode {
   onUpdateOperation: (nodeId: string, operation: Operation) => void;
 }
 
-const typeConfig: Record<NodeType, { icon: Icon; color: string; }> = {
-  source: { icon: Database, color: 'bg-blue-600' },
-  transformation: { icon: GitCompare, color: 'bg-amber-600' },
-  destination: { icon: DatabaseZap, color: 'bg-emerald-600' },
-  dataset: { icon: Layers, color: 'bg-violet-600' },
+const typeConfig: Record<NodeType, { icon: Icon; color: string; border: string; glow: string; }> = {
+  source: { 
+    icon: Database, 
+    color: 'bg-blue-600', 
+    border: 'border-blue-500/40',
+    glow: 'shadow-blue-500/10'
+  },
+  transformation: { 
+    icon: GitCompare, 
+    color: 'bg-amber-600', 
+    border: 'border-amber-500/40',
+    glow: 'shadow-amber-500/10'
+  },
+  destination: { 
+    icon: DatabaseZap, 
+    color: 'bg-emerald-600', 
+    border: 'border-emerald-500/40',
+    glow: 'shadow-emerald-500/10'
+  },
+  dataset: { 
+    icon: Layers, 
+    color: 'bg-violet-600', 
+    border: 'border-violet-500/40',
+    glow: 'shadow-violet-500/10'
+  },
 };
 
 const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
@@ -127,9 +147,12 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
       <Card
         onClick={onSelect}
         className={cn(
-          'w-64 shadow-2xl hover:shadow-primary/5 transition-all duration-300 border-2 relative flex flex-col justify-between cursor-pointer backdrop-blur-md bg-card/90',
+          'w-64 transition-all duration-300 border-2 relative flex flex-col justify-between cursor-pointer backdrop-blur-md bg-card/90 shadow-2xl',
           'bg-gradient-to-br from-white/[0.05] to-transparent',
-          isSelected ? 'border-accent shadow-accent/20 accent-glow scale-[1.02]' : 'border-white/20',
+          typeConfig[type].glow,
+          isSelected 
+            ? 'border-accent shadow-accent/20 accent-glow scale-[1.02]' 
+            : cn('group-hover:scale-[1.01]', typeConfig[type].border),
         )}
       >
         <div className="flex items-center gap-2 p-3">
