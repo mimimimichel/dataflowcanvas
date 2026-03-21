@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Upload, Download, Share2, GitBranch, PlusCircle, Code } from 'lucide-react';
+import { Upload, Download, Share2, GitBranch, PlusCircle, Terminal } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PipelineVersion } from '@/lib/pipeline-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -132,11 +132,11 @@ const Header: React.FC<HeaderProps> = ({ versions, activeVersionId, onVersionCha
         </div>
         <div className="flex items-center gap-2 border-l pl-4 ml-2">
             <Button variant="outline" size="sm" onClick={onGeneratePython}>
-                <Code className="mr-2 h-4 w-4" /> Python
+                <Terminal className="mr-2 h-4 w-4" /> Foundry
             </Button>
-            <Button variant="outline" size="sm" onClick={handleImport}><Upload className="mr-2" /> Import</Button>
-            <Button variant="outline" size="sm" onClick={handleExport}><Download className="mr-2" /> Export</Button>
-            <Button size="sm" onClick={handleShare}><Share2 className="mr-2" /> Share</Button>
+            <Button variant="outline" size="sm" onClick={handleImport}><Upload className="mr-2 h-4 w-4" /> Import</Button>
+            <Button variant="outline" size="sm" onClick={handleExport}><Download className="mr-2 h-4 w-4" /> Export</Button>
+            <Button size="sm" onClick={handleShare}><Share2 className="mr-2 h-4 w-4" /> Share</Button>
         </div>
       </div>
 

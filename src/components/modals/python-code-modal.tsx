@@ -23,22 +23,22 @@ const PythonCodeModal: React.FC<PythonCodeModalProps> = ({ isOpen, onClose, code
     setCopied(true);
     toast({
       title: "Copied to clipboard",
-      description: "Python script is ready to be pasted.",
+      description: "Palantir Foundry transform is ready to be pasted.",
     });
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Generated Python Script (Pandas)</DialogTitle>
+          <DialogTitle>Palantir Foundry Transform (PySpark)</DialogTitle>
           <DialogDescription>
-            This script represents your visual pipeline in Python. You can run it locally with Pandas installed.
+            This script is ready to be used in a Foundry Repository. It uses the @transform_df decorator for clean data processing.
           </DialogDescription>
         </DialogHeader>
         <div className="relative">
-            <ScrollArea className="h-[400px] w-full rounded-md border bg-slate-950 p-4 font-mono text-xs text-slate-50">
+            <ScrollArea className="h-[500px] w-full rounded-md border bg-slate-950 p-4 font-mono text-xs text-slate-50">
                 <pre>{code}</pre>
             </ScrollArea>
             <Button
