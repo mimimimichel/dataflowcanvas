@@ -16,6 +16,7 @@ import {
   JoinOperation, 
   GroupByOperation, 
   SortOperation, 
+  SelectColumnsOperation,
   getJoinOutputFields, 
   PipelineVersion,
   mockLineages,
@@ -29,8 +30,9 @@ import { generatePythonCode } from '@/lib/python-generator';
 import { generatePipelineSpec } from '@/ai/flows/generate-spec-flow';
 import LineageDashboard from '@/components/dashboard/lineage-dashboard';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Plus, Minus, Maximize, MousePointer2, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type SvgDimensions = {
   width: number | string;
@@ -117,6 +119,16 @@ export default function MainApp() {
     setSelectedConnector(connector);
     setSelectedNodeId(null);
   };
+
+  const handleZoom = (delta: number) => {
+    const newZoom = Math.min(Math.max(zoom + delta, 0.2), 3);
+    setZoom(newZoom);
+  };
+
+  const handleResetCanvas = () => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  };
   
   const handleAddNode = useCallback((item: TransformationItem, position: {x: number, y: number}) => {
     if (!canvasRef.current) return;
@@ -158,6 +170,14 @@ export default function MainApp() {
                         conditions: []
                     }
                 } as SortOperation;
+                break;
+            case 'select_columns':
+                operation = {
+                    type: 'select_columns',
+                    settings: {
+                        selectedFields: []
+                    }
+                } as SelectColumnsOperation;
                 break;
             default:
                 operation = { type: item.operationType, settings: {} };
@@ -378,7 +398,7 @@ export default function MainApp() {
     } else {
       newZoom = zoom / zoomFactor;
     }
-    newZoom = Math.min(Math.max(newZoom, 0.2), 5);
+    newZoom = Math.min(Math.max(newZoom, 0.2), 3);
 
     const newPanX = pan.x - (x - pan.x) * (newZoom / zoom - 1);
     const newPanY = pan.y - (y - pan.y) * (newZoom / zoom - 1);
@@ -412,8 +432,14 @@ export default function MainApp() {
             switch(currentNode.operation.type) {
               case 'filter':
               case 'sort':
+              case 'union':
                 newOutputFields = currentNode.inputFields || [];
                 break;
+              case 'select_columns': {
+                const selectOp = currentNode.operation as SelectColumnsOperation;
+                newOutputFields = (currentNode.inputFields || []).filter(f => selectOp.settings.selectedFields?.includes(f.name));
+                break;
+              }
               case 'join': {
                 const joinOp = currentNode.operation as JoinOperation;
                 const leftNode = currentNodes.find(ln => ln.id === joinOp.settings.leftNodeId);
@@ -815,6 +841,46 @@ export default function MainApp() {
                     onUpdateOperation={handleUpdateOperation}
                   />
                 ))}
+              </div>
+
+              {/* Floating Canvas Controls */}
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50">
+                <div className="glass-panel rounded-2xl flex items-center p-1.5 gap-1 border border-white/10 shadow-2xl">
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-white" onClick={() => handleZoom(0.1)}>
+                                    <ZoomIn className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Zoom In</TooltipContent>
+                        </Tooltip>
+                        
+                        <div className="w-12 text-center text-[10px] font-mono font-bold text-muted-foreground">
+                            {Math.round(zoom * 100)}%
+                        </div>
+
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-white" onClick={() => handleZoom(-0.1)}>
+                                    <ZoomOut className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Zoom Out</TooltipContent>
+                        </Tooltip>
+
+                        <div className="w-px h-4 bg-white/10 mx-1" />
+
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-white" onClick={handleResetCanvas}>
+                                    <RotateCcw className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Reset View</TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                </div>
               </div>
             </main>
           </div>

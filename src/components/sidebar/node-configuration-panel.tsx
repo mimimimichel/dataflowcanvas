@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -7,7 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { PipelineNode, Field, Operation, FilterOperation, JoinOperation, GroupByOperation, SortOperation, getJoinOutputFields } from '@/lib/pipeline-data';
+import { 
+  PipelineNode, Field, Operation, FilterOperation, JoinOperation, 
+  GroupByOperation, SortOperation, SelectColumnsOperation, UnionOperation, getJoinOutputFields 
+} from '@/lib/pipeline-data';
 import { Trash2, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Table as UiTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -26,6 +28,7 @@ import FilterOperationEditor from '@/components/operations/filter-operation-edit
 import JoinOperationEditor from '@/components/operations/join-operation-editor';
 import GroupByOperationEditor from '@/components/operations/group-by-operation-editor';
 import SortOperationEditor from '@/components/operations/sort-operation-editor';
+import SelectColumnsOperationEditor from '@/components/operations/select-columns-operation-editor';
 
 
 interface NodeConfigurationPanelProps {
@@ -153,7 +156,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
     const effectiveOperation = { ...displayNode.operation, ...updatedOperation };
     const effectiveInputFields = displayNode.inputFields || [];
 
-    if (effectiveOperation.type === 'filter' || effectiveOperation.type === 'sort') {
+    if (effectiveOperation.type === 'filter' || effectiveOperation.type === 'sort' || effectiveOperation.type === 'union') {
       newConfig.outputFields = effectiveInputFields;
     } else if (effectiveOperation.type === 'join') {
       const joinOp = effectiveOperation as JoinOperation;
@@ -174,6 +177,9 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
           newOutputFields.push({ name: agg.newName, type: originalField?.type || 'unknown' });
       });
       newConfig.outputFields = newOutputFields;
+    } else if (effectiveOperation.type === 'select_columns') {
+      const selectOp = effectiveOperation as SelectColumnsOperation;
+      newConfig.outputFields = effectiveInputFields.filter(f => selectOp.settings.selectedFields?.includes(f.name));
     }
     
     setDraftNode(prev => ({ ...prev, ...newConfig }));
@@ -244,6 +250,20 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                             inputFields={displayNode.inputFields || []}
                             onUpdate={handleOperationUpdate}
                         />
+                    );
+                case 'select_columns':
+                    return (
+                        <SelectColumnsOperationEditor
+                            operation={operation as SelectColumnsOperation}
+                            inputFields={displayNode.inputFields || []}
+                            onUpdate={handleOperationUpdate}
+                        />
+                    );
+                case 'union':
+                    return (
+                        <div className="p-4 bg-white/5 rounded-lg border border-dashed border-white/10 text-center">
+                            <p className="text-sm text-muted-foreground italic">Stacking rows from multiple input sources. No additional configuration needed.</p>
+                        </div>
                     );
                 default:
                     return <p className="text-sm text-muted-foreground">Configuration for '{operation.type}' is not yet available.</p>;

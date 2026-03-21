@@ -1,5 +1,4 @@
-
-import { PipelineNode, Connector, JoinOperation, FilterOperation, GroupByOperation, SortOperation } from './pipeline-data';
+import { PipelineNode, Connector, JoinOperation, FilterOperation, GroupByOperation, SortOperation, SelectColumnsOperation } from './pipeline-data';
 
 /**
  * Generates a Palantir Foundry PySpark transform script based on the pipeline.
@@ -8,7 +7,7 @@ export function generatePythonCode(nodes: PipelineNode[], connectors: Connector[
   const sources = nodes.filter(n => n.type === 'source');
   const destinations = nodes.filter(n => n.type === 'destination');
   
-  let code = `from transforms.api import transform_df, Input, Output\n\n`;
+  let code = `from transforms.api import transform_df, Input, Output\nfrom pyspark.sql import functions as F\n\n`;
 
   // Helper to get variable name from node ID
   const getVarName = (nodeId: string) => {
@@ -100,7 +99,6 @@ export function generatePythonCode(nodes: PipelineNode[], connectors: Connector[
           const gInputVar = getVarName(parentIds[0]);
           const groupByCols = gOp.settings.groupByFields.map(f => `'${f}'`).join(', ');
           
-          code += `    from pyspark.sql import functions as F\n`;
           code += `    ${varName} = ${gInputVar}.groupBy(${groupByCols}).agg(\n`;
           gOp.settings.aggregations.forEach((agg, idx) => {
             const isLast = idx === gOp.settings.aggregations.length - 1;
@@ -115,8 +113,27 @@ export function generatePythonCode(nodes: PipelineNode[], connectors: Connector[
           const sOp = op as SortOperation;
           const sInputVar = getVarName(parentIds[0]);
           const sortExprs = sOp.settings.conditions.map(c => `F.col('${c.field}').${c.direction}()`).join(', ');
-          code += `    from pyspark.sql import functions as F\n`;
           code += `    ${varName} = ${sInputVar}.orderBy(${sortExprs})\n`;
+          break;
+        }
+
+        case 'select_columns': {
+          const selOp = op as SelectColumnsOperation;
+          const selInputVar = getVarName(parentIds[0]);
+          const cols = (selOp.settings.selectedFields || []).map(f => `'${f}'`).join(', ');
+          code += `    ${varName} = ${selInputVar}.select(${cols})\n`;
+          break;
+        }
+
+        case 'union': {
+          if (parentIds.length >= 2) {
+            const firstVar = getVarName(parentIds[0]);
+            const otherVars = parentIds.slice(1).map(id => getVarName(id));
+            code += `    ${varName} = ${firstVar}\n`;
+            otherVars.forEach(v => {
+               code += `    ${varName} = ${varName}.unionByName(${v})\n`;
+            });
+          }
           break;
         }
 

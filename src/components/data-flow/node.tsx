@@ -6,11 +6,13 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal, GitCompare, Group as GroupIcon, ChevronDown, ArrowRightLeft, Filter, SortAsc, Table, Combine, Server, Pin } from 'lucide-react';
 import Port from './port';
-import { TransformationItem, PipelineNode, Field, Operation, transformations, advancedTransformations } from '@/lib/pipeline-data';
+import { TransformationItem, PipelineNode, Field, Operation, transformations, advancedTransformations, SelectColumnsOperation as SelectColumnsType, UnionOperation as UnionType } from '@/lib/pipeline-data';
 import FilterOperation from '@/components/operations/filter-operation';
 import JoinOperation from '@/components/operations/join-operation';
 import GroupByOperation from '@/components/operations/group-by-operation';
 import SortOperation from '@/components/operations/sort-operation';
+import SelectColumnsOperation from '@/components/operations/select-columns-operation';
+import UnionOperation from '@/components/operations/union-operation';
 
 export type NodeType = 'source' | 'transformation' | 'destination' | 'dataset';
 
@@ -40,12 +42,15 @@ const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
     return (
         <div className="p-2 bg-muted/30 rounded-md border border-white/5">
             <div className="space-y-1">
-                {fields.map(field => (
+                {fields.slice(0, 8).map(field => (
                     <div key={field.name} className="flex justify-between items-center text-[10px]">
                         <span className="font-mono text-foreground/80 truncate" title={field.name}>{field.name}</span>
                         <span className="font-mono text-muted-foreground/60 flex-shrink-0 ml-2">{field.type}</span>
                     </div>
                 ))}
+                {fields.length > 8 && (
+                    <p className="text-[9px] text-muted-foreground italic text-center pt-1">+{fields.length - 8} more fields</p>
+                )}
             </div>
         </div>
     );
@@ -56,11 +61,10 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
   const getIconForOperation = (op?: Operation) => {
     if(!op || type !== 'transformation') return typeConfig[type].icon || Cog;
 
-    const advancedItems = Array.isArray(advancedTransformations) ? advancedTransformations.flatMap(c => c.items) : [];
-    const allTransformations = [
-      ...transformations.common,
-      ...advancedItems
-    ];
+    const common = transformations.common;
+    const advanced = advancedTransformations ? advancedTransformations.flatMap(c => c.items) : [];
+    const allTransformations = [...common, ...advanced];
+    
     const transformationInfo = allTransformations.find(t => t.operationType === op.type);
     
     return transformationInfo?.icon || typeConfig[type].icon || Cog;
@@ -92,6 +96,10 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
                     return <GroupByOperation operation={operation} />;
                 case 'sort':
                     return <SortOperation operation={operation} />;
+                case 'select_columns':
+                    return <SelectColumnsOperation operation={operation as SelectColumnsType} />;
+                case 'union':
+                    return <UnionOperation operation={operation as UnionType} />;
                 case 'no_op':
                     return <SchemaOverview fields={inputFields || []} />;
                 default:

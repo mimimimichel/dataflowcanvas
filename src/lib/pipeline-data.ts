@@ -16,7 +16,7 @@ export interface Field {
   type: string;
 }
 
-export type OperationType = 'filter' | 'join' | 'group_by' | 'sort' | string;
+export type OperationType = 'filter' | 'join' | 'group_by' | 'sort' | 'select_columns' | 'union' | string;
 
 export interface BaseOperation {
     type: OperationType;
@@ -77,7 +77,26 @@ export interface SortOperation extends BaseOperation {
     }
 }
 
-export type Operation = FilterOperation | JoinOperation | GroupByOperation | SortOperation | BaseOperation;
+export interface SelectColumnsOperation extends BaseOperation {
+    type: 'select_columns';
+    settings: {
+        selectedFields: string[];
+    }
+}
+
+export interface UnionOperation extends BaseOperation {
+    type: 'union';
+    settings: {}
+}
+
+export type Operation = 
+    | FilterOperation 
+    | JoinOperation 
+    | GroupByOperation 
+    | SortOperation 
+    | SelectColumnsOperation 
+    | UnionOperation 
+    | BaseOperation;
 
 export interface PipelineNode {
   id: string;
