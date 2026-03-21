@@ -1,0 +1,507 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user's profile information and application-specific settings, excluding authentication details.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The first name of the user."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name of the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the user, used for communication.",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user within the application (e.g., 'engineer', 'data_consumer'). This dictates UI views and permissions."
+        },
+        "preferences": {
+          "type": "string",
+          "description": "User-specific settings and preferences, such as UI theme (e.g., dark mode) or notification settings, stored as a JSON string."
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "email",
+        "role"
+      ]
+    },
+    "Workspace": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Workspace",
+      "type": "object",
+      "description": "Organizes pipelines and facilitates collaboration among multiple users.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Workspace entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the workspace."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the workspace's purpose."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who owns this workspace. (Relationship: UserProfile 1:N Workspace)"
+        },
+        "memberIds": {
+          "type": "array",
+          "description": "References to UserProfiles who are members of this workspace and can collaborate. (Relationship: UserProfile N:N Workspace)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The timestamp when the workspace was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "The timestamp when the workspace was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "ownerId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Pipeline": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Pipeline",
+      "type": "object",
+      "description": "Represents a logical data pipeline, acting as a container for its versions.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Pipeline entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the data pipeline."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the data pipeline's purpose and functionality."
+        },
+        "workspaceId": {
+          "type": "string",
+          "description": "Reference to the Workspace this pipeline belongs to. (Relationship: Workspace 1:N Pipeline)"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who owns this pipeline. (Relationship: UserProfile 1:N Pipeline)"
+        },
+        "currentPipelineVersionId": {
+          "type": "string",
+          "description": "Reference to the currently active or production version of this pipeline. (Relationship: Pipeline 1:1 PipelineVersion)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The timestamp when the pipeline was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "The timestamp when the pipeline was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "workspaceId",
+        "ownerId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PipelineVersion": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PipelineVersion",
+      "type": "object",
+      "description": "Represents a specific historical or current version of a data pipeline, supporting lineage versioning.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the PipelineVersion entity."
+        },
+        "pipelineId": {
+          "type": "string",
+          "description": "Reference to the Pipeline this version belongs to. (Relationship: Pipeline 1:N PipelineVersion)"
+        },
+        "versionNumber": {
+          "type": "number",
+          "description": "The sequential version number for this pipeline's evolution."
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of this pipeline version (e.g., 'draft', 'published', 'archived', 'production')."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The timestamp when this pipeline version was created.",
+          "format": "date-time"
+        },
+        "createdByUserId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who created this pipeline version. (Relationship: UserProfile 1:N PipelineVersion)"
+        }
+      },
+      "required": [
+        "id",
+        "pipelineId",
+        "versionNumber",
+        "status",
+        "createdAt",
+        "createdByUserId"
+      ]
+    },
+    "Node": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Node",
+      "type": "object",
+      "description": "Represents a single component within a specific version of a data pipeline, such as a source, transformation, or destination.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Node entity."
+        },
+        "pipelineVersionId": {
+          "type": "string",
+          "description": "Reference to the PipelineVersion this node belongs to. (Relationship: PipelineVersion 1:N Node)"
+        },
+        "type": {
+          "type": "string",
+          "description": "The category of the node (e.g., 'source', 'transformation', 'destination')."
+        },
+        "name": {
+          "type": "string",
+          "description": "The display name of the node on the canvas."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the node's function."
+        },
+        "configuration": {
+          "type": "string",
+          "description": "A JSON string containing the specific configuration parameters for this node type (e.g., database connection details for a source, transformation rules for a transform)."
+        },
+        "xPosition": {
+          "type": "number",
+          "description": "The X-coordinate position of the node on the canvas for visualization."
+        },
+        "yPosition": {
+          "type": "number",
+          "description": "The Y-coordinate position of the node on the canvas for visualization."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current operational status of the node (e.g., 'running', 'stopped', 'error', 'pending')."
+        },
+        "dataQualityMetrics": {
+          "type": "string",
+          "description": "A JSON string containing data quality metrics associated with this node (e.g., 'completeness', 'validity', 'freshness')."
+        },
+        "catalogTransformationId": {
+          "type": "string",
+          "description": "Optional reference to a TransformationCatalog entry if this node represents a pre-defined transformation. (Relationship: TransformationCatalog 1:N Node)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The timestamp when the node was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "The timestamp when the node was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "pipelineVersionId",
+        "type",
+        "name",
+        "configuration",
+        "xPosition",
+        "yPosition",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Connection": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Connection",
+      "type": "object",
+      "description": "Represents a directed link between two nodes within a specific version of a data pipeline, illustrating data flow.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Connection entity."
+        },
+        "pipelineVersionId": {
+          "type": "string",
+          "description": "Reference to the PipelineVersion this connection belongs to. (Relationship: PipelineVersion 1:N Connection)"
+        },
+        "sourceNodeId": {
+          "type": "string",
+          "description": "Reference to the source Node in this connection. (Relationship: Node 1:N Connection)"
+        },
+        "destinationNodeId": {
+          "type": "string",
+          "description": "Reference to the destination Node in this connection. (Relationship: Node 1:N Connection)"
+        },
+        "sourcePort": {
+          "type": "string",
+          "description": "Optional identifier for the specific output port of the source node."
+        },
+        "destinationPort": {
+          "type": "string",
+          "description": "Optional identifier for the specific input port of the destination node."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the data flow or purpose of this connection."
+        }
+      },
+      "required": [
+        "id",
+        "pipelineVersionId",
+        "sourceNodeId",
+        "destinationNodeId"
+      ]
+    },
+    "TransformationCatalog": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "TransformationCatalog",
+      "type": "object",
+      "description": "A catalogue of pre-defined data transformations that users can select and configure in their pipelines.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the TransformationCatalog entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The display name of the pre-defined transformation."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of what the transformation does."
+        },
+        "type": {
+          "type": "string",
+          "description": "The category of the transformation (e.g., 'cleaning', 'join', 'aggregation', 'enrichment')."
+        },
+        "parametersSchema": {
+          "type": "string",
+          "description": "A JSON string representing a JSON Schema that defines the expected configuration parameters for this transformation."
+        },
+        "iconUrl": {
+          "type": "string",
+          "description": "URL to an icon representing this transformation in the catalogue.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "type",
+        "parametersSchema"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}/profile",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores user-specific profile information and application preferences (e.g., dark mode setting). This collection is private, accessible only by the authenticated user matching `{userId}`. It is created during the user onboarding process."
+        }
+      },
+      {
+        "path": "/workspaces/{workspaceId}",
+        "definition": {
+          "entityName": "Workspace",
+          "schema": {
+            "$ref": "#/backend/entities/Workspace"
+          },
+          "description": "Top-level collection for collaborative workspaces. Documents include `ownerId` and a denormalized `members` map (e.g., `{uid1: 'member', uid2: 'admin'}`) for direct authorization checks by members or the owner. This map is derived from the `memberIds` array provided in the schema.",
+          "params": [
+            {
+              "name": "workspaceId",
+              "description": "The unique identifier of the workspace."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/workspaces/{workspaceId}/pipelines/{pipelineId}",
+        "definition": {
+          "entityName": "Pipeline",
+          "schema": {
+            "$ref": "#/backend/entities/Pipeline"
+          },
+          "description": "Contains logical data pipelines within a workspace. Each document includes denormalized `workspaceOwnerId`, `workspaceMembers` (map), and `pipelineOwnerId` for authorization independence, eliminating `get()` calls to parent documents in security rules.",
+          "params": [
+            {
+              "name": "workspaceId",
+              "description": "The unique identifier of the parent workspace."
+            },
+            {
+              "name": "pipelineId",
+              "description": "The unique identifier of the pipeline."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/workspaces/{workspaceId}/pipelines/{pipelineId}/versions/{versionId}",
+        "definition": {
+          "entityName": "PipelineVersion",
+          "schema": {
+            "$ref": "#/backend/entities/PipelineVersion"
+          },
+          "description": "Stores specific versions of a pipeline, supporting lineage. Each document includes denormalized `workspaceOwnerId`, `workspaceMembers` (map), `pipelineOwnerId`, and `pipelineVersionCreatorId` for authorization independence.",
+          "params": [
+            {
+              "name": "workspaceId",
+              "description": "The unique identifier of the parent workspace."
+            },
+            {
+              "name": "pipelineId",
+              "description": "The unique identifier of the parent pipeline."
+            },
+            {
+              "name": "versionId",
+              "description": "The unique identifier of the pipeline version."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/workspaces/{workspaceId}/pipelines/{pipelineId}/versions/{versionId}/nodes/{nodeId}",
+        "definition": {
+          "entityName": "Node",
+          "schema": {
+            "$ref": "#/backend/entities/Node"
+          },
+          "description": "Represents components within a pipeline version (source, transformation, destination). Each document includes denormalized `workspaceOwnerId`, `workspaceMembers` (map), `pipelineOwnerId`, and `pipelineVersionCreatorId` for authorization independence.",
+          "params": [
+            {
+              "name": "workspaceId",
+              "description": "The unique identifier of the parent workspace."
+            },
+            {
+              "name": "pipelineId",
+              "description": "The unique identifier of the parent pipeline."
+            },
+            {
+              "name": "versionId",
+              "description": "The unique identifier of the parent pipeline version."
+            },
+            {
+              "name": "nodeId",
+              "description": "The unique identifier of the node."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/workspaces/{workspaceId}/pipelines/{pipelineId}/versions/{versionId}/connections/{connectionId}",
+        "definition": {
+          "entityName": "Connection",
+          "schema": {
+            "$ref": "#/backend/entities/Connection"
+          },
+          "description": "Represents directed links between nodes within a pipeline version. Each document includes denormalized `workspaceOwnerId`, `workspaceMembers` (map), `pipelineOwnerId`, and `pipelineVersionCreatorId` for authorization independence.",
+          "params": [
+            {
+              "name": "workspaceId",
+              "description": "The unique identifier of the parent workspace."
+            },
+            {
+              "name": "pipelineId",
+              "description": "The unique identifier of the parent pipeline."
+            },
+            {
+              "name": "versionId",
+              "description": "The unique identifier of the parent pipeline version."
+            },
+            {
+              "name": "connectionId",
+              "description": "The unique identifier of the connection."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/transformation_catalog/{transformationId}",
+        "definition": {
+          "entityName": "TransformationCatalog",
+          "schema": {
+            "$ref": "#/backend/entities/TransformationCatalog"
+          },
+          "description": "A global, read-only collection of pre-defined data transformations, accessible by all authenticated users.",
+          "params": [
+            {
+              "name": "transformationId",
+              "description": "The unique identifier of the transformation in the catalog."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/demo_pipelines/{demoPipelineId}",
+        "definition": {
+          "entityName": "PipelineVersion",
+          "schema": {
+            "$ref": "#/backend/entities/PipelineVersion"
+          },
+          "description": "Publicly accessible, read-only pipelines for demonstration purposes. Documents in this collection are a snapshot of a `PipelineVersion` and will embed their associated `nodes` (as an array of `Node` objects) and `connections` (as an array of `Connection` objects) for self-contained access and simple security rules. This ensures a single `get()` operation retrieves the complete demo pipeline structure.",
+          "params": [
+            {
+              "name": "demoPipelineId",
+              "description": "The unique identifier of the demo pipeline."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to adhere strictly to the core design principles, prioritizing Authorization Independence, Clarity of Intent, DBAC, QAPs, and Invariants. Authorization Independence is achieved through strategic denormalization: for collaborative entities like Workspaces and their nested Pipelines, PipelineVersions, Nodes, and Connections, the `ownerId` and a `members` map (derived from the `memberIds` array for efficient lookup) from the parent Workspace are denormalized into all child documents. This eliminates the need for `get()` calls in security rules, making them atomic, simpler, and more performant, thus directly addressing Authorization Independence and supporting batch/transactional operations.\n\nQAPs (Query as a Predicate) are supported primarily through Structural Segregation and the denormalized authorization fields. By organizing data into distinct collections with homogeneous security postures, such as `/users/{userId}/profile` for private data, `/workspaces/{workspaceId}` for collaborative data, and `/transformation_catalog/{transformationId}` for globally accessible read-only data, rules can be written more simply without acting as filters. For instance, to list pipelines a user has access to, the client queries `/workspaces/{workspaceId}/pipelines` where `workspaceId` is one the user is a member of. Security rules then verify `request.auth.uid` against the denormalized `workspaceMembers` map (or `workspaceOwnerId`) directly on the `pipeline` document, ensuring all returned documents are authorized. The addition of `/demo_pipelines/{demoPipelineId}` further exemplifies structural segregation, providing public read-only access to specific demo content without mixing it with private production data.\n\nUser onboarding involves creating a `UserProfile` document in `/users/{userId}/profile` upon first login. This document includes a `preferences` field that stores UI settings, notably defaulting to `darkMode: true` as requested. The `role` field within `UserProfile` will dictate UI views and default permissions but is not used for direct authorization on other documents to maintain Authorization Independence; instead, `ownerId` and denormalized `members` maps are used for resource access control. The 'demo mode' button will link to the `/demo_pipelines` collection, which is explicitly structured for public read access."
+  }
+}

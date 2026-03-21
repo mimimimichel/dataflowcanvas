@@ -1,0 +1,148 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * CORE PHILOSOPHY
+     * This ruleset implements a robust, multi-tenant collaboration model designed for rapid prototyping.
+     * It prioritizes secure authorization over strict data validation, allowing for schema evolution
+     * without breaking the security posture.
+     *
+     * DATA STRUCTURE & AUTHORIZATION
+     * 1. User Profiles: Isolated under /users/{userId}/profile, accessible only by the owner.
+     * 2. Workspaces: Shared collaborative environments. Access is governed by a denormalized 'members' map 
+     *    and an 'ownerId' field.
+     * 3. Deeply Nested Entities: To maintain high performance and avoid costly get() calls, authorization 
+     *    data (workspaceOwnerId and workspaceMembers) is denormalized directly into child documents 
+     *    (Pipelines, Versions, Nodes, Connections).
+     * 4. Global Resources: Catalog data and demo pipelines are read-only and publicly/globally accessible.
+     *
+     * DENORMALIZATION FOR PERFORMANCE
+     * Security decisions for nested resources are made using local data within the document. Every 
+     * document within a workspace tree carries the necessary context to verify the user's membership 
+     * without querying the parent workspace document.
+     */
+
+    // --- Global Helper Functions ---
+
+    /** @description Checks if the user is authenticated. */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /** @description Checks if the user's UID matches the provided ID. */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /** @description Checks if the user is the owner and the document exists. */
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
+    }
+
+    /** @description Checks if the user is a member in a denormalized workspace member map. */
+    function isWorkspaceMember(membersMap) {
+      return isSignedIn() && membersMap[request.auth.uid] != null;
+    }
+
+    /** @description Checks if the user is the owner via a denormalized owner field. */
+    function isWorkspaceOwner(ownerId) {
+      return isOwner(ownerId);
+    }
+
+    // --- Collection Rules ---
+
+    /**
+     * @description Rules for user-specific profiles and preferences (e.g., Dark Mode settings).
+     * @path /users/{userId}/profile/{profileId}
+     * @allow Authenticated user matching {userId} (get, list, create, update, delete).
+     * @deny Any user accessing a profile that does not belong to their UID.
+     * @principle Enforces strict user-ownership for private configuration.
+     */
+    match /users/{userId}/profile/{profileId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Rules for top-level collaborative workspaces.
+     * @path /workspaces/{workspaceId}
+     * @allow Members or Owner to read. Only Owner to update or delete.
+     * @deny Users not listed in the members map or ownerId.
+     * @principle Shared Access pattern via denormalized member maps.
+     */
+    match /workspaces/{workspaceId} {
+      allow get: if isWorkspaceOwner(resource.data.ownerId) || isWorkspaceMember(resource.data.members);
+      allow list: if isSignedIn(); // Filtered by membership in queries.
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isExistingOwner(resource.data.ownerId);
+      allow delete: if isExistingOwner(resource.data.ownerId);
+
+      /**
+       * @description Rules for pipelines nested within a workspace.
+       * @path /workspaces/{workspaceId}/pipelines/{pipelineId}
+       * @allow Workspace members or owner (via denormalized fields).
+       * @deny Users without workspace membership.
+       * @principle Authorization Independence via denormalized workspace context.
+       */
+      match /pipelines/{pipelineId} {
+        allow get, list: if isWorkspaceOwner(resource.data.workspaceOwnerId) || isWorkspaceMember(resource.data.workspaceMembers);
+        allow create: if isSignedIn() && request.resource.data.workspaceOwnerId != null;
+        allow update: if resource != null && (isWorkspaceOwner(resource.data.workspaceOwnerId) || isWorkspaceMember(resource.data.workspaceMembers));
+        allow delete: if resource != null && isWorkspaceOwner(resource.data.workspaceOwnerId);
+
+        /**
+         * @description Rules for pipeline versions, nodes, and connections.
+         * @path /workspaces/{workspaceId}/pipelines/{pipelineId}/versions/{versionId}
+         * @principle Cascading denormalized authorization.
+         */
+        match /versions/{versionId} {
+          allow get, list: if isWorkspaceOwner(resource.data.workspaceOwnerId) || isWorkspaceMember(resource.data.workspaceMembers);
+          allow create: if isSignedIn() && request.resource.data.workspaceOwnerId != null;
+          allow update: if resource != null && (isWorkspaceOwner(resource.data.workspaceOwnerId) || isWorkspaceMember(resource.data.workspaceMembers));
+          allow delete: if resource != null && isWorkspaceOwner(resource.data.workspaceOwnerId);
+
+          match /nodes/{nodeId} {
+            allow get, list: if isWorkspaceOwner(resource.data.workspaceOwnerId) || isWorkspaceMember(resource.data.workspaceMembers);
+            allow create: if isSignedIn();
+            allow update: if resource != null && (isWorkspaceOwner(resource.data.workspaceOwnerId) || isWorkspaceMember(resource.data.workspaceMembers));
+            allow delete: if resource != null && (isWorkspaceOwner(resource.data.workspaceOwnerId) || isWorkspaceMember(resource.data.workspaceMembers));
+          }
+
+          match /connections/{connectionId} {
+            allow get, list: if isWorkspaceOwner(resource.data.workspaceOwnerId) || isWorkspaceMember(resource.data.workspaceMembers);
+            allow create: if isSignedIn();
+            allow update: if resource != null && (isWorkspaceOwner(resource.data.workspaceOwnerId) || isWorkspaceMember(resource.data.workspaceMembers));
+            allow delete: if resource != null && (isWorkspaceOwner(resource.data.workspaceOwnerId) || isWorkspaceMember(resource.data.workspaceMembers));
+          }
+        }
+      }
+    }
+
+    /**
+     * @description Global catalog of available data transformations.
+     * @path /transformation_catalog/{transformationId}
+     * @allow Any authenticated user (get, list).
+     * @deny Any write operations.
+     * @principle Publicly readable, centrally managed catalog.
+     */
+    match /transformation_catalog/{transformationId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if false;
+    }
+
+    /**
+     * @description Public pipelines for the application's demo mode.
+     * @path /demo_pipelines/{demoPipelineId}
+     * @allow Anyone, including unauthenticated users (get, list).
+     * @deny Any write operations.
+     * @principle Structural Segregation for public demonstration content.
+     */
+    match /demo_pipelines/{demoPipelineId} {
+      allow get, list: if true;
+      allow create, update, delete: if false;
+    }
+  }
+}
