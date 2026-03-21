@@ -10,6 +10,8 @@ import Connector from '@/components/data-flow/connector';
 import { initialVersions, PipelineNode, TransformationItem, Connector as ConnectorType, Field, Operation, FilterOperation, JoinOperation, GroupByOperation, SortOperation, getJoinOutputFields, PipelineVersion } from '@/lib/pipeline-data';
 import { cn } from '@/lib/utils';
 import ConnectionFieldsModal from '@/components/data-flow/connection-fields-modal';
+import PythonCodeModal from '@/components/modals/python-code-modal';
+import { generatePythonCode } from '@/lib/python-generator';
 
 type SvgDimensions = {
   width: number | string;
@@ -48,6 +50,10 @@ export default function DataFlowCanvas() {
   const [zoom, setZoom] = useState(1);
   const [newConnector, setNewConnector] = useState<{ from: string; to: { x: number; y: number } } | null>(null);
   
+  // Python Generation State
+  const [isPythonModalOpen, setIsPythonModalOpen] = useState(false);
+  const [generatedPythonCode, setGeneratedPythonCode] = useState('');
+
   const canvasRef = useRef<HTMLDivElement>(null);
   
   const isPanningRef = useRef(false);
@@ -521,6 +527,12 @@ export default function DataFlowCanvas() {
     setConnectors(prev => prev.filter(c => !(c.from === connector.from && c.to === connector.to)));
     setSelectedConnector(null);
   }
+
+  const handleHandleGeneratePython = () => {
+    const pythonCode = generatePythonCode(nodes, connectors);
+    setGeneratedPythonCode(pythonCode);
+    setIsPythonModalOpen(true);
+  };
   
   const selectedNode = useMemo(() => {
     if (!selectedNodeId) return undefined;
@@ -590,14 +602,15 @@ export default function DataFlowCanvas() {
   const connectionModalSourceNode = nodes.find(n => n.id === connectionForFields?.fromNodeId);
 
   return (
-      <div className="flex h-screen w-full flex-col bg-background font-body">
+      <div className="flex h-screen w-full flex-col bg-background font-body overflow-hidden">
         <Header 
           versions={versions} 
           activeVersionId={activeVersionId} 
           onVersionChange={setActiveVersionId}
           onCreateVersion={handleCreateVersion}
+          onGeneratePython={handleHandleGeneratePython}
         />
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-hidden relative">
           <TransformationsCatalogue />
           <main
             className="flex-1 relative overflow-hidden cursor-grab"
@@ -686,6 +699,11 @@ export default function DataFlowCanvas() {
                 onSave={handleSaveConnectionFields}
             />
         )}
+        <PythonCodeModal 
+            isOpen={isPythonModalOpen}
+            onClose={() => setIsPythonModalOpen(false)}
+            code={generatedPythonCode}
+        />
       </div>
   );
 }
