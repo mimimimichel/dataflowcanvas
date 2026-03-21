@@ -41,6 +41,10 @@ type SvgDimensions = {
   left: number;
 };
 
+// Constant for port positioning (half of node height)
+const PORT_Y_OFFSET = 45;
+const NODE_WIDTH = 256;
+
 export default function MainApp() {
   const { toast } = useToast();
   const [activeView, setActiveView] = useState<'dashboard' | 'editor'>('dashboard');
@@ -827,8 +831,14 @@ export default function MainApp() {
                       return (
                         <Connector 
                           key={`${connector.from}-${connector.to}-${index}`} 
-                          from={{ x: fromNode.position.x - svgDimensions.left, y: fromNode.position.y - svgDimensions.top }} 
-                          to={{ x: toNode.position.x - svgDimensions.left, y: toNode.position.y - svgDimensions.top }}
+                          from={{ 
+                            x: fromNode.position.x + NODE_WIDTH - svgDimensions.left, 
+                            y: fromNode.position.y + PORT_Y_OFFSET - svgDimensions.top 
+                          }} 
+                          to={{ 
+                            x: toNode.position.x - svgDimensions.left, 
+                            y: toNode.position.y + PORT_Y_OFFSET - svgDimensions.top 
+                          }}
                           isSelected={selectedConnector?.from === connector.from && selectedConnector?.to === connector.to}
                           onClick={() => handleConnectorClick(connector)}
                         />
@@ -839,8 +849,14 @@ export default function MainApp() {
                       if (!fromNode) return null;
                       return (
                         <Connector 
-                          from={{ x: fromNode.position.x - svgDimensions.left, y: fromNode.position.y - svgDimensions.top }} 
-                          to={{ x: newConnector.to.x - svgDimensions.left, y: newConnector.to.y - svgDimensions.top }} 
+                          from={{ 
+                            x: fromNode.position.x + NODE_WIDTH - svgDimensions.left, 
+                            y: fromNode.position.y + PORT_Y_OFFSET - svgDimensions.top 
+                          }} 
+                          to={{ 
+                            x: newConnector.to.x - svgDimensions.left, 
+                            y: newConnector.to.y - svgDimensions.top 
+                          }} 
                           className="opacity-50" 
                         />
                       );
