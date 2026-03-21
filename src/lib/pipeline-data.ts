@@ -8,7 +8,7 @@ import {
   Milestone, DatabaseBackup, TestTube, FileJson, GitPullRequest, Settings,
   FileText, FunctionSquare, Pilcrow, Pencil, Search, GitCompare, EyeOff,
   Fingerprint, Bot, Group, Shuffle, Blend, BoxSelect, Code, Unplug, Layers,
-  Table
+  Table, Activity, CheckCircle2, XCircle, Clock3
 } from 'lucide-react';
 import type { NodeType } from '@/components/data-flow/node';
 
@@ -106,6 +106,17 @@ export interface PipelineVersion {
   connectors: Connector[];
 }
 
+export type LineageStatus = 'success' | 'failed' | 'running' | 'idle';
+
+export interface LineageInfo {
+  id: string;
+  name: string;
+  owner: string;
+  status: LineageStatus;
+  lastRun: string;
+  health: number; // 0-100
+  versions: PipelineVersion[];
+}
 
 export function getJoinOutputFields(leftNode: PipelineNode, rightNode: PipelineNode, joinType: JoinType): Field[] {
     const leftFields = leftNode.outputFields || [];
@@ -279,21 +290,52 @@ export const initialConnectors: Connector[] = [
   { from: 'transform-3', to: 'dest-1' },
 ];
 
-export const initialVersions: PipelineVersion[] = [
+export const mockLineages: LineageInfo[] = [
   {
-    id: 'v1',
-    name: 'v1.0 (Production)',
-    nodes: initialNodes,
-    connectors: initialConnectors,
+    id: 'lineage-1',
+    name: 'Customer Revenue Pipeline',
+    owner: 'Jane Doe',
+    status: 'success',
+    lastRun: '2 hours ago',
+    health: 98,
+    versions: [
+      {
+        id: 'v1',
+        name: 'v1.0 (Production)',
+        nodes: initialNodes,
+        connectors: initialConnectors,
+      },
+      {
+        id: 'v2',
+        name: 'v1.1 (Staging)',
+        nodes: JSON.parse(JSON.stringify(initialNodes)).map((n: PipelineNode) => ({...n, id: `${n.id}-v2`})),
+        connectors: JSON.parse(JSON.stringify(initialConnectors)).map((c: Connector) => ({from: `${c.from}-v2`, to: `${c.to}-v2`})),
+      },
+    ]
   },
-    {
-    id: 'v2',
-    name: 'v1.1 (Development)',
-    nodes: JSON.parse(JSON.stringify(initialNodes)).map((n: PipelineNode) => ({...n, id: `${n.id}-v2`})),
-    connectors: JSON.parse(JSON.stringify(initialConnectors)).map((c: Connector) => ({from: `${c.from}-v2`, to: `${c.to}-v2`})),
+  {
+    id: 'lineage-2',
+    name: 'Inventory Sync',
+    owner: 'John Smith',
+    status: 'failed',
+    lastRun: '15 mins ago',
+    health: 45,
+    versions: [
+       { id: 'v1', name: 'v1.0', nodes: [], connectors: [] }
+    ]
   },
+  {
+    id: 'lineage-3',
+    name: 'Marketing Leads ETL',
+    owner: 'Sarah Connor',
+    status: 'running',
+    lastRun: 'Now',
+    health: 100,
+    versions: [
+       { id: 'v1', name: 'v1.0', nodes: [], connectors: [] }
+    ]
+  }
 ];
-
 
 export interface TransformationItem {
     name: string;

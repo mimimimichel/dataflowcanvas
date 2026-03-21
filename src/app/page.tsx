@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
@@ -6,13 +7,29 @@ import TransformationsCatalogue from '@/components/sidebar/transformations-catal
 import NodeConfigurationPanel from '@/components/sidebar/node-configuration-panel';
 import Node from '@/components/data-flow/node';
 import Connector from '@/components/data-flow/connector';
-import { initialVersions, PipelineNode, TransformationItem, Connector as ConnectorType, Field, Operation, FilterOperation, JoinOperation, GroupByOperation, SortOperation, getJoinOutputFields, PipelineVersion } from '@/lib/pipeline-data';
+import { 
+  initialVersions, 
+  PipelineNode, 
+  TransformationItem, 
+  Connector as ConnectorType, 
+  Field, 
+  Operation, 
+  FilterOperation, 
+  JoinOperation, 
+  GroupByOperation, 
+  SortOperation, 
+  getJoinOutputFields, 
+  PipelineVersion,
+  mockLineages,
+  LineageInfo
+} from '@/lib/pipeline-data';
 import { cn } from '@/lib/utils';
 import ConnectionFieldsModal from '@/components/data-flow/connection-fields-modal';
 import PythonCodeModal from '@/components/modals/python-code-modal';
 import SpecModal from '@/components/modals/spec-modal';
 import { generatePythonCode } from '@/lib/python-generator';
 import { generatePipelineSpec } from '@/ai/flows/generate-spec-flow';
+import LineageDashboard from '@/components/dashboard/lineage-dashboard';
 
 type SvgDimensions = {
   width: number | string;
@@ -22,25 +39,40 @@ type SvgDimensions = {
 };
 
 export default function DataFlowCanvas() {
-  const [versions, setVersions] = useState<PipelineVersion[]>(initialVersions);
-  const [activeVersionId, setActiveVersionId] = useState<string>('v1');
+  const [activeView, setActiveView] = useState<'dashboard' | 'editor'>('dashboard');
+  const [lineages, setLineages] = useState<LineageInfo[]>(mockLineages);
+  const [activeLineageId, setActiveLineageId] = useState<string>('lineage-1');
   
-  const activeVersion = useMemo(() => versions.find(v => v.id === activeVersionId)!, [versions, activeVersionId]);
+  const activeLineage = useMemo(() => 
+    lineages.find(l => l.id === activeLineageId) || lineages[0], 
+  [lineages, activeLineageId]);
+
+  const [activeVersionId, setActiveVersionId] = useState<string>(activeLineage.versions[0].id);
+  
+  const activeVersion = useMemo(() => 
+    activeLineage.versions.find(v => v.id === activeVersionId) || activeLineage.versions[0], 
+  [activeLineage, activeVersionId]);
   
   const nodes = activeVersion.nodes;
   const connectors = activeVersion.connectors;
 
   const setNodes = (updater: React.SetStateAction<PipelineNode[]>) => {
     const newNodes = typeof updater === 'function' ? updater(nodes) : updater;
-    setVersions(currentVersions => currentVersions.map(v => 
-      v.id === activeVersionId ? { ...v, nodes: newNodes } : v
+    setLineages(currentLineages => currentLineages.map(l => 
+      l.id === activeLineageId ? {
+        ...l,
+        versions: l.versions.map(v => v.id === activeVersionId ? { ...v, nodes: newNodes } : v)
+      } : l
     ));
   };
   
   const setConnectors = (updater: React.SetStateAction<ConnectorType[]>) => {
     const newConnectors = typeof updater === 'function' ? updater(connectors) : updater;
-    setVersions(currentVersions => currentVersions.map(v => 
-      v.id === activeVersionId ? { ...v, connectors: newConnectors } : v
+    setLineages(currentLineages => currentLineages.map(l => 
+      l.id === activeLineageId ? {
+        ...l,
+        versions: l.versions.map(v => v.id === activeVersionId ? { ...v, connectors: newConnectors } : v)
+      } : l
     ));
   };
 
@@ -51,7 +83,6 @@ export default function DataFlowCanvas() {
   const [zoom, setZoom] = useState(1);
   const [newConnector, setNewConnector] = useState<{ from: string; to: { x: number; y: number } } | null>(null);
   
-  // Modals State
   const [isPythonModalOpen, setIsPythonModalOpen] = useState(false);
   const [generatedPythonCode, setGeneratedPythonCode] = useState('');
   
@@ -60,10 +91,8 @@ export default function DataFlowCanvas() {
   const [isSpecLoading, setIsSpecLoading] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
-  
   const isPanningRef = useRef(false);
   const panStartRef = useRef({ x: 0, y: 0 });
-
   const draggingNodeIdRef = useRef<string | null>(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const isConnectingRef = useRef(false);
@@ -559,15 +588,26 @@ export default function DataFlowCanvas() {
   
   const handleCreateVersion = (name: string) => {
     const newVersion: PipelineVersion = {
-      id: `v${versions.length + 1}`,
+      id: `v${activeLineage.versions.length + 1}`,
       name,
       nodes: JSON.parse(JSON.stringify(activeVersion.nodes)),
       connectors: JSON.parse(JSON.stringify(activeVersion.connectors)),
     };
-    setVersions(prev => [...prev, newVersion]);
+    
+    setLineages(prev => prev.map(l => 
+        l.id === activeLineageId ? { ...l, versions: [...l.versions, newVersion] } : l
+    ));
     setActiveVersionId(newVersion.id);
   };
 
+  const handleSelectLineage = (id: string) => {
+    const lineage = lineages.find(l => l.id === id);
+    if (lineage) {
+      setActiveLineageId(id);
+      setActiveVersionId(lineage.versions[0].id);
+      setActiveView('editor');
+    }
+  };
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -583,8 +623,8 @@ export default function DataFlowCanvas() {
     nodes.forEach(node => {
       minX = Math.min(minX, node.position.x);
       minY = Math.min(minY, node.position.y);
-      maxX = Math.max(maxX, node.position.x + 256); // node width (w-64)
-      maxY = Math.max(maxY, node.position.y + 200);  // max node height approx
+      maxX = Math.max(maxX, node.position.x + 256); 
+      maxY = Math.max(maxY, node.position.y + 200);  
     });
     
     const padding = 200;
@@ -622,84 +662,95 @@ export default function DataFlowCanvas() {
   return (
       <div className="flex h-screen w-full flex-col bg-background font-body overflow-hidden">
         <Header 
-          versions={versions} 
+          versions={activeLineage.versions} 
           activeVersionId={activeVersionId} 
           onVersionChange={setActiveVersionId}
           onCreateVersion={handleCreateVersion}
           onGeneratePython={handleHandleGeneratePython}
           onGenerateSpec={handleGenerateSpec}
+          activeView={activeView}
+          onViewChange={setActiveView}
         />
-        <div className="flex flex-1 overflow-hidden relative">
-          <TransformationsCatalogue />
-          <main
-            className="flex-1 relative overflow-hidden cursor-grab"
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onWheel={handleWheel}
-            ref={canvasRef}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-          >
-            <div
-              className="absolute top-0 left-0"
-              style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'top left' }}
+        
+        {activeView === 'dashboard' ? (
+          <LineageDashboard 
+            lineages={lineages} 
+            onSelectLineage={handleSelectLineage}
+          />
+        ) : (
+          <div className="flex flex-1 overflow-hidden relative">
+            <TransformationsCatalogue />
+            <main
+              className="flex-1 relative overflow-hidden cursor-grab"
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onWheel={handleWheel}
+              ref={canvasRef}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
             >
-              <svg
-                  className={cn('absolute pointer-events-none overflow-visible')}
-                  style={{
-                    left: svgDimensions.left,
-                    top: svgDimensions.top,
-                    width: svgDimensions.width,
-                    height: svgDimensions.height
-                  }}
+              <div
+                className="absolute top-0 left-0"
+                style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'top left' }}
               >
-                  {connectors.map((connector, index) => {
-                    const fromNode = nodes.find((n) => n.id === connector.from);
-                    const toNode = nodes.find((n) => n.id === connector.to);
-                    if (!fromNode || !toNode) return null;
-                    return (
-                      <Connector 
-                        key={`${connector.from}-${connector.to}-${index}`} 
-                        from={{ x: fromNode.position.x - svgDimensions.left, y: fromNode.position.y - svgDimensions.top }} 
-                        to={{ x: toNode.position.x - svgDimensions.left, y: toNode.position.y - svgDimensions.top }}
-                        isSelected={selectedConnector?.from === connector.from && selectedConnector?.to === connector.to}
-                        onClick={() => handleConnectorClick(connector)}
-                      />
-                    );
-                  })}
-                  {newConnector && (() => {
-                    const fromNode = nodes.find(n => n.id === newConnector.from);
-                    if (!fromNode) return null;
-                    return (
-                      <Connector 
-                        from={{ x: fromNode.position.x - svgDimensions.left, y: fromNode.position.y - svgDimensions.top }} 
-                        to={{ x: newConnector.to.x - svgDimensions.left, y: newConnector.to.y - svgDimensions.top }} 
-                        className="opacity-50" 
-                      />
-                    );
-                  })()}
-              </svg>
+                <svg
+                    className={cn('absolute pointer-events-none overflow-visible')}
+                    style={{
+                      left: svgDimensions.left,
+                      top: svgDimensions.top,
+                      width: svgDimensions.width,
+                      height: svgDimensions.height
+                    }}
+                >
+                    {connectors.map((connector, index) => {
+                      const fromNode = nodes.find((n) => n.id === connector.from);
+                      const toNode = nodes.find((n) => n.id === connector.to);
+                      if (!fromNode || !toNode) return null;
+                      return (
+                        <Connector 
+                          key={`${connector.from}-${connector.to}-${index}`} 
+                          from={{ x: fromNode.position.x - svgDimensions.left, y: fromNode.position.y - svgDimensions.top }} 
+                          to={{ x: toNode.position.x - svgDimensions.left, y: toNode.position.y - svgDimensions.top }}
+                          isSelected={selectedConnector?.from === connector.from && selectedConnector?.to === connector.to}
+                          onClick={() => handleConnectorClick(connector)}
+                        />
+                      );
+                    })}
+                    {newConnector && (() => {
+                      const fromNode = nodes.find(n => n.id === newConnector.from);
+                      if (!fromNode) return null;
+                      return (
+                        <Connector 
+                          from={{ x: fromNode.position.x - svgDimensions.left, y: fromNode.position.y - svgDimensions.top }} 
+                          to={{ x: newConnector.to.x - svgDimensions.left, y: newConnector.to.y - svgDimensions.top }} 
+                          className="opacity-50" 
+                        />
+                      );
+                    })()}
+                </svg>
 
-              {nodes.map((node) => (
-                <Node
-                  key={node.id}
-                  {...node}
-                  nodes={nodes}
-                  onSelect={() => handleNodeSelect(node.id)}
-                  onConfigOpen={() => handleOpenConfig(node.id)}
-                  onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
-                  onMouseUp={(e) => handleNodeMouseUp(e, node.id)}
-                  onPortMouseDown={(e) => handlePortMouseDown(e, node.id)}
-                  onAddNode={handleAddNode}
-                  isSelected={selectedNodeId === node.id}
-                  onUpdateOperation={handleUpdateOperation}
-                />
-              ))}
-            </div>
-          </main>
-        </div>
+                {nodes.map((node) => (
+                  <Node
+                    key={node.id}
+                    {...node}
+                    nodes={nodes}
+                    onSelect={() => handleNodeSelect(node.id)}
+                    onConfigOpen={() => handleOpenConfig(node.id)}
+                    onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
+                    onMouseUp={(e) => handleNodeMouseUp(e, node.id)}
+                    onPortMouseDown={(e) => handlePortMouseDown(e, node.id)}
+                    onAddNode={handleAddNode}
+                    isSelected={selectedNodeId === node.id}
+                    onUpdateOperation={handleUpdateOperation}
+                  />
+                ))}
+              </div>
+            </main>
+          </div>
+        )}
+        
         <NodeConfigurationPanel
           key={selectedNodeId}
           node={selectedNode}

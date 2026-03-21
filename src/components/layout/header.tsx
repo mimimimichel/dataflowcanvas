@@ -1,15 +1,21 @@
+
 'use client';
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Upload, Download, Share2, GitBranch, PlusCircle, Terminal, FileText, Sparkles } from 'lucide-react';
+import { 
+  Upload, Download, Share2, GitBranch, PlusCircle, 
+  Terminal, Sparkles, LayoutDashboard, Settings2 
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PipelineVersion } from '@/lib/pipeline-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 
 interface HeaderProps {
   versions: PipelineVersion[];
@@ -18,6 +24,8 @@ interface HeaderProps {
   onCreateVersion: (name: string) => void;
   onGeneratePython: () => void;
   onGenerateSpec: () => void;
+  activeView: 'dashboard' | 'editor';
+  onViewChange: (view: 'dashboard' | 'editor') => void;
 }
 
 const CreateVersionDialog: React.FC<{
@@ -67,7 +75,16 @@ const CreateVersionDialog: React.FC<{
 };
 
 
-const Header: React.FC<HeaderProps> = ({ versions, activeVersionId, onVersionChange, onCreateVersion, onGeneratePython, onGenerateSpec }) => {
+const Header: React.FC<HeaderProps> = ({ 
+  versions, 
+  activeVersionId, 
+  onVersionChange, 
+  onCreateVersion, 
+  onGeneratePython, 
+  onGenerateSpec,
+  activeView,
+  onViewChange
+}) => {
   const { toast } = useToast();
   const [isCreateVersionOpen, setIsCreateVersionOpen] = useState(false);
 
@@ -95,51 +112,70 @@ const Header: React.FC<HeaderProps> = ({ versions, activeVersionId, onVersionCha
   const activeVersion = versions.find(v => v.id === activeVersionId);
 
   return (
-    <header className="flex h-16 items-center justify-between border-b bg-card px-4 md:px-6 shrink-0 z-20 relative">
-      <div className="flex items-center gap-4">
-        <GitBranch className="h-7 w-7 text-primary" />
-        <h1 className="text-xl font-semibold text-foreground">DataFlow Canvas</h1>
-        <div className="flex items-center gap-1">
-          <Select value={activeVersionId} onValueChange={onVersionChange}>
-            <SelectTrigger className="w-48 h-9">
-              <SelectValue placeholder="Select version" />
-            </SelectTrigger>
-            <SelectContent>
-              {versions.map(version => (
-                <SelectItem key={version.id} value={version.id}>{version.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setIsCreateVersionOpen(true)}>
-            <PlusCircle className="w-5 h-5" />
-          </Button>
+    <header className="flex h-16 items-center justify-between border-b bg-card px-4 md:px-6 shrink-0 z-30 relative shadow-sm">
+      <div className="flex items-center gap-6">
+        <div className="flex items-center gap-2">
+          <GitBranch className="h-6 w-6 text-primary" />
+          <h1 className="text-lg font-bold tracking-tight text-foreground hidden md:block">DataFlow</h1>
         </div>
+
+        <Tabs value={activeView} onValueChange={(v) => onViewChange(v as any)} className="w-[300px]">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="dashboard" className="flex items-center gap-2">
+              <LayoutDashboard className="h-4 w-4" /> Manager
+            </TabsTrigger>
+            <TabsTrigger value="editor" className="flex items-center gap-2">
+              <Settings2 className="h-4 w-4" /> Editor
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {activeView === 'editor' && (
+          <div className="flex items-center gap-2 border-l pl-4 ml-2">
+            <Select value={activeVersionId} onValueChange={onVersionChange}>
+              <SelectTrigger className="w-48 h-9 bg-background">
+                <SelectValue placeholder="Select version" />
+              </SelectTrigger>
+              <SelectContent>
+                {versions.map(version => (
+                  <SelectItem key={version.id} value={version.id}>{version.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setIsCreateVersionOpen(true)}>
+              <PlusCircle className="w-5 h-5 text-muted-foreground hover:text-primary transition-colors" />
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="flex -space-x-2">
-            <Avatar className="h-8 w-8 border-2 border-card">
-                <AvatarImage src="https://i.pravatar.cc/150?u=a042581f4e29026704d" />
-                <AvatarFallback>U1</AvatarFallback>
-            </Avatar>
-            <Avatar className="h-8 w-8 border-2 border-card">
-                <AvatarImage src="https://i.pravatar.cc/150?u=a042581f4e29026704a" />
-                <AvatarFallback>U2</AvatarFallback>
-            </Avatar>
-             <Avatar className="h-8 w-8 border-2 border-card bg-primary text-primary-foreground">
-                <AvatarFallback>+3</AvatarFallback>
-            </Avatar>
-        </div>
-        <div className="flex items-center gap-2 border-l pl-4 ml-2">
-            <Button variant="outline" size="sm" onClick={onGenerateSpec} className="group">
+        <div className="hidden lg:flex items-center gap-2 border-r pr-4">
+            <Button variant="outline" size="sm" onClick={onGenerateSpec} className="group h-9">
                 <Sparkles className="mr-2 h-4 w-4 text-amber-500 group-hover:scale-110 transition-transform" /> Write Spec
             </Button>
-            <Button variant="outline" size="sm" onClick={onGeneratePython}>
+            <Button variant="outline" size="sm" onClick={onGeneratePython} className="h-9">
                 <Terminal className="mr-2 h-4 w-4" /> Foundry
             </Button>
-            <Button variant="outline" size="sm" onClick={handleImport}><Upload className="mr-2 h-4 w-4" /> Import</Button>
-            <Button variant="outline" size="sm" onClick={handleExport}><Download className="mr-2 h-4 w-4" /> Export</Button>
-            <Button size="sm" onClick={handleShare}><Share2 className="mr-2 h-4 w-4" /> Share</Button>
+            <Button variant="outline" size="sm" onClick={handleImport} className="h-9"><Upload className="mr-2 h-4 w-4" /> Import</Button>
+            <Button variant="outline" size="sm" onClick={handleExport} className="h-9"><Download className="mr-2 h-4 w-4" /> Export</Button>
+        </div>
+
+        <div className="flex items-center gap-3 pl-2">
+          <Button size="sm" onClick={handleShare} className="h-9"><Share2 className="mr-2 h-4 w-4" /> Share</Button>
+          <div className="flex -space-x-2">
+              <Avatar className="h-8 w-8 border-2 border-card">
+                  <AvatarImage src="https://i.pravatar.cc/150?u=a042581f4e29026704d" />
+                  <AvatarFallback>U1</AvatarFallback>
+              </Avatar>
+              <Avatar className="h-8 w-8 border-2 border-card">
+                  <AvatarImage src="https://i.pravatar.cc/150?u=a042581f4e29026704a" />
+                  <AvatarFallback>U2</AvatarFallback>
+              </Avatar>
+               <Avatar className="h-8 w-8 border-2 border-card bg-primary text-primary-foreground">
+                  <AvatarFallback>+3</AvatarFallback>
+              </Avatar>
+          </div>
         </div>
       </div>
 
