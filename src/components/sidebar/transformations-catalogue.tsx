@@ -76,7 +76,7 @@ const TransformationsCatalogue: React.FC = () => {
         item.description?.toLowerCase().includes(lowerCaseSearchTerm)
     );
 
-    const filteredAdvanced = advancedTransformations
+    const filteredAdvanced = (advancedTransformations || [])
       .map(category => ({
         ...category,
         items: filterItems(category.items)
@@ -111,20 +111,20 @@ const TransformationsCatalogue: React.FC = () => {
                 <CatalogueSection title="Sources" items={filteredTransformations.sources} itemType="source" />
                 
                 <div className="space-y-2">
-                    <CatalogueSection title="Transformations courantes" items={filteredTransformations.common} itemType="transformation" />
+                    <CatalogueSection title="Common Transformations" items={filteredTransformations.common} itemType="transformation" />
                     
                     {filteredTransformations.advanced.length > 0 && (
                         <Accordion type="single" collapsible className="w-full">
                             <AccordionItem value="advanced" className="border-b-0">
                                 <AccordionTrigger className="text-sm font-semibold text-muted-foreground hover:no-underline px-2 py-2">
-                                    Transformations avancées
+                                    Advanced Transformations
                                 </AccordionTrigger>
                                 <AccordionContent className="p-1 space-y-4">
                                     {filteredTransformations.advanced.map((category) => (
                                       <div key={category.category} className="space-y-1">
                                         <h4 className="px-2 text-xs font-semibold text-muted-foreground/80">{category.category}</h4>
                                         {category.items.map(item => (
-                                           <DraggableItem key={item.operationType} item={{...item, type: 'transformation'}} />
+                                           <DraggableItem key={item.operationType || item.name} item={{...item, type: 'transformation'}} />
                                         ))}
                                       </div>
                                     ))}
