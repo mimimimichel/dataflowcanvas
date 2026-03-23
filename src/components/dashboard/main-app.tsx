@@ -364,7 +364,6 @@ export default function MainApp() {
     const x = (position.x - canvasRect.left - pan.x) / zoom;
     const y = (position.y - canvasRect.top - pan.y) / zoom;
 
-    // Detect group at drop position using a central point
     const groupUnder = groups.find(g => {
       const currentWidth = g.isCollapsed ? Math.max(250, g.width * 0.4) : g.width;
       const currentHeight = g.isCollapsed ? 64 : g.height;
@@ -553,13 +552,11 @@ export default function MainApp() {
     }
     
     if (draggingNodeIdRef.current) {
-      // Dynamic grouping or de-grouping on drop
       setNodes(currentNodes => {
         return currentNodes.map(node => {
           if (selectedNodeIds.includes(node.id)) {
-            // Check if node center is dropped inside any group zone
             const centerX = node.position.x + (NODE_WIDTH / 2);
-            const centerY = node.position.y + 50; // Approximate center y
+            const centerY = node.position.y + 50; 
 
             const groupUnder = groups.find(g => {
               const currentWidth = g.isCollapsed ? Math.max(250, g.width * 0.4) : g.width;
@@ -571,7 +568,6 @@ export default function MainApp() {
                      centerY <= g.position.y + currentHeight;
             });
             
-            // Explicitly set groupId to either the found group or undefined if dropped outside
             return { ...node, groupId: groupUnder ? groupUnder.id : undefined };
           }
           return node;
@@ -738,7 +734,6 @@ export default function MainApp() {
   }, [selectedNodeIds, selectedGroupIds]);
 
   const handleGeneratePython = useCallback(() => {
-    if (!nodes) return;
     const pythonCode = generatePythonCode(nodes, connectors);
     setGeneratedPythonCode(pythonCode);
     setIsPythonModalOpen(true);
