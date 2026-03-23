@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
@@ -243,7 +242,7 @@ export default function MainApp() {
     const levels: Record<string, number> = {};
     const assignLevel = (nodeId: string, level: number) => {
         levels[nodeId] = Math.max(levels[nodeId] || 0, level);
-        const downstream = connectors.filter(c => c.to === nodeId);
+        const downstream = connectors.filter(c => c.from === nodeId);
         downstream.forEach(c => assignLevel(c.to, level + 1));
     };
 
