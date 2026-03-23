@@ -148,14 +148,15 @@ export default function MainApp() {
   };
 
   const finalizeNodeDrag = useCallback(() => {
-    if (!draggingNodeIdRef.current) return;
+    const draggingId = draggingNodeIdRef.current;
+    if (!draggingId) return;
     
     setNodes(currentNodes => {
       return currentNodes.map(node => {
         if (selectedNodeIds.includes(node.id)) {
           // Utiliser le centre du nœud pour la détection
           const centerX = node.position.x + (NODE_WIDTH / 2);
-          const centerY = node.position.y + 50; 
+          const centerY = node.position.y + 60; // Hauteur approximative du header de la carte
 
           const groupUnder = groups.find(g => {
             const currentWidth = g.isCollapsed ? Math.max(250, g.width * 0.4) : g.width;
@@ -270,7 +271,7 @@ export default function MainApp() {
     const levels: Record<string, number> = {};
     const assignLevel = (nodeId: string, level: number) => {
         levels[nodeId] = Math.max(levels[nodeId] || 0, level);
-        const downstream = connectors.filter(c => c.to === nodeId);
+        const downstream = connectors.filter(c => c.from === nodeId);
         downstream.forEach(c => assignLevel(c.to, level + 1));
     };
 
@@ -394,7 +395,7 @@ export default function MainApp() {
 
     // Détection de groupe au drop
     const centerX = x + (NODE_WIDTH / 2);
-    const centerY = y + 50;
+    const centerY = y + 60;
     const groupUnder = groups.find(g => {
       const currentWidth = g.isCollapsed ? Math.max(250, g.width * 0.4) : g.width;
       const currentHeight = g.isCollapsed ? 64 : g.height;
@@ -599,15 +600,13 @@ export default function MainApp() {
 
       if (toNodeId && newConnector && newConnector.from !== toNodeId) {
         handleNodeMouseUp(e, toNodeId);
-      } else {
-         isConnectingRef.current = false;
-         setNewConnector(null);
       }
+      isConnectingRef.current = false;
+      setNewConnector(null);
     }
   };
   
   const handleNodeMouseUp = (e: React.MouseEvent, toNodeId: string) => {
-    // Ne pas arrêter la propagation ici pour laisser handleMouseUp du canvas s'exécuter
     if (isConnectingRef.current && newConnector && newConnector.from !== toNodeId) {
       const fromNode = nodes.find(n => n.id === newConnector.from);
       const toNode = nodes.find(n => n.id === toNodeId);
@@ -621,8 +620,6 @@ export default function MainApp() {
         }
       }
     }
-    
-    // Le reste de la logique est centralisé dans handleMouseUp du canvas
   }
 
   const handleSaveConnectionFields = (fromNodeId: string, toNodeId: string, selectedFields: Field[]) => {
