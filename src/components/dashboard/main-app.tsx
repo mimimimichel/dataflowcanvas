@@ -276,7 +276,7 @@ export default function MainApp() {
       operation: item.type === 'transformation' ? operation : undefined,
     };
     setNodes((prev) => [...prev, newNode]);
-  }, [pan.x, pan.y, zoom]);
+  }, [pan.x, pan.y, zoom, nodes, connectors]);
 
   const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
     e.stopPropagation();
@@ -521,7 +521,7 @@ export default function MainApp() {
               case 'join': {
                 const joinOp = currentNode.operation as JoinOperation;
                 const leftNode = currentNodes.find(ln => ln.id === joinOp.settings.leftNodeId);
-                const rightNode = currentNodes.find(rn => rn.id === joinOp.settings.rightNodeId);
+                const rightNode = currentNodes.find(rn => ln.id === joinOp.settings.rightNodeId);
                 if (leftNode && rightNode) {
                   newOutputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
                 }
@@ -556,7 +556,7 @@ export default function MainApp() {
             if (downstreamNodeIndex === -1) continue;
 
             const parentNodes = connectors
-                .filter(c => c.from === downstreamId)
+                .filter(c => c.to === downstreamId)
                 .map(c => currentNodes.find(n => n.id === c.from))
                 .filter((n): n is PipelineNode => !!n);
             
@@ -586,7 +586,7 @@ export default function MainApp() {
         }));
     };
   
-  const handleDeleteNode = (nodeId: string) => {
+  const handleDeleteNode = useCallback((nodeId: string) => {
     const nodeToDelete = nodes.find(n => n.id === nodeId);
     if (!nodeToDelete) return;
 
@@ -617,9 +617,9 @@ export default function MainApp() {
       setSelectedNodeId(null);
       setIsConfigPanelOpen(false);
     }
-  };
+  }, [nodes, connectors, selectedNodeId]);
 
-  const handleDeleteConnector = (connector: ConnectorType) => {
+  const handleDeleteConnector = useCallback((connector: ConnectorType) => {
     const fromNode = nodes.find(n => n.id === connector.from);
     
     setNodes(prev => prev.map(n => {
@@ -667,7 +667,7 @@ export default function MainApp() {
 
     setConnectors(prev => prev.filter(c => !(c.from === connector.from && c.to === connector.to)));
     setSelectedConnector(null);
-  }
+  }, [nodes, connectors]);
 
   const handleGeneratePython = useCallback(() => {
     if (!nodes) return;
@@ -873,17 +873,6 @@ export default function MainApp() {
               onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
             />
             
-            {isSidebarCollapsed && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="absolute left-4 top-4 z-40 h-8 w-8 glass-panel border border-white/10"
-                onClick={() => setIsSidebarCollapsed(false)}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            )}
-
             <main
               className="flex-1 relative overflow-hidden cursor-grab bg-slate-950"
               onDrop={handleDrop}

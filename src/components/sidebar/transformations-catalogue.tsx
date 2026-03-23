@@ -15,7 +15,7 @@ interface TransformationsCatalogueProps {
   onToggleCollapse?: () => void;
 }
 
-const DraggableItem: React.FC<{item: TransformationItem}> = ({ item }) => {
+const DraggableItem: React.FC<{item: TransformationItem, isMini: boolean}> = ({ item, isMini }) => {
     const handleDragStart = (e: React.DragEvent) => {
         e.dataTransfer.setData('application/json', JSON.stringify(item));
         e.dataTransfer.effectAllowed = 'move';
@@ -25,39 +25,44 @@ const DraggableItem: React.FC<{item: TransformationItem}> = ({ item }) => {
         <div 
             draggable 
             onDragStart={handleDragStart} 
-            className="flex items-center gap-4 p-2.5 rounded-lg hover:bg-white/5 cursor-grab w-full text-left transition-colors border border-transparent hover:border-white/5"
+            className={cn(
+                "flex items-center gap-4 p-2.5 rounded-lg hover:bg-white/5 cursor-grab w-full text-left transition-all border border-transparent hover:border-white/5",
+                isMini ? "justify-center p-2" : "px-2.5"
+            )}
         >
-            <div className="p-1.5 rounded-md bg-primary/10 border border-primary/20">
+            <div className={cn(
+                "p-1.5 rounded-md bg-primary/10 border border-primary/20 shrink-0",
+                isMini && "mx-auto"
+            )}>
               <item.icon className="w-4 h-4 text-primary flex-shrink-0" />
             </div>
-            <span className="font-medium text-sm text-foreground/90">{item.name}</span>
+            {!isMini && <span className="font-medium text-sm text-foreground/90 truncate">{item.name}</span>}
         </div>
     );
     
-    if (!item.description) {
-        return content;
-    }
-
     return (
       <TooltipProvider delayDuration={300}>
         <Tooltip>
           <TooltipTrigger asChild>{content}</TooltipTrigger>
-          <TooltipContent side="right" align="start" className="max-w-xs glass-panel">
-            <p className="text-xs">{item.description}</p>
+          <TooltipContent side="right" align="center" className="max-w-xs glass-panel z-[100]">
+            <div className="space-y-1">
+                <p className="font-bold text-xs">{item.name}</p>
+                {item.description && <p className="text-[10px] text-muted-foreground">{item.description}</p>}
+            </div>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
     );
 };
 
-const CatalogueSection: React.FC<{title: string, items: TransformationItem[], itemType: TransformationItem['type']}> = ({title, items, itemType}) => {
+const CatalogueSection: React.FC<{title: string, items: TransformationItem[], itemType: TransformationItem['type'], isMini: boolean}> = ({title, items, itemType, isMini}) => {
   if (items.length === 0) return null;
   return (
       <div className="space-y-1.5">
-          <h3 className="px-2.5 text-[10px] uppercase font-bold text-muted-foreground tracking-widest">{title}</h3>
+          {!isMini && <h3 className="px-2.5 text-[10px] uppercase font-bold text-muted-foreground tracking-widest">{title}</h3>}
           <div className="space-y-0.5">
             {items.map((item) => (
-                <DraggableItem key={item.operationType || item.name} item={{...item, type: itemType}} />
+                <DraggableItem key={item.operationType || item.name} item={{...item, type: itemType}} isMini={isMini} />
             ))}
           </div>
       </div>
@@ -65,7 +70,7 @@ const CatalogueSection: React.FC<{title: string, items: TransformationItem[], it
 };
 
 
-const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ isCollapsed, onToggleCollapse }) => {
+const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ isCollapsed = false, onToggleCollapse }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredTransformations = useMemo(() => {
@@ -102,42 +107,48 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ isC
     };
   }, [searchTerm]);
 
-  if (isCollapsed) return null;
-
   return (
     <aside className={cn(
-      "w-80 glass-panel shrink-0 flex flex-col z-40 transition-all duration-300",
+      "glass-panel shrink-0 flex flex-col z-40 transition-all duration-300 ease-in-out relative",
+      isCollapsed ? "w-16" : "w-80",
       "after:absolute after:inset-y-0 after:right-0 after:w-[1px] after:bg-white/5"
     )}>
-        <div className="p-4 border-b border-white/5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold tracking-tight">Catalogue</h2>
-              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md hover:bg-white/5" onClick={onToggleCollapse}>
-                <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+        <div className={cn("p-4 border-b border-white/5 flex flex-col gap-4", isCollapsed && "items-center px-2")}>
+            <div className={cn("flex items-center justify-between w-full", isCollapsed && "justify-center")}>
+              {!isCollapsed && <h2 className="text-sm font-bold tracking-tight">Catalogue</h2>}
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7 rounded-md hover:bg-white/5 text-muted-foreground" 
+                onClick={onToggleCollapse}
+              >
+                {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
               </Button>
             </div>
-            <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input 
-                  placeholder="Search..." 
-                  className="pl-9 h-9 bg-black/20 border-white/5 focus:border-primary/50 text-xs"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-            </div>
+            {!isCollapsed && (
+              <div className="relative animate-in fade-in duration-500">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input 
+                    placeholder="Search..." 
+                    className="pl-9 h-9 bg-black/20 border-white/5 focus:border-primary/50 text-xs"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+              </div>
+            )}
         </div>
         <ScrollArea className="flex-1">
-            <div className="p-4 space-y-8">
-                <CatalogueSection title="Sources" items={filteredTransformations.sources} itemType="source" />
+            <div className={cn("p-4 space-y-8", isCollapsed && "p-2")}>
+                <CatalogueSection title="Sources" items={filteredTransformations.sources} itemType="source" isMini={isCollapsed} />
                 
                 <div className="space-y-4">
-                    <CatalogueSection title="Common Transformations" items={filteredTransformations.common} itemType="transformation" />
+                    <CatalogueSection title="Common" items={filteredTransformations.common} itemType="transformation" isMini={isCollapsed} />
                     
-                    {filteredTransformations.advanced.length > 0 && (
-                        <Accordion type="single" collapsible className="w-full">
+                    {!isCollapsed && filteredTransformations.advanced.length > 0 && (
+                        <Accordion type="single" collapsible className="w-full animate-in fade-in duration-500">
                             <AccordionItem value="advanced" className="border-b-0">
                                 <AccordionTrigger className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest hover:no-underline px-2.5 py-2 hover:bg-white/5 rounded-lg transition-colors">
-                                    Advanced Operations
+                                    Advanced
                                 </AccordionTrigger>
                                 <AccordionContent className="p-1 space-y-6 pt-4">
                                     {filteredTransformations.advanced.map((category) => (
@@ -145,7 +156,7 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ isC
                                         <h4 className="px-2.5 text-[9px] uppercase font-semibold text-muted-foreground/60 tracking-wider">{category.category}</h4>
                                         <div className="space-y-0.5">
                                           {category.items.map(item => (
-                                            <DraggableItem key={item.operationType || item.name} item={{...item, type: 'transformation'}} />
+                                            <DraggableItem key={item.operationType || item.name} item={{...item, type: 'transformation'}} isMini={isCollapsed} />
                                           ))}
                                         </div>
                                       </div>
@@ -157,11 +168,11 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ isC
                 </div>
                
                 {filteredTransformations.dataset.name && (
-                    <CatalogueSection title="Datasets" items={[filteredTransformations.dataset]} itemType="dataset" />
+                    <CatalogueSection title="Datasets" items={[filteredTransformations.dataset]} itemType="dataset" isMini={isCollapsed} />
                 )}
                 
                 {filteredTransformations.destination.name && (
-                    <CatalogueSection title="Destinations" items={[filteredTransformations.destination]} itemType="destination" />
+                    <CatalogueSection title="Destinations" items={[filteredTransformations.destination]} itemType="destination" isMini={isCollapsed} />
                 )}
             </div>
         </ScrollArea>
