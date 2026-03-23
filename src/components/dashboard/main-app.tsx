@@ -556,7 +556,7 @@ export default function MainApp() {
             if (downstreamNodeIndex === -1) continue;
 
             const parentNodes = connectors
-                .filter(c => c.to === downstreamId)
+                .filter(c => c.from === downstreamId)
                 .map(c => currentNodes.find(n => n.id === c.from))
                 .filter((n): n is PipelineNode => !!n);
             
@@ -706,6 +706,10 @@ export default function MainApp() {
         l.id === activeLineageId ? { ...l, versions: [...l.versions, newVersion] } : l
     ));
     setActiveVersionId(newVersion.id);
+  };
+
+  const onVersionChange = (id: string) => {
+    setActiveVersionId(id);
   };
 
   const handleCreateLineage = (name: string, description: string) => {
