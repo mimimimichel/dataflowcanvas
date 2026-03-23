@@ -171,7 +171,8 @@ export default function MainApp() {
       color: "slate",
       position: { x: minX - padding, y: minY - padding },
       width: maxX - minX + padding * 2,
-      height: maxY - minY + padding * 2
+      height: maxY - minY + padding * 2,
+      isCollapsed: false
     };
 
     setGroups(prev => [...prev, newGroup]);
@@ -185,6 +186,14 @@ export default function MainApp() {
     setGroups(prev => prev.filter(g => g.id !== groupId));
     setNodes(prev => prev.map(n => n.groupId === groupId ? { ...n, groupId: undefined } : n));
     setSelectedGroupIds(prev => prev.filter(id => id !== groupId));
+  };
+
+  const handleRenameGroup = (groupId: string, newName: string) => {
+    setGroups(prev => prev.map(g => g.id === groupId ? { ...g, name: newName } : g));
+  };
+
+  const handleToggleGroupCollapse = (groupId: string) => {
+    setGroups(prev => prev.map(g => g.id === groupId ? { ...g, isCollapsed: !g.isCollapsed } : g));
   };
 
   const handleOpenConfig = (nodeId: string) => {
@@ -473,10 +482,12 @@ export default function MainApp() {
       
       setSelectionRect({ ...selectionRect, x, y, width, height });
       
-      const nodesInRect = nodes.filter(n => 
-        n.position.x >= x && n.position.x <= x + width &&
-        n.position.y >= y && n.position.y <= y + height
-      ).map(n => n.id);
+      const nodesInRect = nodes.filter(n => {
+        const isParentCollapsed = groups.find(g => g.id === n.groupId)?.isCollapsed;
+        if (isParentCollapsed) return false;
+        return n.position.x >= x && n.position.x <= x + width &&
+               n.position.y >= y && n.position.y <= y + height;
+      }).map(n => n.id);
       
       setSelectedNodeIds(nodesInRect);
     } else if (draggingNodeIdRef.current) {
@@ -898,6 +909,8 @@ export default function MainApp() {
                     {...group}
                     onMouseDown={(e) => handleGroupMouseDown(e, group.id)}
                     onDelete={() => handleDeleteGroup(group.id)}
+                    onRename={(newName) => handleRenameGroup(group.id, newName)}
+                    onToggleCollapse={() => handleToggleGroupCollapse(group.id)}
                     isSelected={selectedGroupIds.includes(group.id)}
                   />
                 ))}
@@ -915,6 +928,12 @@ export default function MainApp() {
                       const fromNode = nodes.find((n) => n.id === connector.from);
                       const toNode = nodes.find((n) => n.id === connector.to);
                       if (!fromNode || !toNode) return null;
+                      
+                      // Don't show connectors if either parent group is collapsed
+                      const isFromCollapsed = groups.find(g => g.id === fromNode.groupId)?.isCollapsed;
+                      const isToCollapsed = groups.find(g => g.id === toNode.groupId)?.isCollapsed;
+                      if (isFromCollapsed || isToCollapsed) return null;
+
                       return (
                         <Connector 
                           key={`${connector.from}-${connector.to}-${index}`} 
@@ -950,21 +969,26 @@ export default function MainApp() {
                     })()}
                 </svg>
 
-                {nodes.map((node) => (
-                  <Node
-                    key={node.id}
-                    {...node}
-                    nodes={nodes}
-                    onSelect={(isShift) => handleNodeSelect(node.id, isShift)}
-                    onConfigOpen={() => handleOpenConfig(node.id)}
-                    onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
-                    onMouseUp={(e) => handleNodeMouseUp(e, node.id)}
-                    onPortMouseDown={(e) => handlePortMouseDown(e, node.id)}
-                    onAddNode={handleAddNode}
-                    isSelected={selectedNodeIds.includes(node.id)}
-                    onUpdateOperation={handleUpdateOperation}
-                  />
-                ))}
+                {nodes.map((node) => {
+                  const isParentCollapsed = groups.find(g => g.id === node.groupId)?.isCollapsed;
+                  if (isParentCollapsed) return null;
+
+                  return (
+                    <Node
+                      key={node.id}
+                      {...node}
+                      nodes={nodes}
+                      onSelect={(isShift) => handleNodeSelect(node.id, isShift)}
+                      onConfigOpen={() => handleOpenConfig(node.id)}
+                      onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
+                      onMouseUp={(e) => handleNodeMouseUp(e, node.id)}
+                      onPortMouseDown={(e) => handlePortMouseDown(e, node.id)}
+                      onAddNode={handleAddNode}
+                      isSelected={selectedNodeIds.includes(node.id)}
+                      onUpdateOperation={handleUpdateOperation}
+                    />
+                  );
+                })}
 
                 {selectionRect && (
                   <div 

@@ -128,6 +128,7 @@ export interface NodeGroup {
   position: { x: number, y: number };
   width: number;
   height: number;
+  isCollapsed?: boolean;
 }
 
 export interface Connector {
@@ -288,7 +289,8 @@ export const initialGroups: NodeGroup[] = [
     color: 'blue',
     position: { x: 50, y: 100 },
     width: 350,
-    height: 400
+    height: 400,
+    isCollapsed: false
   },
   {
     id: 'group-clean',
@@ -296,7 +298,8 @@ export const initialGroups: NodeGroup[] = [
     color: 'amber',
     position: { x: 420, y: 100 },
     width: 650,
-    height: 400
+    height: 400,
+    isCollapsed: false
   }
 ];
 
