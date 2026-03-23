@@ -104,10 +104,8 @@ const Header: React.FC<HeaderProps> = ({
   activeView,
   onViewChange
 }) => {
-  const { toast } = useToast();
   const [isCreateVersionOpen, setIsCreateVersionOpen] = useState(false);
   const [isArchitectOpen, setIsArchitectOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExport = () => {
     if (!activeVersion) return;
@@ -178,7 +176,7 @@ const Header: React.FC<HeaderProps> = ({
                   <Sparkles className="mr-2 h-4 w-4 text-amber-500" /> Spec
               </Button>
               <Button variant="outline" size="sm" onClick={onGeneratePython} className="h-9 bg-background/40 border-white/10 hover:bg-background/60">
-                  <Terminal className="mr-2 h-4 w-4" /> Foundry
+                  <Terminal className="mr-2 h-4 w-4" /> PySpark Code
               </Button>
               <Button variant="outline" size="sm" onClick={handleExport} className="h-9 bg-background/40 border-white/10 hover:bg-background/60">
                 <Download className="mr-2 h-4 w-4" /> Export
@@ -193,15 +191,22 @@ const Header: React.FC<HeaderProps> = ({
                 <Menu className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 glass-panel border-white/10">
+            <DropdownMenuContent align="end" className="w-52 glass-panel border-white/10">
               <DropdownMenuItem onClick={onGroupSelected} className="gap-2">
                 <Boxes className="h-4 w-4" /> Group Selected
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsArchitectOpen(true)} className="gap-2 text-primary">
+              <DropdownMenuItem onClick={() => setIsArchitectOpen(true)} className="gap-2 text-primary font-bold">
                 <Wand2 className="h-4 w-4" /> AI Architect
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onAutoLayout} className="gap-2">
                 <LayoutDashboard className="h-4 w-4" /> Auto Layout
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-white/5" />
+              <DropdownMenuItem onClick={onGenerateSpec} className="gap-2">
+                <Sparkles className="h-4 w-4 text-amber-500" /> AI Spec Writer
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onGeneratePython} className="gap-2">
+                <Terminal className="h-4 w-4" /> PySpark Code
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-white/5" />
               <DropdownMenuItem onClick={handleExport} className="gap-2">
@@ -211,7 +216,7 @@ const Header: React.FC<HeaderProps> = ({
           </DropdownMenu>
         </div>
 
-        <Button size="sm" onClick={() => {}} className="h-9 shadow-inner px-3 md:px-4">
+        <Button size="sm" onClick={() => {}} className="h-9 shadow-inner px-3 md:px-4 bg-primary hover:bg-primary/90">
           <Share2 className="md:mr-2 h-4 w-4" />
           <span className="hidden sm:inline">Share</span>
         </Button>
