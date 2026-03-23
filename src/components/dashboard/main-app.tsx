@@ -559,21 +559,21 @@ export default function MainApp() {
         return currentNodes.map(node => {
           if (selectedNodeIds.includes(node.id)) {
             // Check if node center is dropped inside any group zone
+            const centerX = node.position.x + (NODE_WIDTH / 2);
+            const centerY = node.position.y + 50; // Approximate center y
+
             const groupUnder = groups.find(g => {
               const currentWidth = g.isCollapsed ? Math.max(250, g.width * 0.4) : g.width;
               const currentHeight = g.isCollapsed ? 64 : g.height;
               
-              const centerX = node.position.x + (NODE_WIDTH / 2);
-              const centerY = node.position.y + 50; // Approximate center y
-
               return centerX >= g.position.x && 
                      centerX <= g.position.x + currentWidth &&
                      centerY >= g.position.y &&
                      centerY <= g.position.y + currentHeight;
             });
             
-            // If groupUnder is undefined, groupId will be set to undefined (effectively removing it)
-            return { ...node, groupId: groupUnder?.id };
+            // Explicitly set groupId to either the found group or undefined if dropped outside
+            return { ...node, groupId: groupUnder ? groupUnder.id : undefined };
           }
           return node;
         });
