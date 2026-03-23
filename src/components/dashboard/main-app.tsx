@@ -147,7 +147,7 @@ export default function MainApp() {
     }
   };
 
-  const handleCreateGroup = () => {
+  const handleCreateGroup = useCallback(() => {
     if (selectedNodeIds.length < 1) {
       toast({ title: "No Nodes Selected", description: "Select nodes to group them functionally.", variant: "destructive" });
       return;
@@ -179,7 +179,7 @@ export default function MainApp() {
     setSelectedGroupIds([newGroupId]);
     
     toast({ title: "Zone Created", description: `Grouped ${selectedNodeIds.length} nodes functionally.` });
-  };
+  }, [selectedNodeIds, nodes, toast]);
 
   const handleDeleteGroup = (groupId: string) => {
     setGroups(prev => prev.filter(g => g.id !== groupId));
@@ -227,7 +227,7 @@ export default function MainApp() {
     });
   };
 
-  const handleAutoLayout = () => {
+  const handleAutoLayout = useCallback(() => {
     if (nodes.length === 0) return;
 
     const levels: Record<string, number> = {};
@@ -268,12 +268,35 @@ export default function MainApp() {
         };
     });
 
+    // Update groups to fit new node positions
+    const newGroups = groups.map(group => {
+      const groupNodes = newNodes.filter(n => n.groupId === group.id);
+      if (groupNodes.length === 0) return group;
+
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      groupNodes.forEach(n => {
+        minX = Math.min(minX, n.position.x);
+        minY = Math.min(minY, n.position.y);
+        maxX = Math.max(maxX, n.position.x + NODE_WIDTH);
+        maxY = Math.max(maxY, n.position.y + 150);
+      });
+
+      const padding = 60;
+      return {
+        ...group,
+        position: { x: minX - padding, y: minY - padding },
+        width: maxX - minX + padding * 2,
+        height: maxY - minY + padding * 2
+      };
+    });
+
     setNodes(newNodes);
+    setGroups(newGroups);
     toast({
         title: "Layout Applied",
-        description: "Your nodes have been arranged hierearchically."
+        description: "Your design and zones have been arranged hierarchically."
     });
-  };
+  }, [nodes, connectors, groups, toast]);
   
   const handleAddNode = useCallback((item: TransformationItem, position: {x: number, y: number}) => {
     if (!canvasRef.current) return;
@@ -344,7 +367,7 @@ export default function MainApp() {
       operation: item.type === 'transformation' ? operation : undefined,
     };
     setNodes((prev) => [...prev, newNode]);
-  }, [pan.x, pan.y, zoom, nodes, connectors]);
+  }, [pan.x, pan.y, zoom]);
 
   const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
     if (e.button !== 0) return;
