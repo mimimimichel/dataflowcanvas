@@ -3,7 +3,6 @@
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   Upload, Download, Share2, GitBranch, PlusCircle, 
   Terminal, Sparkles, Library, Settings2, Wand2, LayoutDashboard 
@@ -226,19 +225,6 @@ const Header: React.FC<HeaderProps> = ({
 
         <div className="flex items-center gap-3 pl-2">
           <Button size="sm" onClick={handleShare} className="h-9 shadow-inner"><Share2 className="mr-2 h-4 w-4" /> Share</Button>
-          <div className="flex -space-x-2">
-              <Avatar className="h-8 w-8 border-2 border-card shadow-sm">
-                  <AvatarImage src="https://i.pravatar.cc/150?u=a042581f4e29026704d" />
-                  <AvatarFallback>U1</AvatarFallback>
-              </Avatar>
-              <Avatar className="h-8 w-8 border-2 border-card shadow-sm">
-                  <AvatarImage src="https://i.pravatar.cc/150?u=a042581f4e29026704a" />
-                  <AvatarFallback>U2</AvatarFallback>
-              </Avatar>
-               <Avatar className="h-8 w-8 border-2 border-card bg-primary text-primary-foreground shadow-sm">
-                  <AvatarFallback>+3</AvatarFallback>
-              </Avatar>
-          </div>
         </div>
       </div>
 
