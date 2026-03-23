@@ -32,7 +32,7 @@ import { generatePythonCode } from '@/lib/python-generator';
 import { generatePipelineSpec } from '@/ai/flows/generate-spec-flow';
 import LineageDashboard from '@/components/dashboard/lineage-dashboard';
 import { useToast } from '@/hooks/use-toast';
-import { ZoomIn, ZoomOut, RotateCcw, Crosshair } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, Crosshair, Keyboard, MousePointer2, BoxSelect, Trash2, Group } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -45,6 +45,43 @@ type SvgDimensions = {
 
 const PORT_Y_OFFSET = 45;
 const NODE_WIDTH = 256;
+
+const ShortcutLegend = () => (
+  <div className="absolute bottom-6 left-6 z-50 animate-in slide-in-from-left-4 duration-500">
+    <div className="glass-panel rounded-2xl p-4 space-y-3 border border-white/10 shadow-2xl min-w-[200px]">
+      <div className="flex items-center gap-2 mb-1">
+        <Keyboard className="h-4 w-4 text-primary" />
+        <span className="text-[11px] font-bold uppercase tracking-widest text-white/70">Shortcuts</span>
+      </div>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+            <MousePointer2 className="h-3 w-3" /> Left Click
+          </div>
+          <span className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 rounded text-white/50 border border-white/5">Drag / Pan</span>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+            <BoxSelect className="h-3 w-3" /> Right Click
+          </div>
+          <span className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 rounded text-white/50 border border-white/5">Multi-select</span>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+            <Group className="h-3 w-3" /> Ctrl + G
+          </div>
+          <span className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 rounded text-white/50 border border-white/5">Group Selection</span>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+            <Trash2 className="h-3 w-3" /> Del / Backspace
+          </div>
+          <span className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 rounded text-white/50 border border-white/5">Remove</span>
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 export default function MainApp() {
   const { toast } = useToast();
@@ -213,7 +250,7 @@ export default function MainApp() {
 
   const handleCreateGroup = useCallback(() => {
     if (selectedNodeIds.length < 1) {
-      toast({ title: "No Nodes Selected", description: "Select nodes to group them functionally.", variant: "destructive" });
+      toast({ title: "No Nodes Selected", description: "Select nodes using right-click to group them.", variant: "destructive" });
       return;
     }
 
@@ -243,7 +280,7 @@ export default function MainApp() {
     setNodes(prev => prev.map(n => selectedNodeIds.includes(n.id) ? { ...n, groupId: newGroupId } : n));
     setSelectedGroupIds([newGroupId]);
     
-    toast({ title: "Zone Created", description: `Grouped ${selectedNodeIds.length} nodes functionally.` });
+    toast({ title: "Zone Created", description: `Grouped ${selectedNodeIds.length} nodes successfully.` });
   }, [selectedNodeIds, nodes, toast, setGroups, setNodes]);
 
   const handleDeleteGroup = (groupId: string) => {
@@ -1075,7 +1112,9 @@ export default function MainApp() {
                 )}
               </div>
 
-              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50">
+              <ShortcutLegend />
+
+              <div className="absolute bottom-6 right-6 z-50">
                 <div className="glass-panel rounded-2xl flex items-center p-1.5 gap-1 border border-white/10 shadow-2xl">
                     <TooltipProvider>
                         <Tooltip>
