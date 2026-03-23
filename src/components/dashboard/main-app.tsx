@@ -32,7 +32,7 @@ import { generatePythonCode } from '@/lib/python-generator';
 import { generatePipelineSpec } from '@/ai/flows/generate-spec-flow';
 import LineageDashboard from '@/components/dashboard/lineage-dashboard';
 import { useToast } from '@/hooks/use-toast';
-import { ZoomIn, ZoomOut, RotateCcw, Crosshair, Keyboard, MousePointer2, BoxSelect, Trash2, Group } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, Crosshair, Keyboard, MousePointer2, BoxSelect, Trash2, Group, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -46,42 +46,56 @@ type SvgDimensions = {
 const PORT_Y_OFFSET = 45;
 const NODE_WIDTH = 256;
 
-const ShortcutLegend = () => (
-  <div className="absolute bottom-6 left-6 z-50 animate-in slide-in-from-left-4 duration-500">
-    <div className="glass-panel rounded-2xl p-4 space-y-3 border border-white/10 shadow-2xl min-w-[200px]">
-      <div className="flex items-center gap-2 mb-1">
-        <Keyboard className="h-4 w-4 text-primary" />
-        <span className="text-[11px] font-bold uppercase tracking-widest text-white/70">Shortcuts</span>
-      </div>
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-            <MousePointer2 className="h-3 w-3" /> Left Click
+const ShortcutLegend = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="absolute bottom-20 left-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+      <div className="glass-panel rounded-2xl p-4 space-y-3 border border-white/10 shadow-2xl min-w-[240px]">
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <Keyboard className="h-4 w-4 text-primary" />
+            <span className="text-[11px] font-bold uppercase tracking-widest text-white/70">Keyboard Shortcuts</span>
           </div>
-          <span className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 rounded text-white/50 border border-white/5">Drag / Pan</span>
+          <Button variant="ghost" size="icon" className="h-5 w-5 opacity-50 hover:opacity-100" onClick={onClose}>
+            <span className="text-xs">×</span>
+          </Button>
         </div>
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-            <BoxSelect className="h-3 w-3" /> Right Click
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+              <MousePointer2 className="h-3 w-3" /> Left Click
+            </div>
+            <span className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 rounded text-white/50 border border-white/5">Drag / Pan</span>
           </div>
-          <span className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 rounded text-white/50 border border-white/5">Multi-select</span>
-        </div>
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-            <Group className="h-3 w-3" /> Ctrl + G
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+              <BoxSelect className="h-3 w-3" /> Right Click
+            </div>
+            <span className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 rounded text-white/50 border border-white/5">Multi-select</span>
           </div>
-          <span className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 rounded text-white/50 border border-white/5">Group Selection</span>
-        </div>
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-            <Trash2 className="h-3 w-3" /> Del / Backspace
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+              <Square className="h-3 w-3" /> Draw Button
+            </div>
+            <span className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 rounded text-white/50 border border-white/5">Create Zone</span>
           </div>
-          <span className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 rounded text-white/50 border border-white/5">Remove</span>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+              <Group className="h-3 w-3" /> Ctrl + G
+            </div>
+            <span className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 rounded text-white/50 border border-white/5">Group Selection</span>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+              <Trash2 className="h-3 w-3" /> Del / Backspace
+            </div>
+            <span className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 rounded text-white/50 border border-white/5">Remove</span>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default function MainApp() {
   const { toast } = useToast();
@@ -89,6 +103,8 @@ export default function MainApp() {
   const [lineages, setLineages] = useState<LineageInfo[]>(mockLineages);
   const [activeLineageId, setActiveLineageId] = useState<string>('lineage-1');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [isDrawMode, setIsDrawMode] = useState(false);
   
   const activeLineage = useMemo(() => 
     lineages.find(l => l.id === activeLineageId) || lineages[0], 
@@ -148,6 +164,7 @@ export default function MainApp() {
   const [zoom, setZoom] = useState(1);
   const [newConnector, setNewConnector] = useState<{ from: string; to: { x: number; y: number } } | null>(null);
   const [selectionRect, setSelectionRect] = useState<{ startX: number, startY: number, x: number, y: number, width: number, height: number } | null>(null);
+  const [drawingZoneRect, setDrawingZoneRect] = useState<{ startX: number, startY: number, x: number, y: number, width: number, height: number } | null>(null);
   
   const [isPythonModalOpen, setIsPythonModalOpen] = useState(false);
   const [generatedPythonCode, setGeneratedPythonCode] = useState('');
@@ -159,6 +176,7 @@ export default function MainApp() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const isPanningRef = useRef(false);
   const isSelectingRef = useRef(false);
+  const isDrawingZoneRef = useRef(false);
   const panStartRef = useRef({ x: 0, y: 0 });
   const draggingNodeIdRef = useRef<string | null>(null);
   const draggingGroupIdRef = useRef<string | null>(null);
@@ -282,6 +300,50 @@ export default function MainApp() {
     
     toast({ title: "Zone Created", description: `Grouped ${selectedNodeIds.length} nodes successfully.` });
   }, [selectedNodeIds, nodes, toast, setGroups, setNodes]);
+
+  const finalizeDrawingZone = useCallback(() => {
+    if (!drawingZoneRect) return;
+    if (drawingZoneRect.width < 50 || drawingZoneRect.height < 50) {
+      setDrawingZoneRect(null);
+      return;
+    }
+
+    const newGroupId = `group-${Date.now()}`;
+    const newGroup: NodeGroup = {
+      id: newGroupId,
+      name: "Custom Workspace Zone",
+      color: "slate",
+      position: { x: drawingZoneRect.x, y: drawingZoneRect.y },
+      width: drawingZoneRect.width,
+      height: drawingZoneRect.height,
+      isCollapsed: false
+    };
+
+    setGroups(prev => [...prev, newGroup]);
+    
+    // Attach nodes that are inside the drawn rectangle
+    setNodes(currentNodes => {
+      return currentNodes.map(node => {
+        const centerX = node.position.x + (NODE_WIDTH / 2);
+        const centerY = node.position.y + 60;
+
+        const isInside = centerX >= drawingZoneRect.x && 
+                        centerX <= drawingZoneRect.x + drawingZoneRect.width &&
+                        centerY >= drawingZoneRect.y &&
+                        centerY <= drawingZoneRect.y + drawingZoneRect.height;
+
+        if (isInside) {
+          return { ...node, groupId: newGroupId };
+        }
+        return node;
+      });
+    });
+
+    setSelectedGroupIds([newGroupId]);
+    setDrawingZoneRect(null);
+    setIsDrawMode(false); // Disable draw mode after one use for better UX
+    toast({ title: "Workspace Zone Created", description: "You can now drag nodes into this new area." });
+  }, [drawingZoneRect, setGroups, setNodes, toast]);
 
   const handleDeleteGroup = (groupId: string) => {
     setGroups(prev => prev.filter(g => g.id !== groupId));
@@ -551,9 +613,18 @@ export default function MainApp() {
       }
     } 
     else if (e.button === 0) {
-      isPanningRef.current = true;
-      panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
-      if (canvasRef.current) canvasRef.current.style.cursor = 'grabbing';
+      if (isDrawMode) {
+        isDrawingZoneRef.current = true;
+        if (!canvasRef.current) return;
+        const rect = canvasRef.current.getBoundingClientRect();
+        const x = (e.clientX - rect.left - pan.x) / zoom;
+        const y = (e.clientY - rect.top - pan.y) / zoom;
+        setDrawingZoneRect({ startX: x, startY: y, x, y, width: 0, height: 0 });
+      } else {
+        isPanningRef.current = true;
+        panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+        if (canvasRef.current) canvasRef.current.style.cursor = 'grabbing';
+      }
     }
     
     setSelectedConnector(null);
@@ -595,6 +666,18 @@ export default function MainApp() {
       }).map(n => n.id);
       
       setSelectedNodeIds(nodesInRect);
+    } else if (isDrawingZoneRef.current && drawingZoneRect) {
+      if (!canvasRef.current) return;
+      const rect = canvasRef.current.getBoundingClientRect();
+      const currentX = (e.clientX - rect.left - pan.x) / zoom;
+      const currentY = (e.clientY - rect.top - pan.y) / zoom;
+      
+      const x = Math.min(drawingZoneRect.startX, currentX);
+      const y = Math.min(drawingZoneRect.startY, currentY);
+      const width = Math.abs(drawingZoneRect.startX - currentX);
+      const height = Math.abs(drawingZoneRect.startY - currentY);
+      
+      setDrawingZoneRect({ ...drawingZoneRect, x, y, width, height });
     } else if (resizingGroupIdRef.current) {
       const groupId = resizingGroupIdRef.current;
       setGroups(prev => prev.map(g => {
@@ -652,6 +735,11 @@ export default function MainApp() {
     if (isSelectingRef.current) {
       isSelectingRef.current = false;
       setSelectionRect(null);
+    }
+
+    if (isDrawingZoneRef.current) {
+      isDrawingZoneRef.current = false;
+      finalizeDrawingZone();
     }
     
     if (draggingNodeIdRef.current) {
@@ -959,6 +1047,8 @@ export default function MainApp() {
           onGroupSelected={handleCreateGroup}
           activeView={activeView}
           onViewChange={setActiveView}
+          isDrawMode={isDrawMode}
+          onToggleDrawMode={() => setIsDrawMode(!isDrawMode)}
         />
         
         {activeView === 'dashboard' ? (
@@ -995,7 +1085,10 @@ export default function MainApp() {
             />
             
             <main
-              className="flex-1 relative overflow-hidden cursor-grab bg-slate-950"
+              className={cn(
+                "flex-1 relative overflow-hidden bg-slate-950",
+                isDrawMode ? "cursor-crosshair" : "cursor-grab"
+              )}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onWheel={handleWheel}
@@ -1110,9 +1203,21 @@ export default function MainApp() {
                     }}
                   />
                 )}
+
+                {drawingZoneRect && (
+                  <div 
+                    className="absolute border-2 border-dashed border-primary bg-primary/5 pointer-events-none z-[100] rounded-xl"
+                    style={{
+                      left: drawingZoneRect.x,
+                      top: drawingZoneRect.y,
+                      width: drawingZoneRect.width,
+                      height: drawingZoneRect.height
+                    }}
+                  />
+                )}
               </div>
 
-              <ShortcutLegend />
+              <ShortcutLegend isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
 
               <div className="absolute bottom-6 right-6 z-50">
                 <div className="glass-panel rounded-2xl flex items-center p-1.5 gap-1 border border-white/10 shadow-2xl">
@@ -1148,6 +1253,20 @@ export default function MainApp() {
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent side="top">Fit to Screen</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className={cn("h-9 w-9 text-muted-foreground hover:text-white", showShortcuts && "text-primary")} 
+                                  onClick={() => setShowShortcuts(!showShortcuts)}
+                                >
+                                    <Keyboard className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Keyboard Shortcuts</TooltipContent>
                         </Tooltip>
 
                         <Tooltip>

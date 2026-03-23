@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   Upload, Download, Share2, GitBranch, PlusCircle, 
   Terminal, Sparkles, Library, Settings2, Wand2, LayoutDashboard,
-  MoreVertical, FileJson, Menu, Boxes
+  MoreVertical, FileJson, Menu, Boxes, Square
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PipelineVersion, LineageInfo } from '@/lib/pipeline-data';
@@ -39,6 +39,8 @@ interface HeaderProps {
   onGroupSelected: () => void;
   activeView: 'dashboard' | 'editor';
   onViewChange: (view: 'dashboard' | 'editor') => void;
+  isDrawMode?: boolean;
+  onToggleDrawMode?: () => void;
 }
 
 const CreateVersionDialog: React.FC<{
@@ -102,7 +104,9 @@ const Header: React.FC<HeaderProps> = ({
   onAutoLayout,
   onGroupSelected,
   activeView,
-  onViewChange
+  onViewChange,
+  isDrawMode,
+  onToggleDrawMode
 }) => {
   const [isCreateVersionOpen, setIsCreateVersionOpen] = useState(false);
   const [isArchitectOpen, setIsArchitectOpen] = useState(false);
@@ -163,6 +167,17 @@ const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-2 md:gap-4">
         {activeView === 'editor' && (
           <div className="hidden lg:flex items-center gap-2 border-r border-white/10 pr-4">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onToggleDrawMode} 
+                className={cn(
+                  "h-9 bg-background/40 border-white/10 hover:bg-background/60",
+                  isDrawMode && "border-primary text-primary bg-primary/10"
+                )}
+              >
+                  <Square className="mr-2 h-4 w-4" /> Draw Zone
+              </Button>
               <Button variant="outline" size="sm" onClick={onGroupSelected} className="h-9 bg-background/40 border-white/10 hover:bg-background/60">
                   <Boxes className="mr-2 h-4 w-4" /> Group
               </Button>
@@ -192,6 +207,9 @@ const Header: React.FC<HeaderProps> = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52 glass-panel border-white/10">
+              <DropdownMenuItem onClick={onToggleDrawMode} className={cn("gap-2", isDrawMode && "text-primary")}>
+                <Square className="h-4 w-4" /> Draw Zone Mode
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={onGroupSelected} className="gap-2">
                 <Boxes className="h-4 w-4" /> Group Selected
               </DropdownMenuItem>
