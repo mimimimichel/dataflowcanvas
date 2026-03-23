@@ -133,6 +133,60 @@ export default function MainApp() {
     setZoom(1);
     setPan({ x: 0, y: 0 });
   };
+
+  const handleAutoLayout = () => {
+    if (nodes.length === 0) return;
+
+    // Basic topological layout implementation
+    const levels: Record<string, number> = {};
+    const visited = new Set<string>();
+
+    const assignLevel = (nodeId: string, level: number) => {
+        levels[nodeId] = Math.max(levels[nodeId] || 0, level);
+        const downstream = connectors.filter(c => c.from === nodeId);
+        downstream.forEach(c => assignLevel(c.to, level + 1));
+    };
+
+    // Start with sources
+    const sources = nodes.filter(n => !connectors.some(c => c.to === n.id));
+    sources.forEach(s => assignLevel(s.id, 0));
+
+    // Handle any nodes that weren't reached (e.g. islands)
+    nodes.forEach(n => {
+        if (levels[n.id] === undefined) assignLevel(n.id, 0);
+    });
+
+    // Group by levels and calculate positions
+    const levelGroups: Record<number, string[]> = {};
+    Object.entries(levels).forEach(([id, level]) => {
+        if (!levelGroups[level]) levelGroups[level] = [];
+        levelGroups[level].push(id);
+    });
+
+    const HORIZONTAL_GAP = 350;
+    const VERTICAL_GAP = 180;
+    const START_X = 100;
+    const START_Y = 100;
+
+    const newNodes = nodes.map(node => {
+        const level = levels[node.id];
+        const indexInLevel = levelGroups[level].indexOf(node.id);
+        
+        return {
+            ...node,
+            position: {
+                x: START_X + level * HORIZONTAL_GAP,
+                y: START_Y + indexInLevel * VERTICAL_GAP
+            }
+        };
+    });
+
+    setNodes(newNodes);
+    toast({
+        title: "Layout Applied",
+        description: "Your nodes have been arranged hierearchically."
+    });
+  };
   
   const handleAddNode = useCallback((item: TransformationItem, position: {x: number, y: number}) => {
     if (!canvasRef.current) return;
@@ -772,6 +826,7 @@ export default function MainApp() {
           onGenerateSpec={handleGenerateSpec}
           onImportPipeline={handleImportPipeline}
           onApplyScaffold={handleApplyScaffold}
+          onAutoLayout={handleAutoLayout}
           activeView={activeView}
           onViewChange={setActiveView}
         />

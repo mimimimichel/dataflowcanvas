@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   Upload, Download, Share2, GitBranch, PlusCircle, 
-  Terminal, Sparkles, Library, Settings2, Wand2 
+  Terminal, Sparkles, Library, Settings2, Wand2, LayoutDashboard 
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PipelineVersion, LineageInfo } from '@/lib/pipeline-data';
@@ -28,6 +28,7 @@ interface HeaderProps {
   onGenerateSpec: () => void;
   onImportPipeline: (data: any) => void;
   onApplyScaffold: (scaffold: any) => void;
+  onAutoLayout: () => void;
   activeView: 'dashboard' | 'editor';
   onViewChange: (view: 'dashboard' | 'editor') => void;
 }
@@ -90,6 +91,7 @@ const Header: React.FC<HeaderProps> = ({
   onGenerateSpec,
   onImportPipeline,
   onApplyScaffold,
+  onAutoLayout,
   activeView,
   onViewChange
 }) => {
@@ -193,6 +195,9 @@ const Header: React.FC<HeaderProps> = ({
 
       <div className="flex items-center gap-4">
         <div className="hidden lg:flex items-center gap-2 border-r border-white/10 pr-4">
+            <Button variant="outline" size="sm" onClick={onAutoLayout} className="h-9 bg-background/40 border-white/10 hover:bg-background/60">
+                <LayoutDashboard className="mr-2 h-4 w-4" /> Auto-Layout
+            </Button>
             <Button variant="outline" size="sm" onClick={() => setIsArchitectOpen(true)} className="group h-9 bg-primary/10 border-primary/20 hover:bg-primary/20 text-primary">
                 <Wand2 className="mr-2 h-4 w-4" /> AI Architect
             </Button>
