@@ -119,7 +119,7 @@ export default function MainApp() {
   const panStartRef = useRef({ x: 0, y: 0 });
   const draggingNodeIdRef = useRef<string | null>(null);
   const draggingGroupIdRef = useRef<string | null>(null);
-  const dragOffsetRef = useRef({ x: 0, y: 0 });
+  const lastMousePosRef = useRef({ x: 0, y: 0 });
   const isConnectingRef = useRef(false);
 
   const [connectionForFields, setConnectionForFields] = useState<{fromNodeId: string, toNodeId: string} | null>(null);
@@ -153,10 +153,9 @@ export default function MainApp() {
     
     setNodes(currentNodes => {
       return currentNodes.map(node => {
-        if (selectedNodeIds.includes(node.id)) {
-          // Utiliser le centre du nœud pour la détection
+        if (node.id === draggingId || selectedNodeIds.includes(node.id)) {
           const centerX = node.position.x + (NODE_WIDTH / 2);
-          const centerY = node.position.y + 60; // Hauteur approximative du header de la carte
+          const centerY = node.position.y + 60;
 
           const groupUnder = groups.find(g => {
             const currentWidth = g.isCollapsed ? Math.max(250, g.width * 0.4) : g.width;
@@ -393,7 +392,6 @@ export default function MainApp() {
     const x = (position.x - canvasRect.left - pan.x) / zoom;
     const y = (position.y - canvasRect.top - pan.y) / zoom;
 
-    // Détection de groupe au drop
     const centerX = x + (NODE_WIDTH / 2);
     const centerY = y + 60;
     const groupUnder = groups.find(g => {
@@ -420,44 +418,29 @@ export default function MainApp() {
   const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
     if (e.button !== 0) return;
     e.stopPropagation();
-    const node = nodes.find(n => n.id === nodeId);
-    if (!node || isConnectingRef.current) return;
-
+    
     const isShift = e.shiftKey;
     handleNodeSelect(nodeId, isShift);
 
     draggingNodeIdRef.current = nodeId;
-    if(canvasRef.current) {
-        dragOffsetRef.current = {
-            x: e.clientX / zoom - node.position.x,
-            y: e.clientY / zoom - node.position.y,
-        };
-    }
+    lastMousePosRef.current = { x: e.clientX, y: e.clientY };
   };
 
   const handleGroupMouseDown = (e: React.MouseEvent, groupId: string) => {
     if (e.button !== 0) return;
     e.stopPropagation();
-    const group = groups.find(g => g.id === groupId);
-    if (!group) return;
 
     const isShift = e.shiftKey;
     handleGroupSelect(groupId, isShift);
 
     draggingGroupIdRef.current = groupId;
-    if (canvasRef.current) {
-      dragOffsetRef.current = {
-        x: e.clientX / zoom - group.position.x,
-        y: e.clientY / zoom - group.position.y,
-      };
-    }
+    lastMousePosRef.current = { x: e.clientX, y: e.clientY };
   };
 
   const handlePortMouseDown = (e: React.MouseEvent, nodeId: string) => {
     if (e.button !== 0) return;
     e.stopPropagation();
     isConnectingRef.current = true;
-    draggingNodeIdRef.current = null; 
     if (!canvasRef.current) return;
       const canvasRect = canvasRef.current.getBoundingClientRect();
       setNewConnector({ 
@@ -498,6 +481,11 @@ export default function MainApp() {
 
   const handleMouseMove = (e: React.MouseEvent) => {
     e.preventDefault();
+    
+    const dx = (e.clientX - lastMousePosRef.current.x) / zoom;
+    const dy = (e.clientY - lastMousePosRef.current.y) / zoom;
+    lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+
     if (isConnectingRef.current && newConnector) {
       if (!canvasRef.current) return;
       const canvasRect = canvasRef.current.getBoundingClientRect();
@@ -531,14 +519,8 @@ export default function MainApp() {
       setSelectedNodeIds(nodesInRect);
     } else if (draggingNodeIdRef.current) {
       const nodeId = draggingNodeIdRef.current;
-      const nodeToDrag = nodes.find(n => n.id === nodeId);
-      if (!nodeToDrag) return;
-
-      const dx = e.clientX / zoom - dragOffsetRef.current.x - nodeToDrag.position.x;
-      const dy = e.clientY / zoom - dragOffsetRef.current.y - nodeToDrag.position.y;
-      
       setNodes(prevNodes => prevNodes.map(n => {
-        if (selectedNodeIds.includes(n.id)) {
+        if (n.id === nodeId || selectedNodeIds.includes(n.id)) {
           return {
             ...n,
             position: {
@@ -551,19 +533,15 @@ export default function MainApp() {
       }));
     } else if (draggingGroupIdRef.current) {
       const groupId = draggingGroupIdRef.current;
-      const targetGroup = groups.find(g => g.id === groupId)!;
-      const dx = e.clientX / zoom - dragOffsetRef.current.x - targetGroup.position.x;
-      const dy = e.clientY / zoom - dragOffsetRef.current.y - targetGroup.position.y;
-
       setGroups(prev => prev.map(g => {
-        if (selectedGroupIds.includes(g.id)) {
+        if (g.id === groupId || selectedGroupIds.includes(g.id)) {
           return { ...g, position: { x: g.position.x + dx, y: g.position.y + dy } };
         }
         return g;
       }));
 
       setNodes(prev => prev.map(n => {
-        if (n.groupId && selectedGroupIds.includes(n.groupId)) {
+        if (n.groupId && (n.groupId === groupId || selectedGroupIds.includes(n.groupId))) {
           return { ...n, position: { x: n.position.x + dx, y: n.position.y + dy } };
         }
         return n;
@@ -590,9 +568,7 @@ export default function MainApp() {
       finalizeNodeDrag();
     }
 
-    if (draggingGroupIdRef.current) {
-      draggingGroupIdRef.current = null;
-    }
+    draggingGroupIdRef.current = null;
     
     if (isConnectingRef.current) {
       const toNodeElement = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-node-id]');
