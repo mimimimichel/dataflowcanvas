@@ -139,7 +139,6 @@ export default function MainApp() {
 
     // Basic topological layout implementation
     const levels: Record<string, number> = {};
-    const visited = new Set<string>();
 
     const assignLevel = (nodeId: string, level: number) => {
         levels[nodeId] = Math.max(levels[nodeId] || 0, level);
@@ -501,7 +500,7 @@ export default function MainApp() {
               case 'join': {
                 const joinOp = currentNode.operation as JoinOperation;
                 const leftNode = currentNodes.find(ln => ln.id === joinOp.settings.leftNodeId);
-                const rightNode = currentNodes.find(rn => rn.id === joinOp.settings.rightNodeId);
+                const rightNode = currentNodes.find(rn => ln.id === joinOp.settings.rightNodeId);
                 if (leftNode && rightNode) {
                   newOutputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
                 }
@@ -649,11 +648,12 @@ export default function MainApp() {
     setSelectedConnector(null);
   }
 
-  const handleHandleGeneratePython = () => {
+  const handleGeneratePython = useCallback(() => {
+    if (!nodes) return;
     const pythonCode = generatePythonCode(nodes, connectors);
     setGeneratedPythonCode(pythonCode);
     setIsPythonModalOpen(true);
-  };
+  }, [nodes, connectors]);
   
   const handleGenerateSpec = async () => {
     setIsSpecModalOpen(true);
@@ -822,7 +822,7 @@ export default function MainApp() {
           activeVersionId={activeVersionId} 
           onVersionChange={setActiveVersionId}
           onCreateVersion={handleCreateVersion}
-          onGeneratePython={handleHandleGeneratePython}
+          onGeneratePython={handleGeneratePython}
           onGenerateSpec={handleGenerateSpec}
           onImportPipeline={handleImportPipeline}
           onApplyScaffold={handleApplyScaffold}

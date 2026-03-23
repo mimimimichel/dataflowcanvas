@@ -3,7 +3,11 @@ import { PipelineNode, Connector, JoinOperation, FilterOperation, GroupByOperati
 /**
  * Generates a Palantir Foundry PySpark transform script based on the pipeline.
  */
-export function generatePythonCode(nodes: PipelineNode[], connectors: Connector[]): string {
+export function generatePythonCode(nodes: PipelineNode[] = [], connectors: Connector[] = []): string {
+  if (!nodes || nodes.length === 0) {
+    return "# No nodes defined in the pipeline canvas.";
+  }
+
   const sources = nodes.filter(n => n.type === 'source');
   const destinations = nodes.filter(n => n.type === 'destination');
   
@@ -13,14 +17,16 @@ export function generatePythonCode(nodes: PipelineNode[], connectors: Connector[
   const getVarName = (nodeId: string) => {
     const node = nodes.find(n => n.id === nodeId);
     if (!node) return `df_${nodeId.replace(/[^a-zA-Z0-9]/g, '_')}`;
-    return `${node.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${node.id.split('-').pop()}`;
+    const cleanName = node.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const shortId = node.id.split('-').pop() || 'node';
+    return `${cleanName}_${shortId}`;
   };
 
   // Define the transform decorator
   code += `@transform_df(\n`;
   
   // Output
-  destinations.forEach((dest, i) => {
+  destinations.forEach((dest) => {
     code += `    Output("${dest.location || '/path/to/output'}"),\n`;
   });
 
@@ -32,16 +38,22 @@ export function generatePythonCode(nodes: PipelineNode[], connectors: Connector[
 
   // Function signature
   const inputParams = sources.map(s => getVarName(s.id)).join(', ');
-  code += `def compute(${inputParams}):\n`;
+  code += `def compute(${inputParams || 'ctx'}):\n`;
 
-  // Topological Sort to ensure dependencies are defined first
+  // Safe Topological Sort to ensure dependencies are defined first
   const visited = new Set<string>();
+  const visiting = new Set<string>(); // Cycle detection
   const sortedNodeIds: string[] = [];
 
   const visit = (nodeId: string) => {
+    if (visiting.has(nodeId)) return; // Cycle detected: skip to avoid recursion error
     if (visited.has(nodeId)) return;
+    
+    visiting.add(nodeId);
     const parentConnectors = connectors.filter(c => c.to === nodeId);
     parentConnectors.forEach(c => visit(c.from));
+    
+    visiting.delete(nodeId);
     visited.add(nodeId);
     sortedNodeIds.push(nodeId);
   };
@@ -50,12 +62,15 @@ export function generatePythonCode(nodes: PipelineNode[], connectors: Connector[
 
   // Internal Logic
   sortedNodeIds.forEach(nodeId => {
-    const node = nodes.find(n => n.id === nodeId)!;
-    if (node.type === 'source') return; // Handled in signature
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node || node.type === 'source') return; // Sources handled in signature
+    
     if (node.type === 'destination') {
         const parentId = connectors.find(c => c.to === nodeId)?.from;
         if (parentId) {
             code += `    return ${getVarName(parentId)}\n`;
+        } else {
+            code += `    # Warning: Destination ${node.name} is not connected\n`;
         }
         return;
     }
@@ -67,10 +82,13 @@ export function generatePythonCode(nodes: PipelineNode[], connectors: Connector[
 
     if (node.type === 'transformation') {
       const op = node.operation;
-      if (!op) {
+      if (!op || parentIds.length === 0) {
         if (parentIds.length > 0) {
           code += `    ${varName} = ${getVarName(parentIds[0])}\n`;
+        } else {
+          code += `    # Warning: Transformation ${node.name} has no input\n`;
         }
+        code += `\n`;
         return;
       }
 
@@ -90,6 +108,8 @@ export function generatePythonCode(nodes: PipelineNode[], connectors: Connector[
             const leftVar = getVarName(jOp.settings.leftNodeId || parentIds[0]);
             const rightVar = getVarName(jOp.settings.rightNodeId || parentIds[1]);
             code += `    ${varName} = ${leftVar}.join(\n        ${rightVar}, \n        ${leftVar}['${jOp.settings.condition.leftField}'] == ${rightVar}['${jOp.settings.condition.rightField}'], \n        how='${jOp.settings.joinType}'\n    )\n`;
+          } else {
+            code += `    ${varName} = ${getVarName(parentIds[0])}  # Join requires 2 inputs\n`;
           }
           break;
         }
@@ -97,10 +117,10 @@ export function generatePythonCode(nodes: PipelineNode[], connectors: Connector[
         case 'group_by': {
           const gOp = op as GroupByOperation;
           const gInputVar = getVarName(parentIds[0]);
-          const groupByCols = gOp.settings.groupByFields.map(f => `'${f}'`).join(', ');
+          const groupByCols = (gOp.settings.groupByFields || []).map(f => `'${f}'`).join(', ');
           
           code += `    ${varName} = ${gInputVar}.groupBy(${groupByCols}).agg(\n`;
-          gOp.settings.aggregations.forEach((agg, idx) => {
+          (gOp.settings.aggregations || []).forEach((agg, idx) => {
             const isLast = idx === gOp.settings.aggregations.length - 1;
             const pyFunc = agg.type === 'avg' ? 'mean' : agg.type;
             code += `        F.${pyFunc}('${agg.field}').alias('${agg.newName}')${isLast ? '' : ','}\n`;
@@ -112,8 +132,8 @@ export function generatePythonCode(nodes: PipelineNode[], connectors: Connector[
         case 'sort': {
           const sOp = op as SortOperation;
           const sInputVar = getVarName(parentIds[0]);
-          const sortExprs = sOp.settings.conditions.map(c => `F.col('${c.field}').${c.direction}()`).join(', ');
-          code += `    ${varName} = ${sInputVar}.orderBy(${sortExprs})\n`;
+          const sortExprs = (sOp.settings.conditions || []).map(c => `F.col('${c.field}').${c.direction}()`).join(', ');
+          code += `    ${varName} = ${sInputVar}.orderBy(${sortExprs || "F.col('id').asc()"})\n`;
           break;
         }
 
@@ -121,7 +141,7 @@ export function generatePythonCode(nodes: PipelineNode[], connectors: Connector[
           const selOp = op as SelectColumnsOperation;
           const selInputVar = getVarName(parentIds[0]);
           const cols = (selOp.settings.selectedFields || []).map(f => `'${f}'`).join(', ');
-          code += `    ${varName} = ${selInputVar}.select(${cols})\n`;
+          code += `    ${varName} = ${selInputVar}.select(${cols || '*'})\n`;
           break;
         }
 
@@ -133,16 +153,18 @@ export function generatePythonCode(nodes: PipelineNode[], connectors: Connector[
             otherVars.forEach(v => {
                code += `    ${varName} = ${varName}.unionByName(${v})\n`;
             });
+          } else {
+            code += `    ${varName} = ${getVarName(parentIds[0])}\n`;
           }
           break;
         }
 
         default:
-          code += `    ${varName} = ${getVarName(parentIds[0])}  # Placeholder for ${op.type}\n`;
+          code += `    ${varName} = ${getVarName(parentIds[0])}  # Transformation: ${op.type}\n`;
       }
     } else if (node.type === 'dataset') {
         if (parentIds.length > 0) {
-            code += `    ${varName} = ${getVarName(parentIds[0])}.checkpoint()  # Intermediate Cache\n`;
+            code += `    ${varName} = ${getVarName(parentIds[0])}.checkpoint()  # Cache point\n`;
         }
     }
     code += `\n`;
