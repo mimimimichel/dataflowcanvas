@@ -277,7 +277,6 @@ export default function MainApp() {
         };
     });
 
-    // Update groups to fit new node positions
     const newGroups = groups.map(group => {
       const groupNodes = newNodes.filter(n => n.groupId === group.id);
       if (groupNodes.length === 0) return group;
@@ -545,6 +544,26 @@ export default function MainApp() {
     }
     
     if (draggingNodeIdRef.current) {
+      // Dynamic grouping on drop
+      setNodes(currentNodes => {
+        return currentNodes.map(node => {
+          if (selectedNodeIds.includes(node.id)) {
+            // Check if node is dropped inside any group zone
+            const groupUnder = groups.find(g => {
+              const currentWidth = g.isCollapsed ? Math.max(250, g.width * 0.4) : g.width;
+              const currentHeight = g.isCollapsed ? 64 : g.height;
+              
+              return node.position.x >= g.position.x && 
+                     node.position.x <= g.position.x + currentWidth &&
+                     node.position.y >= g.position.y &&
+                     node.position.y <= g.position.y + currentHeight;
+            });
+            
+            return { ...node, groupId: groupUnder?.id };
+          }
+          return node;
+        });
+      });
       draggingNodeIdRef.current = null;
     }
 
@@ -840,7 +859,7 @@ export default function MainApp() {
           activeVersion={activeVersion}
           versions={activeLineage.versions} 
           activeVersionId={activeVersionId} 
-          onVersionChange={setActiveVersionId} 
+          onVersionChange={(id) => setActiveVersionId(id)} 
           onCreateVersion={handleCreateVersion}
           onGeneratePython={handleGeneratePython}
           onGenerateSpec={handleGenerateSpec}
@@ -929,7 +948,6 @@ export default function MainApp() {
                       const toNode = nodes.find((n) => n.id === connector.to);
                       if (!fromNode || !toNode) return null;
                       
-                      // Don't show connectors if either parent group is collapsed
                       const isFromCollapsed = groups.find(g => g.id === fromNode.groupId)?.isCollapsed;
                       const isToCollapsed = groups.find(g => g.id === toNode.groupId)?.isCollapsed;
                       if (isFromCollapsed || isToCollapsed) return null;
