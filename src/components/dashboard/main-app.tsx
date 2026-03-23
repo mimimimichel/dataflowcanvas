@@ -147,6 +147,33 @@ export default function MainApp() {
     }
   };
 
+  const finalizeNodeDrag = useCallback(() => {
+    if (!draggingNodeIdRef.current) return;
+    
+    setNodes(currentNodes => {
+      return currentNodes.map(node => {
+        if (selectedNodeIds.includes(node.id)) {
+          const centerX = node.position.x + (NODE_WIDTH / 2);
+          const centerY = node.position.y + 50; 
+
+          const groupUnder = groups.find(g => {
+            const currentWidth = g.isCollapsed ? Math.max(250, g.width * 0.4) : g.width;
+            const currentHeight = g.isCollapsed ? 64 : g.height;
+            
+            return centerX >= g.position.x && 
+                   centerX <= g.position.x + currentWidth &&
+                   centerY >= g.position.y &&
+                   centerY <= g.position.y + currentHeight;
+          });
+          
+          return { ...node, groupId: groupUnder ? groupUnder.id : undefined };
+        }
+        return node;
+      });
+    });
+    draggingNodeIdRef.current = null;
+  }, [selectedNodeIds, groups]);
+
   const handleCreateGroup = useCallback(() => {
     if (selectedNodeIds.length < 1) {
       toast({ title: "No Nodes Selected", description: "Select nodes to group them functionally.", variant: "destructive" });
@@ -499,8 +526,11 @@ export default function MainApp() {
       setSelectedNodeIds(nodesInRect);
     } else if (draggingNodeIdRef.current) {
       const nodeId = draggingNodeIdRef.current;
-      const dx = e.clientX / zoom - dragOffsetRef.current.x - nodes.find(n => n.id === nodeId)!.position.x;
-      const dy = e.clientY / zoom - dragOffsetRef.current.y - nodes.find(n => n.id === nodeId)!.position.y;
+      const nodeToDrag = nodes.find(n => n.id === nodeId);
+      if (!nodeToDrag) return;
+
+      const dx = e.clientX / zoom - dragOffsetRef.current.x - nodeToDrag.position.x;
+      const dy = e.clientY / zoom - dragOffsetRef.current.y - nodeToDrag.position.y;
       
       setNodes(prevNodes => prevNodes.map(n => {
         if (selectedNodeIds.includes(n.id)) {
@@ -552,28 +582,7 @@ export default function MainApp() {
     }
     
     if (draggingNodeIdRef.current) {
-      setNodes(currentNodes => {
-        return currentNodes.map(node => {
-          if (selectedNodeIds.includes(node.id)) {
-            const centerX = node.position.x + (NODE_WIDTH / 2);
-            const centerY = node.position.y + 50; 
-
-            const groupUnder = groups.find(g => {
-              const currentWidth = g.isCollapsed ? Math.max(250, g.width * 0.4) : g.width;
-              const currentHeight = g.isCollapsed ? 64 : g.height;
-              
-              return centerX >= g.position.x && 
-                     centerX <= g.position.x + currentWidth &&
-                     centerY >= g.position.y &&
-                     centerY <= g.position.y + currentHeight;
-            });
-            
-            return { ...node, groupId: groupUnder ? groupUnder.id : undefined };
-          }
-          return node;
-        });
-      });
-      draggingNodeIdRef.current = null;
+      finalizeNodeDrag();
     }
 
     if (draggingGroupIdRef.current) {
@@ -607,6 +616,10 @@ export default function MainApp() {
             setConnectionForFields({ fromNodeId: fromNode.id, toNodeId: toNode.id });
         }
       }
+    }
+    
+    if (draggingNodeIdRef.current) {
+      finalizeNodeDrag();
     }
     
     isConnectingRef.current = false;
