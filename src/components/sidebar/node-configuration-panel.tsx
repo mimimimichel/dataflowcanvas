@@ -8,11 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { 
   PipelineNode, Field, Operation, FilterOperation, JoinOperation, 
-  GroupByOperation, SortOperation, SelectColumnsOperation, UnionOperation, getJoinOutputFields 
+  GroupByOperation, SortOperation, SelectColumnsOperation, UnionOperation, getJoinOutputFields, DesignStatus, DataQualityMetrics 
 } from '@/lib/pipeline-data';
-import { Trash2, PlusCircle } from 'lucide-react';
+import { Trash2, PlusCircle, Activity, ShieldCheck, Clock3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Table as UiTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -150,6 +151,11 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
   const handleUpdate = (field: keyof PipelineNode, value: any) => {
     setDraftNode(prev => ({ ...prev, [field]: value }));
   };
+
+  const handleQualityUpdate = (key: keyof DataQualityMetrics, value: any) => {
+    const currentMetrics = displayNode.qualityMetrics || {};
+    handleUpdate('qualityMetrics', { ...currentMetrics, [key]: value });
+  }
   
   const handleOperationUpdate = (updatedOperation: Operation) => {
     const newConfig: Partial<PipelineNode> = { operation: updatedOperation };
@@ -331,31 +337,75 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="sm:max-w-lg w-full flex flex-col">
+      <SheetContent className="sm:max-w-lg w-full flex flex-col glass-panel border-l border-white/10">
         <SheetHeader className="mb-4">
           <SheetTitle className="text-xl">Configure: {displayNode.name}</SheetTitle>
           <SheetDescription>
-            Modify configurations, rules, and schemas for this node.
+            Modify configurations, rules, and design specifications.
           </SheetDescription>
         </SheetHeader>
-        <Separator />
+        <Separator className="bg-white/5" />
         <div className="flex-1 overflow-y-auto pr-6 -mr-6 py-4">
-          <div className="space-y-4">
-            <div className="grid w-full items-center gap-1.5">
-                <Label htmlFor="node-name">Node Name</Label>
-                <Input type="text" id="node-name" value={displayNode.name} onChange={(e) => handleUpdate('name', e.target.value)} />
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+               <div className="space-y-1.5">
+                  <Label htmlFor="node-name">Node Name</Label>
+                  <Input type="text" id="node-name" value={displayNode.name} onChange={(e) => handleUpdate('name', e.target.value)} className="bg-black/20" />
+               </div>
+               <div className="space-y-1.5">
+                  <Label htmlFor="status">Design Status</Label>
+                  <Select value={displayNode.status} onValueChange={(v: DesignStatus) => handleUpdate('status', v)}>
+                    <SelectTrigger className="bg-black/20">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="review">In Review</SelectItem>
+                      <SelectItem value="ready">Production Ready</SelectItem>
+                    </SelectContent>
+                  </Select>
+               </div>
             </div>
-            <Separator className="my-4"/>
+
+            <div className="space-y-3 p-4 bg-blue-500/5 border border-blue-500/10 rounded-xl">
+               <h4 className="text-xs font-bold uppercase tracking-widest text-blue-400 flex items-center gap-2">
+                  <ShieldCheck className="h-3 w-3" /> Quality Targets (SLAs)
+               </h4>
+               <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] text-muted-foreground uppercase">Target Completeness (%)</Label>
+                    <Input 
+                      type="number" 
+                      placeholder="99.9" 
+                      value={displayNode.qualityMetrics?.completeness || ''} 
+                      onChange={(e) => handleQualityUpdate('completeness', parseFloat(e.target.value))}
+                      className="h-8 text-xs bg-black/20"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] text-muted-foreground uppercase">Target Freshness</Label>
+                    <Input 
+                      type="text" 
+                      placeholder="1h, 15m, 1d" 
+                      value={displayNode.qualityMetrics?.freshness || ''} 
+                      onChange={(e) => handleQualityUpdate('freshness', e.target.value)}
+                      className="h-8 text-xs bg-black/20"
+                    />
+                  </div>
+               </div>
+            </div>
+
+            <Separator className="bg-white/5"/>
             {renderConfigContent()}
           </div>
         </div>
-        <SheetFooter className="mt-6 border-t pt-4">
+        <SheetFooter className="mt-6 border-t border-white/5 pt-4">
             <div className="flex justify-between w-full">
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button variant="destructive"><Trash2 className="mr-2"/> Delete Node</Button>
+                        <Button variant="ghost" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4"/> Delete Node</Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent>
+                    <AlertDialogContent className="glass-panel border-white/10">
                         <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
@@ -364,15 +414,15 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                         </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                        <AlertDialogCancel className="bg-white/5 border-white/10">Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
 
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={onClose}>Cancel</Button>
-                    <Button onClick={handleSave}>Save Changes</Button>
+                    <Button variant="outline" onClick={onClose} className="border-white/10 bg-white/5">Cancel</Button>
+                    <Button onClick={handleSave} className="bg-primary text-primary-foreground shadow-lg shadow-primary/20">Save Changes</Button>
                 </div>
             </div>
         </SheetFooter>

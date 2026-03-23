@@ -64,4 +64,10 @@
   .apple-card:hover {
     @apply border-white/20 bg-white/[0.12];
   }
+
+  .canvas-grid {
+    background-image: radial-gradient(circle, white 1px, transparent 1px);
+    background-size: 30px 30px;
+    opacity: 0.05;
+  }
 }

@@ -16,6 +16,14 @@ export interface Field {
   type: string;
 }
 
+export type DesignStatus = 'draft' | 'review' | 'ready';
+
+export interface DataQualityMetrics {
+  completeness?: number;
+  freshness?: string;
+  validity?: number;
+}
+
 export type OperationType = 'filter' | 'join' | 'group_by' | 'sort' | 'select_columns' | 'union' | 'no_op' | string;
 
 export interface BaseOperation {
@@ -105,6 +113,8 @@ export interface PipelineNode {
   position: { x: number; y: number };
   system?: string;
   location?: string;
+  status?: DesignStatus;
+  qualityMetrics?: DataQualityMetrics;
   inputFields?: Field[];
   outputFields?: Field[];
   operation?: Operation;
@@ -159,6 +169,8 @@ export const initialNodes: PipelineNode[] = [
     position: { x: 50, y: 150 },
     system: 'PostgreSQL',
     location: 'prod-customers-db',
+    status: 'ready',
+    qualityMetrics: { completeness: 99.9, freshness: '1h' },
     outputFields: [
       { name: 'id', type: 'integer' },
       { name: 'first_name', type: 'string' },
@@ -174,6 +186,7 @@ export const initialNodes: PipelineNode[] = [
     position: { x: 50, y: 350 },
     system: 'PostgreSQL',
     location: 'prod-orders-db',
+    status: 'ready',
     outputFields: [
       { name: 'order_id', type: 'integer' },
       { name: 'customer_id', type: 'integer' },
@@ -186,6 +199,7 @@ export const initialNodes: PipelineNode[] = [
     name: 'Filter Inactive', 
     type: 'transformation', 
     position: { x: 350, y: 50 },
+    status: 'review',
     operation: {
         type: 'filter',
         settings: {
@@ -214,6 +228,7 @@ export const initialNodes: PipelineNode[] = [
     name: 'Join Orders', 
     type: 'transformation', 
     position: { x: 350, y: 250 },
+    status: 'draft',
     operation: {
         type: 'join',
         settings: {
@@ -254,6 +269,7 @@ export const initialNodes: PipelineNode[] = [
     name: 'Aggregate Spend', 
     type: 'transformation', 
     position: { x: 650, y: 150 },
+    status: 'draft',
     operation: { 
         type: 'group_by', 
         settings: {
@@ -288,6 +304,7 @@ export const initialNodes: PipelineNode[] = [
     position: { x: 950, y: 150 },
     system: 'Snowflake',
     location: 'analytics_db.mkt.customer_ltv',
+    status: 'ready',
     inputFields: [
         { name: 'id', type: 'integer' },
         { name: 'first_name', type: 'string' },

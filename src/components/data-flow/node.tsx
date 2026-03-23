@@ -4,15 +4,16 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal, GitCompare, Group as GroupIcon, ChevronDown, ArrowRightLeft, Filter, SortAsc, Table, Combine, Server, Pin, Copy } from 'lucide-react';
+import { Database, Cog, DatabaseZap, Icon, Layers, SlidersHorizontal, GitCompare, Group as GroupIcon, ChevronDown, ArrowRightLeft, Filter, SortAsc, Table, Combine, Server, Pin, Copy, Activity, ShieldCheck, Clock3 } from 'lucide-react';
 import Port from './port';
-import { TransformationItem, PipelineNode, Field, Operation, transformations, advancedTransformations, SelectColumnsOperation as SelectColumnsType, UnionOperation as UnionType } from '@/lib/pipeline-data';
+import { TransformationItem, PipelineNode, Field, Operation, transformations, advancedTransformations, SelectColumnsOperation as SelectColumnsType, UnionOperation as UnionType, DesignStatus } from '@/lib/pipeline-data';
 import FilterOperation from '@/components/operations/filter-operation';
 import JoinOperation from '@/components/operations/join-operation';
 import GroupByOperation from '@/components/operations/group-by-operation';
 import SortOperation from '@/components/operations/sort-operation';
 import SelectColumnsOperation from '@/components/operations/select-columns-operation';
 import UnionOperation from '@/components/operations/union-operation';
+import { Badge } from '@/components/ui/badge';
 
 export type NodeType = 'source' | 'transformation' | 'destination' | 'dataset';
 
@@ -55,6 +56,12 @@ const typeConfig: Record<NodeType, { icon: Icon; color: string; border: string; 
   },
 };
 
+const statusColors: Record<DesignStatus, string> = {
+  draft: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
+  review: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+  ready: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+};
+
 const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
     if (!fields || fields.length === 0) {
         return <p className="text-xs text-muted-foreground text-center p-2">No fields defined</p>;
@@ -76,7 +83,7 @@ const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
     );
 };
 
-const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputFields, outputFields, system, location, onSelect, onConfigOpen, onMouseDown, onMouseUp, onPortMouseDown, isSelected, onUpdateOperation, nodes, onAddNode }) => {
+const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputFields, outputFields, system, location, status = 'draft', qualityMetrics, onSelect, onConfigOpen, onMouseDown, onMouseUp, onPortMouseDown, isSelected, onUpdateOperation, nodes, onAddNode }) => {
   
   const getIconForOperation = (op?: Operation) => {
     if(!op || type !== 'transformation') return typeConfig[type].icon || Cog;
@@ -172,7 +179,12 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
             </div>
             <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold leading-tight text-left truncate text-white">{name}</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold opacity-70">{type}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold opacity-70">{type}</p>
+                  <Badge variant="outline" className={cn("text-[8px] h-3.5 px-1 py-0 border leading-none capitalize", statusColors[status])}>
+                    {status}
+                  </Badge>
+                </div>
             </div>
         </div>
 
@@ -191,6 +203,25 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
                     </div>
                 )}
             </div>
+        )}
+
+        {qualityMetrics && (
+          <div className="px-3 pb-3">
+             <div className="flex items-center gap-3 p-1.5 bg-blue-500/5 border border-blue-500/10 rounded-md">
+                {qualityMetrics.completeness && (
+                  <div className="flex flex-col">
+                    <span className="text-[8px] text-muted-foreground/60 uppercase">Completeness</span>
+                    <span className="text-[10px] font-mono text-emerald-400 font-bold">{qualityMetrics.completeness}%</span>
+                  </div>
+                )}
+                {qualityMetrics.freshness && (
+                  <div className="flex flex-col">
+                    <span className="text-[8px] text-muted-foreground/60 uppercase">Freshness</span>
+                    <span className="text-[10px] font-mono text-blue-400 font-bold">{qualityMetrics.freshness}</span>
+                  </div>
+                )}
+             </div>
+          </div>
         )}
 
         {isExpanded && (

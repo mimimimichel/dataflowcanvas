@@ -30,7 +30,7 @@ import { generatePythonCode } from '@/lib/python-generator';
 import { generatePipelineSpec } from '@/ai/flows/generate-spec-flow';
 import LineageDashboard from '@/components/dashboard/lineage-dashboard';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronRight, Plus, Minus, Maximize, MousePointer2, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { ChevronRight, Plus, Minus, Maximize, MousePointer2, ZoomIn, ZoomOut, RotateCcw, Crosshair } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -125,7 +125,7 @@ export default function MainApp() {
   };
 
   const handleZoom = (delta: number) => {
-    const newZoom = Math.min(Math.max(zoom + delta, 0.2), 3);
+    const newZoom = Math.min(Math.max(zoom + delta, 0.1), 3);
     setZoom(newZoom);
   };
 
@@ -134,28 +134,48 @@ export default function MainApp() {
     setPan({ x: 0, y: 0 });
   };
 
+  const handleFitToScreen = () => {
+    if (nodes.length === 0 || !canvasRef.current) return;
+    
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    nodes.forEach(node => {
+      minX = Math.min(minX, node.position.x);
+      minY = Math.min(minY, node.position.y);
+      maxX = Math.max(maxX, node.position.x + NODE_WIDTH);
+      maxY = Math.max(maxY, node.position.y + 100);
+    });
+
+    const padding = 100;
+    const contentWidth = maxX - minX + (padding * 2);
+    const contentHeight = maxY - minY + (padding * 2);
+    const canvasWidth = canvasRef.current.clientWidth;
+    const canvasHeight = canvasRef.current.clientHeight;
+
+    const newZoom = Math.min(canvasWidth / contentWidth, canvasHeight / contentHeight, 1.5);
+    setZoom(newZoom);
+    setPan({
+      x: (canvasWidth - contentWidth * newZoom) / 2 - minX * newZoom + padding * newZoom,
+      y: (canvasHeight - contentHeight * newZoom) / 2 - minY * newZoom + padding * newZoom
+    });
+  };
+
   const handleAutoLayout = () => {
     if (nodes.length === 0) return;
 
-    // Basic topological layout implementation
     const levels: Record<string, number> = {};
-
     const assignLevel = (nodeId: string, level: number) => {
         levels[nodeId] = Math.max(levels[nodeId] || 0, level);
         const downstream = connectors.filter(c => c.from === nodeId);
         downstream.forEach(c => assignLevel(c.to, level + 1));
     };
 
-    // Start with sources
     const sources = nodes.filter(n => !connectors.some(c => c.to === n.id));
     sources.forEach(s => assignLevel(s.id, 0));
 
-    // Handle any nodes that weren't reached (e.g. islands)
     nodes.forEach(n => {
         if (levels[n.id] === undefined) assignLevel(n.id, 0);
     });
 
-    // Group by levels and calculate positions
     const levelGroups: Record<number, string[]> = {};
     Object.entries(levels).forEach(([id, level]) => {
         if (!levelGroups[level]) levelGroups[level] = [];
@@ -246,6 +266,7 @@ export default function MainApp() {
       id: `${item.type}-${Date.now()}`,
       name: item.name,
       type: item.type,
+      status: 'draft',
       position: {
         x: (position.x - canvasRect.left - pan.x) / zoom,
         y: (position.y - canvasRect.top - pan.y) / zoom,
@@ -455,7 +476,7 @@ export default function MainApp() {
     } else {
       newZoom = zoom / zoomFactor;
     }
-    newZoom = Math.min(Math.max(newZoom, 0.2), 3);
+    newZoom = Math.min(Math.max(newZoom, 0.1), 3);
 
     const newPanX = pan.x - (x - pan.x) * (newZoom / zoom - 1);
     const newPanY = pan.y - (y - pan.y) * (newZoom / zoom - 1);
@@ -500,7 +521,7 @@ export default function MainApp() {
               case 'join': {
                 const joinOp = currentNode.operation as JoinOperation;
                 const leftNode = currentNodes.find(ln => ln.id === joinOp.settings.leftNodeId);
-                const rightNode = currentNodes.find(rn => ln.id === joinOp.settings.rightNodeId);
+                const rightNode = currentNodes.find(rn => rn.id === joinOp.settings.rightNodeId);
                 if (leftNode && rightNode) {
                   newOutputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
                 }
@@ -739,6 +760,7 @@ export default function MainApp() {
       id: `${n.type}-${Date.now()}-${i}`,
       name: n.name,
       type: n.type,
+      status: 'draft',
       position: { x: n.x, y: n.y },
       inputFields: [],
       outputFields: [],
@@ -781,7 +803,7 @@ export default function MainApp() {
       maxY = Math.max(maxY, node.position.y + 200);  
     });
     
-    const padding = 200;
+    const padding = 500;
     const finalMinX = minX - padding;
     const finalMinY = minY - padding;
     const width = maxX - minX + (padding * 2);
@@ -798,6 +820,9 @@ export default function MainApp() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Delete' || e.key === 'Backspace') {
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
         if (selectedNodeId && !isConfigPanelOpen) {
           handleDeleteNode(selectedNodeId);
         } else if (selectedConnector) {
@@ -820,7 +845,7 @@ export default function MainApp() {
           activeVersion={activeVersion}
           versions={activeLineage.versions} 
           activeVersionId={activeVersionId} 
-          onVersionChange={setActiveVersionId}
+          onVersionChange={onVersionChange}
           onCreateVersion={handleCreateVersion}
           onGeneratePython={handleGeneratePython}
           onGenerateSpec={handleGenerateSpec}
@@ -848,7 +873,7 @@ export default function MainApp() {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="absolute left-4 top-4 z-40 h-8 w-8 glass-panel"
+                className="absolute left-4 top-4 z-40 h-8 w-8 glass-panel border border-white/10"
                 onClick={() => setIsSidebarCollapsed(false)}
               >
                 <ChevronRight className="h-4 w-4" />
@@ -856,7 +881,7 @@ export default function MainApp() {
             )}
 
             <main
-              className="flex-1 relative overflow-hidden cursor-grab"
+              className="flex-1 relative overflow-hidden cursor-grab bg-slate-950"
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onWheel={handleWheel}
@@ -866,6 +891,8 @@ export default function MainApp() {
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
             >
+              <div className="absolute inset-0 canvas-grid pointer-events-none" />
+
               <div
                 className="absolute top-0 left-0"
                 style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'top left' }}
@@ -948,7 +975,7 @@ export default function MainApp() {
                             <TooltipContent side="top">Zoom In</TooltipContent>
                         </Tooltip>
                         
-                        <div className="w-12 text-center text-[10px] font-mono font-bold text-muted-foreground">
+                        <div className="w-14 text-center text-[10px] font-mono font-bold text-muted-foreground bg-white/5 rounded px-1 py-0.5">
                             {Math.round(zoom * 100)}%
                         </div>
 
@@ -962,6 +989,15 @@ export default function MainApp() {
                         </Tooltip>
 
                         <div className="w-px h-4 bg-white/10 mx-1" />
+
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-white" onClick={handleFitToScreen}>
+                                    <Crosshair className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Fit to Screen</TooltipContent>
+                        </Tooltip>
 
                         <Tooltip>
                             <TooltipTrigger asChild>
