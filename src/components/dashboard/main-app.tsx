@@ -6,6 +6,7 @@ import TransformationsCatalogue from '@/components/sidebar/transformations-catal
 import NodeConfigurationPanel from '@/components/sidebar/node-configuration-panel';
 import Node from '@/components/data-flow/node';
 import Connector from '@/components/data-flow/connector';
+import GroupZone from '@/components/data-flow/group-zone';
 import { 
   PipelineNode, 
   TransformationItem, 
@@ -20,7 +21,8 @@ import {
   getJoinOutputFields, 
   PipelineVersion,
   mockLineages,
-  LineageInfo
+  LineageInfo,
+  NodeGroup
 } from '@/lib/pipeline-data';
 import { cn } from '@/lib/utils';
 import ConnectionFieldsModal from '@/components/data-flow/connection-fields-modal';
@@ -63,6 +65,7 @@ export default function MainApp() {
   
   const nodes = activeVersion.nodes;
   const connectors = activeVersion.connectors;
+  const groups = activeVersion.groups || [];
 
   const setNodes = (updater: React.SetStateAction<PipelineNode[]>) => {
     const newNodes = typeof updater === 'function' ? updater(nodes) : updater;
@@ -84,7 +87,18 @@ export default function MainApp() {
     ));
   };
 
+  const setGroups = (updater: React.SetStateAction<NodeGroup[]>) => {
+    const newGroups = typeof updater === 'function' ? updater(groups) : updater;
+    setLineages(currentLineages => currentLineages.map(l => 
+      l.id === activeLineageId ? {
+        ...l,
+        versions: l.versions.map(v => v.id === activeVersionId ? { ...v, groups: newGroups } : v)
+      } : l
+    ));
+  };
+
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [selectedConnector, setSelectedConnector] = useState<ConnectorType | null>(null);
   const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -104,7 +118,7 @@ export default function MainApp() {
   const isSelectingRef = useRef(false);
   const panStartRef = useRef({ x: 0, y: 0 });
   const draggingNodeIdRef = useRef<string | null>(null);
-  const dragStartNodesPositionsRef = useRef<Record<string, { x: number, y: number }>>({});
+  const draggingGroupIdRef = useRef<string | null>(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const isConnectingRef = useRef(false);
 
@@ -118,19 +132,65 @@ export default function MainApp() {
     } else {
       if (!selectedNodeIds.includes(id)) {
         setSelectedNodeIds([id]);
+        setSelectedGroupIds([]);
       }
     }
+  };
+
+  const handleGroupSelect = (id: string, isShift: boolean) => {
+    setSelectedConnector(null);
+    if (isShift) {
+      setSelectedGroupIds(prev => prev.includes(id) ? prev.filter(gid => gid !== id) : [...prev, id]);
+    } else {
+      setSelectedGroupIds([id]);
+      setSelectedNodeIds([]);
+    }
+  };
+
+  const handleCreateGroup = () => {
+    if (selectedNodeIds.length < 1) {
+      toast({ title: "No Nodes Selected", description: "Select nodes to group them functionally.", variant: "destructive" });
+      return;
+    }
+
+    const selectedNodes = nodes.filter(n => selectedNodeIds.includes(n.id));
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    
+    selectedNodes.forEach(n => {
+      minX = Math.min(minX, n.position.x);
+      minY = Math.min(minY, n.position.y);
+      maxX = Math.max(maxX, n.position.x + NODE_WIDTH);
+      maxY = Math.max(maxY, n.position.y + 150);
+    });
+
+    const padding = 60;
+    const newGroupId = `group-${Date.now()}`;
+    const newGroup: NodeGroup = {
+      id: newGroupId,
+      name: "New Functional Zone",
+      color: "slate",
+      position: { x: minX - padding, y: minY - padding },
+      width: maxX - minX + padding * 2,
+      height: maxY - minY + padding * 2
+    };
+
+    setGroups(prev => [...prev, newGroup]);
+    setNodes(prev => prev.map(n => selectedNodeIds.includes(n.id) ? { ...n, groupId: newGroupId } : n));
+    setSelectedGroupIds([newGroupId]);
+    
+    toast({ title: "Zone Created", description: `Grouped ${selectedNodeIds.length} nodes functionally.` });
+  };
+
+  const handleDeleteGroup = (groupId: string) => {
+    setGroups(prev => prev.filter(g => g.id !== groupId));
+    setNodes(prev => prev.map(n => n.groupId === groupId ? { ...n, groupId: undefined } : n));
+    setSelectedGroupIds(prev => prev.filter(id => id !== groupId));
   };
 
   const handleOpenConfig = (nodeId: string) => {
     setSelectedNodeIds([nodeId]);
     setIsConfigPanelOpen(true);
   }
-  
-  const handleConnectorClick = (connector: ConnectorType) => {
-    setSelectedConnector(connector);
-    setSelectedNodeIds([]);
-  };
 
   const handleZoom = (delta: number) => {
     const newZoom = Math.min(Math.max(zoom + delta, 0.1), 3);
@@ -287,7 +347,7 @@ export default function MainApp() {
   }, [pan.x, pan.y, zoom, nodes, connectors]);
 
   const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
-    if (e.button !== 0) return; // Only Left Click for node interaction
+    if (e.button !== 0) return;
     e.stopPropagation();
     const node = nodes.find(n => n.id === nodeId);
     if (!node || isConnectingRef.current) return;
@@ -301,17 +361,24 @@ export default function MainApp() {
             x: e.clientX / zoom - node.position.x,
             y: e.clientY / zoom - node.position.y,
         };
-        
-        // Store initial positions of all selected nodes for relative movement
-        const currentSelected = isShift 
-          ? (selectedNodeIds.includes(nodeId) ? selectedNodeIds : [...selectedNodeIds, nodeId])
-          : (selectedNodeIds.includes(nodeId) ? selectedNodeIds : [nodeId]);
-          
-        dragStartNodesPositionsRef.current = {};
-        currentSelected.forEach(id => {
-          const n = nodes.find(node => node.id === id);
-          if (n) dragStartNodesPositionsRef.current[id] = { ...n.position };
-        });
+    }
+  };
+
+  const handleGroupMouseDown = (e: React.MouseEvent, groupId: string) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    const group = groups.find(g => g.id === groupId);
+    if (!group) return;
+
+    const isShift = e.shiftKey;
+    handleGroupSelect(groupId, isShift);
+
+    draggingGroupIdRef.current = groupId;
+    if (canvasRef.current) {
+      dragOffsetRef.current = {
+        x: e.clientX / zoom - group.position.x,
+        y: e.clientY / zoom - group.position.y,
+      };
     }
   };
 
@@ -337,7 +404,6 @@ export default function MainApp() {
       return;
     }
 
-    // Right-click (button 2) triggers marquee selection
     if (e.button === 2) {
       isSelectingRef.current = true;
       if (!canvasRef.current) return;
@@ -345,9 +411,11 @@ export default function MainApp() {
       const x = (e.clientX - rect.left - pan.x) / zoom;
       const y = (e.clientY - rect.top - pan.y) / zoom;
       setSelectionRect({ startX: x, startY: y, x, y, width: 0, height: 0 });
-      if (!e.shiftKey) setSelectedNodeIds([]);
+      if (!e.shiftKey) {
+        setSelectedNodeIds([]);
+        setSelectedGroupIds([]);
+      }
     } 
-    // Left-click (button 0) triggers panning
     else if (e.button === 0) {
       isPanningRef.current = true;
       panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
@@ -387,11 +455,7 @@ export default function MainApp() {
         n.position.y >= y && n.position.y <= y + height
       ).map(n => n.id);
       
-      if (e.shiftKey) {
-        // Toggle selection for shift-drag selection could be implemented here
-      } else {
-        setSelectedNodeIds(nodesInRect);
-      }
+      setSelectedNodeIds(nodesInRect);
     } else if (draggingNodeIdRef.current) {
       const nodeId = draggingNodeIdRef.current;
       const dx = e.clientX / zoom - dragOffsetRef.current.x - nodes.find(n => n.id === nodeId)!.position.x;
@@ -406,6 +470,25 @@ export default function MainApp() {
               y: n.position.y + dy
             }
           };
+        }
+        return n;
+      }));
+    } else if (draggingGroupIdRef.current) {
+      const groupId = draggingGroupIdRef.current;
+      const targetGroup = groups.find(g => g.id === groupId)!;
+      const dx = e.clientX / zoom - dragOffsetRef.current.x - targetGroup.position.x;
+      const dy = e.clientY / zoom - dragOffsetRef.current.y - targetGroup.position.y;
+
+      setGroups(prev => prev.map(g => {
+        if (selectedGroupIds.includes(g.id)) {
+          return { ...g, position: { x: g.position.x + dx, y: g.position.y + dy } };
+        }
+        return g;
+      }));
+
+      setNodes(prev => prev.map(n => {
+        if (n.groupId && selectedGroupIds.includes(n.groupId)) {
+          return { ...n, position: { x: n.position.x + dx, y: n.position.y + dy } };
         }
         return n;
       }));
@@ -429,6 +512,10 @@ export default function MainApp() {
     
     if (draggingNodeIdRef.current) {
       draggingNodeIdRef.current = null;
+    }
+
+    if (draggingGroupIdRef.current) {
+      draggingGroupIdRef.current = null;
     }
     
     if (isConnectingRef.current) {
@@ -495,12 +582,6 @@ export default function MainApp() {
             
             if (leftParentNode && rightParentNode) {
                 toNode.outputFields = getJoinOutputFields(leftParentNode, rightParentNode, joinOp.settings.joinType);
-            } else if (leftParentNode) {
-                toNode.outputFields = leftParentNode.outputFields;
-            } else if (rightParentNode) {
-                toNode.outputFields = rightParentNode.outputFields;
-            } else {
-                toNode.outputFields = [];
             }
             toNode.operation = joinOp;
         } else {
@@ -564,105 +645,12 @@ export default function MainApp() {
   };
   
   const handleNodeConfigChange = (nodeId: string, newConfig: Partial<PipelineNode>) => {
-    setNodes(prevNodes => {
-      const updatedNodes = prevNodes.map(n => {
-        if (n.id === nodeId) {
-          return { ...n, ...newConfig };
-        }
-        return n;
-      });
-  
-      const propagateUpdates = (nodesToUpdate: PipelineNode[], startNodeId: string): PipelineNode[] => {
-        let currentNodes = [...nodesToUpdate];
-        const queue = [startNodeId];
-        const visited = new Set<string>([startNodeId]);
-  
-        while (queue.length > 0) {
-          const currentId = queue.shift()!;
-          const currentNode = currentNodes.find(n => n.id === currentId)!;
-          
-          let newOutputFields = currentNode.outputFields || [];
-          if (currentNode.type === 'dataset') {
-            newOutputFields = currentNode.inputFields || [];
-          } else if (currentNode.operation) {
-            switch(currentNode.operation.type) {
-              case 'filter':
-              case 'sort':
-              case 'union':
-                newOutputFields = currentNode.inputFields || [];
-                break;
-              case 'select_columns': {
-                const selectOp = currentNode.operation as SelectColumnsOperation;
-                newOutputFields = (currentNode.inputFields || []).filter(f => selectOp.settings.selectedFields?.includes(f.name));
-                break;
-              }
-              case 'join': {
-                const joinOp = currentNode.operation as JoinOperation;
-                const leftNode = currentNodes.find(ln => ln.id === joinOp.settings.leftNodeId);
-                const rightNode = currentNodes.find(rn => rn.id === joinOp.settings.rightNodeId);
-                if (leftNode && rightNode) {
-                  newOutputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
-                }
-                break;
-              }
-              case 'group_by': {
-                const groupOp = currentNode.operation as GroupByOperation;
-                const calculatedOutput: Field[] = [];
-                groupOp.settings.groupByFields.forEach(fieldName => {
-                    const field = currentNode.inputFields?.find(f => f.name === fieldName);
-                    if(field) calculatedOutput.push(field);
-                });
-                groupOp.settings.aggregations.forEach(agg => {
-                    const originalField = currentNode.inputFields?.find(f => f.name === agg.field);
-                    calculatedOutput.push({ name: agg.newName, type: originalField?.type || 'unknown' });
-                });
-                newOutputFields = calculatedOutput;
-                break;
-              }
-              default:
-                 newOutputFields = currentNode.inputFields || [];
-                 break;
-            }
-          }
-          
-          currentNodes = currentNodes.map(n => n.id === currentId ? {...n, outputFields: newOutputFields} : n);
-
-          const downstreamConnectors = connectors.filter(c => c.from === currentId);
-          for (const connector of downstreamConnectors) {
-            const downstreamId = connector.to;
-            const downstreamNodeIndex = currentNodes.findIndex(n => n.id === downstreamId);
-            if (downstreamNodeIndex === -1) continue;
-
-            const parentNodes = connectors
-                .filter(c => c.to === downstreamId)
-                .map(c => currentNodes.find(n => n.id === c.from))
-                .filter((n): n is PipelineNode => !!n);
-            
-            const newInputFields = parentNodes.flatMap(pn => pn?.outputFields || []);
-
-            currentNodes[downstreamNodeIndex] = { ...currentNodes[downstreamNodeIndex], inputFields: newInputFields };
-
-            if (!visited.has(downstreamId)) {
-                visited.add(downstreamId);
-                queue.push(downstreamId);
-            }
-          }
-        }
-        return currentNodes;
-      };
-  
-      return propagateUpdates(updatedNodes, nodeId);
-    });
+    setNodes(prevNodes => prevNodes.map(n => n.id === nodeId ? { ...n, ...newConfig } : n));
   };
   
-    const handleUpdateOperation = (nodeId: string, operation: Operation) => {
-        setNodes(prevNodes => prevNodes.map(n => {
-            if (n.id === nodeId) {
-                return { ...n, operation };
-            }
-            return n;
-        }));
-    };
+  const handleUpdateOperation = (nodeId: string, operation: Operation) => {
+      setNodes(prevNodes => prevNodes.map(n => n.id === nodeId ? { ...n, operation } : n));
+  };
   
   const handleDeleteNode = useCallback((nodeId: string) => {
     setNodes(prev => prev.filter(n => n.id !== nodeId));
@@ -671,22 +659,17 @@ export default function MainApp() {
   }, []);
 
   const handleDeleteSelected = useCallback(() => {
-    if (selectedNodeIds.length === 0 && !selectedConnector) return;
-
     if (selectedNodeIds.length > 0) {
       setNodes(prev => prev.filter(n => !selectedNodeIds.includes(n.id)));
       setConnectors(prev => prev.filter(c => !selectedNodeIds.includes(c.from) && !selectedNodeIds.includes(c.to)));
       setSelectedNodeIds([]);
-      toast({ title: "Nodes Deleted", description: `Removed ${selectedNodeIds.length} nodes.` });
-    } else if (selectedConnector) {
-      handleDeleteConnector(selectedConnector);
     }
-  }, [selectedNodeIds, selectedConnector, setNodes, setConnectors, toast]);
-
-  const handleDeleteConnector = useCallback((connector: ConnectorType) => {
-    setConnectors(prev => prev.filter(c => !(c.from === connector.from && c.to === connector.to)));
-    setSelectedConnector(null);
-  }, []);
+    if (selectedGroupIds.length > 0) {
+      setGroups(prev => prev.filter(g => !selectedGroupIds.includes(g.id)));
+      setNodes(prev => prev.map(n => n.groupId && selectedGroupIds.includes(n.groupId) ? { ...n, groupId: undefined } : n));
+      setSelectedGroupIds([]);
+    }
+  }, [selectedNodeIds, selectedGroupIds]);
 
   const handleGeneratePython = useCallback(() => {
     if (!nodes) return;
@@ -702,7 +685,7 @@ export default function MainApp() {
       const res = await generatePipelineSpec({ nodes, connectors });
       setGeneratedSpec(res.specification);
     } catch (error) {
-      setGeneratedSpec("Failed to generate specification. Please try again.");
+      setGeneratedSpec("Failed to generate specification.");
     } finally {
       setIsSpecLoading(false);
     }
@@ -719,6 +702,7 @@ export default function MainApp() {
       name,
       nodes: JSON.parse(JSON.stringify(activeVersion.nodes)),
       connectors: JSON.parse(JSON.stringify(activeVersion.connectors)),
+      groups: JSON.parse(JSON.stringify(activeVersion.groups || [])),
     };
     
     setLineages(prev => prev.map(l => 
@@ -727,55 +711,18 @@ export default function MainApp() {
     setActiveVersionId(newVersion.id);
   };
 
-  const onVersionChange = (id: string) => {
-    setActiveVersionId(id);
-  };
-
-  const handleCreateLineage = (name: string, description: string) => {
-    const newLineage: LineageInfo = {
-      id: `lineage-${Date.now()}`,
-      name,
-      description,
-      owner: 'Me',
-      lastEdited: 'Just now',
-      versions: [{
-        id: 'v1',
-        name: 'Initial Design',
-        nodes: [],
-        connectors: []
-      }]
-    };
-    setLineages(prev => [newLineage, ...prev]);
-    setActiveLineageId(newLineage.id);
-    setActiveVersionId('v1');
-    setActiveView('editor');
-  };
-
   const handleImportPipeline = (importData: any) => {
-    if (!importData.nodes || !importData.connectors) {
-      toast({
-        variant: "destructive",
-        title: "Import Error",
-        description: "Invalid pipeline JSON format."
-      });
-      return;
-    }
-
     setLineages(currentLineages => currentLineages.map(l => 
       l.id === activeLineageId ? {
         ...l,
         versions: l.versions.map(v => v.id === activeVersionId ? { 
           ...v, 
           nodes: importData.nodes, 
-          connectors: importData.connectors 
+          connectors: importData.connectors,
+          groups: importData.groups || []
         } : v)
       } : l
     ));
-
-    toast({
-      title: "Pipeline Imported",
-      description: "Design has been successfully updated from JSON."
-    });
   };
 
   const handleApplyScaffold = (scaffold: any) => {
@@ -797,15 +744,7 @@ export default function MainApp() {
 
     setNodes(newNodes);
     setConnectors(newConnectors);
-  };
-
-  const handleSelectLineage = (id: string) => {
-    const lineage = lineages.find(l => l.id === id);
-    if (lineage) {
-      setActiveLineageId(id);
-      setActiveVersionId(lineage.versions[0].id);
-      setActiveView('editor');
-    }
+    setGroups([]);
   };
 
   useEffect(() => {
@@ -847,12 +786,16 @@ export default function MainApp() {
         if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
         handleDeleteSelected();
       }
+      if (e.key.toLowerCase() === 'g' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        handleCreateGroup();
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleDeleteSelected]);
+  }, [handleDeleteSelected, handleCreateGroup]);
 
   const connectionModalSourceNode = nodes.find(n => n.id === connectionForFields?.fromNodeId);
 
@@ -863,13 +806,14 @@ export default function MainApp() {
           activeVersion={activeVersion}
           versions={activeLineage.versions} 
           activeVersionId={activeVersionId} 
-          onVersionChange={onVersionChange}
+          onVersionChange={setActiveVersionId} 
           onCreateVersion={handleCreateVersion}
           onGeneratePython={handleGeneratePython}
           onGenerateSpec={handleGenerateSpec}
           onImportPipeline={handleImportPipeline}
           onApplyScaffold={handleApplyScaffold}
           onAutoLayout={handleAutoLayout}
+          onGroupSelected={handleCreateGroup}
           activeView={activeView}
           onViewChange={setActiveView}
         />
@@ -877,8 +821,28 @@ export default function MainApp() {
         {activeView === 'dashboard' ? (
           <LineageDashboard 
             lineages={lineages} 
-            onSelectLineage={handleSelectLineage}
-            onCreateLineage={handleCreateLineage}
+            onSelectLineage={(id) => {
+              const l = lineages.find(lin => lin.id === id);
+              if (l) {
+                setActiveLineageId(id);
+                setActiveVersionId(l.versions[0].id);
+                setActiveView('editor');
+              }
+            }}
+            onCreateLineage={(name, description) => {
+              const newLineage: LineageInfo = {
+                id: `lineage-${Date.now()}`,
+                name,
+                description,
+                owner: 'Me',
+                lastEdited: 'Just now',
+                versions: [{ id: 'v1', name: 'Initial Design', nodes: [], connectors: [], groups: [] }]
+              };
+              setLineages(prev => [newLineage, ...prev]);
+              setActiveLineageId(newLineage.id);
+              setActiveVersionId('v1');
+              setActiveView('editor');
+            }}
           />
         ) : (
           <div className="flex flex-1 overflow-hidden relative">
@@ -905,6 +869,16 @@ export default function MainApp() {
                 className="absolute top-0 left-0"
                 style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'top left' }}
               >
+                {groups.map((group) => (
+                  <GroupZone
+                    key={group.id}
+                    {...group}
+                    onMouseDown={(e) => handleGroupMouseDown(e, group.id)}
+                    onDelete={() => handleDeleteGroup(group.id)}
+                    isSelected={selectedGroupIds.includes(group.id)}
+                  />
+                ))}
+
                 <svg
                     className={cn('absolute pointer-events-none overflow-visible')}
                     style={{
@@ -930,7 +904,7 @@ export default function MainApp() {
                             y: toNode.position.y + PORT_Y_OFFSET - svgDimensions.top 
                           }}
                           isSelected={selectedConnector?.from === connector.from && selectedConnector?.to === connector.to}
-                          onClick={() => handleConnectorClick(connector)}
+                          onClick={() => setSelectedConnector(connector)}
                         />
                       );
                     })}

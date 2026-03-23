@@ -118,6 +118,16 @@ export interface PipelineNode {
   inputFields?: Field[];
   outputFields?: Field[];
   operation?: Operation;
+  groupId?: string;
+}
+
+export interface NodeGroup {
+  id: string;
+  name: string;
+  color: string;
+  position: { x: number, y: number };
+  width: number;
+  height: number;
 }
 
 export interface Connector {
@@ -130,6 +140,7 @@ export interface PipelineVersion {
   name: string;
   nodes: PipelineNode[];
   connectors: Connector[];
+  groups: NodeGroup[];
 }
 
 export interface LineageInfo {
@@ -166,7 +177,7 @@ export const initialNodes: PipelineNode[] = [
     id: 'source-1', 
     name: 'Customer DB', 
     type: 'source', 
-    position: { x: 50, y: 150 },
+    position: { x: 100, y: 150 },
     system: 'PostgreSQL',
     location: 'prod-customers-db',
     status: 'ready',
@@ -177,13 +188,14 @@ export const initialNodes: PipelineNode[] = [
       { name: 'last_name', type: 'string' },
       { name: 'email', type: 'string' },
       { name: 'is_active', type: 'boolean' },
-    ]
+    ],
+    groupId: 'group-ingest'
   },
-    { 
+  { 
     id: 'source-2', 
     name: 'Orders DB', 
     type: 'source', 
-    position: { x: 50, y: 350 },
+    position: { x: 100, y: 350 },
     system: 'PostgreSQL',
     location: 'prod-orders-db',
     status: 'ready',
@@ -192,13 +204,14 @@ export const initialNodes: PipelineNode[] = [
       { name: 'customer_id', type: 'integer' },
       { name: 'amount', type: 'float' },
       { name: 'order_date', type: 'date' },
-    ]
+    ],
+    groupId: 'group-ingest'
   },
   { 
     id: 'transform-1', 
     name: 'Filter Inactive', 
     type: 'transformation', 
-    position: { x: 350, y: 50 },
+    position: { x: 450, y: 150 },
     status: 'review',
     operation: {
         type: 'filter',
@@ -221,13 +234,14 @@ export const initialNodes: PipelineNode[] = [
       { name: 'last_name', type: 'string' },
       { name: 'email', type: 'string' },
       { name: 'is_active', type: 'boolean' },
-    ]
+    ],
+    groupId: 'group-clean'
   },
   { 
     id: 'transform-2', 
     name: 'Join Orders', 
     type: 'transformation', 
-    position: { x: 350, y: 250 },
+    position: { x: 750, y: 250 },
     status: 'draft',
     operation: {
         type: 'join',
@@ -262,64 +276,34 @@ export const initialNodes: PipelineNode[] = [
       { name: 'customer_id', type: 'integer' },
       { name: 'amount', type: 'float' },
       { name: 'order_date', type: 'date' },
-    ]
-  },
-  { 
-    id: 'transform-3', 
-    name: 'Aggregate Spend', 
-    type: 'transformation', 
-    position: { x: 650, y: 150 },
-    status: 'draft',
-    operation: { 
-        type: 'group_by', 
-        settings: {
-            groupByFields: ['id', 'first_name', 'last_name'],
-            aggregations: [
-                { field: 'amount', type: 'sum', newName: 'total_spend' }
-            ]
-        } 
-    },
-    inputFields: [
-       { name: 'id', type: 'integer' },
-      { name: 'first_name', type: 'string' },
-      { name: 'last_name', type: 'string' },
-      { name: 'email', type: 'string' },
-      { name: 'is_active', type: 'boolean' },
-      { name: 'order_id', type: 'integer' },
-      { name: 'customer_id', type: 'integer' },
-      { name: 'amount', type: 'float' },
-      { name: 'order_date', type: 'date' },
     ],
-    outputFields: [
-        { name: 'id', type: 'integer' },
-        { name: 'first_name', type: 'string' },
-        { name: 'last_name', type: 'string' },
-        { name: 'total_spend', type: 'float' },
-    ]
+    groupId: 'group-clean'
   },
-  { 
-    id: 'dest-1', 
-    name: 'Data Warehouse', 
-    type: 'destination', 
-    position: { x: 950, y: 150 },
-    system: 'Snowflake',
-    location: 'analytics_db.mkt.customer_ltv',
-    status: 'ready',
-    inputFields: [
-        { name: 'id', type: 'integer' },
-        { name: 'first_name', type: 'string' },
-        { name: 'last_name', type: 'string' },
-        { name: 'total_spend', type: 'float' },
-    ]
+];
+
+export const initialGroups: NodeGroup[] = [
+  {
+    id: 'group-ingest',
+    name: 'Ingestion Layer',
+    color: 'blue',
+    position: { x: 50, y: 100 },
+    width: 350,
+    height: 400
   },
+  {
+    id: 'group-clean',
+    name: 'Processing & Cleanup',
+    color: 'amber',
+    position: { x: 420, y: 100 },
+    width: 650,
+    height: 400
+  }
 ];
 
 export const initialConnectors: Connector[] = [
   { from: 'source-1', to: 'transform-1' },
   { from: 'source-1', to: 'transform-2' },
   { from: 'source-2', to: 'transform-2' },
-  { from: 'transform-2', to: 'transform-3' },
-  { from: 'transform-3', to: 'dest-1' },
 ];
 
 export const mockLineages: LineageInfo[] = [
@@ -335,6 +319,7 @@ export const mockLineages: LineageInfo[] = [
         name: 'v1.0 (Production)',
         nodes: initialNodes,
         connectors: initialConnectors,
+        groups: initialGroups
       }
     ]
   },
@@ -345,7 +330,7 @@ export const mockLineages: LineageInfo[] = [
     lastEdited: '3 days ago',
     description: 'Syncs warehouse stock levels with the external marketplace API.',
     versions: [
-       { id: 'v1', name: 'v1.0', nodes: [], connectors: [] }
+       { id: 'v1', name: 'v1.0', nodes: [], connectors: [], groups: [] }
     ]
   },
   {
@@ -355,7 +340,7 @@ export const mockLineages: LineageInfo[] = [
     lastEdited: 'Yesterday',
     description: 'Normalizes inbound leads from CRM and prepares for campaign scoring.',
     versions: [
-       { id: 'v1', name: 'v1.0', nodes: [], connectors: [] }
+       { id: 'v1', name: 'v1.0', nodes: [], connectors: [], groups: [] }
     ]
   }
 ];
@@ -412,127 +397,6 @@ export const advancedTransformations: TransformationCategory[] = [
             { name: 'Denormalize/Normalize', icon: GitCommit, operationType: 'denormalize', description: 'Modify the database structure.' },
             { name: 'Nested to Flat', icon: FileJson, operationType: 'nested_to_flat', description: 'Flatten JSON or nested structures.' },
             { name: 'Array Operations', icon: Rows, operationType: 'array_operations', description: 'Operations on arrays (explode, etc.).' },
-        ]
-    },
-    {
-        category: 'Aggregations and Calculations',
-        items: [
-            { name: 'Numeric Aggregations', icon: Sigma, operationType: 'numeric_aggregation', description: 'Advanced statistical calculations.' },
-            { name: 'Window Functions', icon: Rows, operationType: 'window_functions', description: 'Calculations on data windows (e.g., moving average).' },
-            { name: 'Binning', icon: BoxSelect, operationType: 'binning', description: 'Group values into intervals.' },
-            { name: 'Percentiles and Quantiles', icon: BarChart3, operationType: 'percentiles', description: 'Calculate percentiles.' },
-            { name: 'Temporal Aggregation', icon: Clock, operationType: 'temporal_aggregation', description: 'Aggregate data by time periods.' },
-            { name: 'Self Joins', icon: GitPullRequest, operationType: 'self_join', description: 'Join a table with itself.' },
-        ]
-    },
-    {
-        category: 'Enrichment and Advanced Filters',
-        items: [
-            { name: 'Fuzzy Matching', icon: Bot, operationType: 'fuzzy_matching', description: 'Match similar character strings.' },
-            { name: 'Intersect/Except', icon: Unplug, operationType: 'intersect_except', description: 'Set operations on data.' },
-            { name: 'Lookup Enrichment', icon: Search, operationType: 'lookup_enrichment', description: 'Enrich data from a reference table.' },
-            { name: 'Temporal Filters', icon: CalendarDays, operationType: 'temporal_filter', description: 'Filter by dates or periods.' },
-            { name: 'Regex Filter', icon: Pilcrow, operationType: 'regex_filter', description: 'Filter using regular expressions.' },
-            { name: 'Top N/Bottom N', icon: SortAsc, operationType: 'top_n', description: 'Select the first or last N rows.' },
-            { name: 'Sampling', icon: Shuffle, operationType: 'sampling', description: 'Take a sample of data.' },
-            { name: 'Distinct/Unique', icon: GitCommit, operationType: 'distinct', description: 'Get unique values.' },
-        ]
-    },
-    {
-        category: 'Custom Functions and Calculations',
-        items: [
-            { name: 'Arithmetic Operations', icon: FunctionSquare, operationType: 'arithmetic', description: 'Addition, subtraction, etc.' },
-            { name: 'Math Functions', icon: Sigma, operationType: 'math_functions', description: 'Mathematical functions (log, exp...).' },
-            { name: 'Conditional Calculations', icon: Milestone, operationType: 'conditional_calculation', description: 'Calculations based on conditions (IF/ELSE).' },
-            { name: 'Derived Columns', icon: Plus, operationType: 'derived_columns', description: 'Create new columns from others.' },
-            { name: 'Unit Conversions', icon: Replace, operationType: 'unit_conversion', description: 'Convert measurement units.' },
-            { name: 'Custom Formulas', icon: Pencil, operationType: 'custom_formula', description: 'Apply a custom formula.' },
-        ]
-    },
-    {
-        category: 'Temporal Data',
-        items: [
-            { name: 'Date Part Extraction', icon: Timer, operationType: 'date_part_extraction', description: 'Extract year, month, day, etc.' },
-            { name: 'Duration Calculation', icon: Clock, operationType: 'duration_calculation', description: 'Calculate durations between two dates.' },
-            { name: 'Date Formatting', icon: CalendarDays, operationType: 'date_formatting', description: 'Change date display format.' },
-            { name: 'Time Shifting', icon: ArrowRightLeft, operationType: 'time_shifting', description: 'Shift data in time.' },
-            { name: 'Rolling Aggregations', icon: Rows, operationType: 'rolling_aggregations', description: 'Aggregate data over a sliding window.' },
-            { name: 'Timezone Handling', icon: Globe, operationType: 'timezone_handling', description: 'Convert between timezones.' },
-        ]
-    },
-    {
-        category: 'Text Processing and NLP',
-        items: [
-            { name: 'String Manipulation', icon: FileText, operationType: 'string_manipulation', description: 'Concatenation, substring, etc.' },
-            { name: 'Search and Extract', icon: Search, operationType: 'text_search_extract', description: 'Extract text with patterns.' },
-            { name: 'Sentiment Analysis', icon: Bot, operationType: 'sentiment_analysis', description: 'Determine the sentiment of a text.' },
-            { name: 'Tokenization', icon: WholeWord, operationType: 'tokenization', description: 'Divide text into words or sentences.' },
-            { name: 'Linguistic Normalization', icon: SpellCheck, operationType: 'linguistic_normalization', description: 'Lemmatization, etc.' },
-            { name: 'Language Detection', icon: Globe, operationType: 'language_detection', description: 'Identify the language of a text.' },
-        ]
-    },
-    {
-        category: 'Machine Learning and Data Preparation',
-        items: [
-            { name: 'One-hot Encoding', icon: Hash, operationType: 'one_hot_encoding', description: 'Convert categorical variables to binary format.' },
-            { name: 'Label Encoding', icon: Pilcrow, operationType: 'label_encoding', description: 'Assign a numeric value to each category.' },
-            { name: 'Numeric Binning', icon: BoxSelect, operationType: 'numeric_binning', description: 'Convert numeric variables to categories.' },
-            { name: 'Feature Scaling', icon: Sigma, operationType: 'feature_scaling', description: 'Scale features (min-max, standard...).' },
-            { name: 'Hashing', icon: Fingerprint, operationType: 'hashing', description: 'Hash features.' },
-            { name: 'Custom Mapping', icon: GitCompare, operationType: 'custom_mapping', description: 'Apply custom mappings.' },
-        ]
-    },
-    {
-        category: 'External Integration and Enrichment',
-        items: [
-            { name: 'Geocoding', icon: Globe, operationType: 'geocoding', description: 'Convert addresses to GPS coordinates.' },
-            { name: 'API Calls', icon: Unplug, operationType: 'api_calls', description: 'Call external APIs to enrich data.' },
-            { name: 'Lookup Tables', icon: Search, operationType: 'lookup_tables', description: 'Search for values in external tables.' },
-            { name: 'Master Data Matching', icon: GitCompare, operationType: 'master_data_matching', description: 'Match with reference data.' },
-            { name: 'Scoring and Classification', icon: Bot, operationType: 'scoring_classification', description: 'Apply a scoring model.' },
-            { name: 'External Validation', icon: CheckSquare, operationType: 'external_validation', description: 'Validate data via an external service.' },
-        ]
-    },
-    {
-        category: 'Security and Compliance',
-        items: [
-            { name: 'Anonymization', icon: Fingerprint, operationType: 'anonymization', description: 'Remove personal information.' },
-            { name: 'Pseudonymization', icon: Replace, operationType: 'pseudonymization', description: 'Replace identifiers with pseudonyms.' },
-            { name: 'Data Masking', icon: EyeOff, operationType: 'data_masking', description: 'Mask parts of sensitive data.' },
-            { name: 'Encryption/Decryption', icon: KeyRound, operationType: 'encryption', description: 'Encrypt or decrypt data.' },
-            { name: 'Tokenization', icon: Lock, operationType: 'security_tokenization', description: 'Replace sensitive data with tokens.' },
-            { name: 'Audit Trail', icon: ClipboardList, operationType: 'audit_trail', description: 'Generate an audit trail.' },
-        ]
-    },
-    {
-        category: 'Flow and Control Logic',
-        items: [
-            { name: 'Conditional Routing', icon: GitBranch, operationType: 'conditional_routing', description: 'Route data according to conditions.' },
-            { name: 'Multi-branch Transformations', icon: Milestone, operationType: 'multi_branch', description: 'Apply different transformations in parallel.' },
-            { name: 'Validation with Exceptions', icon: CheckSquare, operationType: 'validation_with_exceptions', description: 'Handle validation exceptions.' },
-            { name: 'Switch/Case Statements', icon: CaseSensitive, operationType: 'switch_case', description: 'Switch/case style logic.' },
-            { name: 'Cascading Transforms', icon: Rows, operationType: 'cascading_transforms', description: 'Chain multiple simple transformations.' },
-        ]
-    },
-    {
-        category: 'Formatting and Type Conversion',
-        items: [
-            { name: 'Type Conversion', icon: Replace, operationType: 'type_conversion', description: 'Convert data type (string, int...).' },
-            { name: 'Format Parsing', icon: FileJson, operationType: 'format_parsing', description: 'Analyze complex formats (JSON, XML...).' },
-            { name: 'Serialization', icon: Code, operationType: 'serialization', description: 'Convert data to serial format.' },
-            { name: 'Compression/Decompression', icon: DatabaseBackup, operationType: 'compression', description: 'Compress or decompress data.' },
-            { name: 'Encoding Conversion', icon: Pilcrow, operationType: 'encoding_conversion', description: 'Change character encoding.' },
-        ]
-    },
-    {
-        category: 'Statistical Analysis',
-        items: [
-            { name: 'Z-score, Outlier Detection', icon: TestTube, operationType: 'outlier_detection', description: 'Detect outliers.' },
-            { name: 'Distributions and Histograms', icon: BarChart3, operationType: 'histogram', description: 'Generate histograms.' },
-            { name: 'Correlations and Covariances', icon: Blend, operationType: 'correlation', description: 'Calculate correlations.' },
-            { name: 'Automated Statistical Tests', icon: Bot, operationType: 'statistical_tests', description: 'Perform statistical tests.' },
-            { name: 'Sampling Strategies', icon: Shuffle, operationType: 'sampling_strategies', description: 'Advanced sampling strategies.' },
-            { name: 'Data Profiling', icon: Database, operationType: 'data_profiling', description: 'Analyze data profile.' },
         ]
     }
 ];
