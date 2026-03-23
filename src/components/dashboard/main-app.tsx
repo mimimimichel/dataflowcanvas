@@ -67,35 +67,41 @@ export default function MainApp() {
   const connectors = activeVersion.connectors;
   const groups = activeVersion.groups || [];
 
-  const setNodes = (updater: React.SetStateAction<PipelineNode[]>) => {
-    const newNodes = typeof updater === 'function' ? updater(nodes) : updater;
+  const setNodes = useCallback((updater: React.SetStateAction<PipelineNode[]>) => {
     setLineages(currentLineages => currentLineages.map(l => 
       l.id === activeLineageId ? {
         ...l,
-        versions: l.versions.map(v => v.id === activeVersionId ? { ...v, nodes: newNodes } : v)
+        versions: l.versions.map(v => v.id === activeVersionId ? { 
+          ...v, 
+          nodes: typeof updater === 'function' ? updater(v.nodes) : updater 
+        } : v)
       } : l
     ));
-  };
+  }, [activeLineageId, activeVersionId]);
   
-  const setConnectors = (updater: React.SetStateAction<ConnectorType[]>) => {
-    const newConnectors = typeof updater === 'function' ? updater(connectors) : updater;
+  const setConnectors = useCallback((updater: React.SetStateAction<ConnectorType[]>) => {
     setLineages(currentLineages => currentLineages.map(l => 
       l.id === activeLineageId ? {
         ...l,
-        versions: l.versions.map(v => v.id === activeVersionId ? { ...v, connectors: newConnectors } : v)
+        versions: l.versions.map(v => v.id === activeVersionId ? { 
+          ...v, 
+          connectors: typeof updater === 'function' ? updater(v.connectors) : updater 
+        } : v)
       } : l
     ));
-  };
+  }, [activeLineageId, activeVersionId]);
 
-  const setGroups = (updater: React.SetStateAction<NodeGroup[]>) => {
-    const newGroups = typeof updater === 'function' ? updater(groups) : updater;
+  const setGroups = useCallback((updater: React.SetStateAction<NodeGroup[]>) => {
     setLineages(currentLineages => currentLineages.map(l => 
       l.id === activeLineageId ? {
         ...l,
-        versions: l.versions.map(v => v.id === activeVersionId ? { ...v, groups: newGroups } : v)
+        versions: l.versions.map(v => v.id === activeVersionId ? { 
+          ...v, 
+          groups: typeof updater === 'function' ? updater(v.groups || []) : updater 
+        } : v)
       } : l
     ));
-  };
+  }, [activeLineageId, activeVersionId]);
 
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
@@ -123,7 +129,7 @@ export default function MainApp() {
   const isConnectingRef = useRef(false);
 
   const [connectionForFields, setConnectionForFields] = useState<{fromNodeId: string, toNodeId: string} | null>(null);
-  const [svgDimensions, setSvgDimensions] = useState<SvgDimensions>({ width: 0, height: 0, top: 0, left: 0 });
+  const [svgDimensions, setSvgDimensions] = useState<SvgDimensions>({ width: '100%', height: '100%', top: 0, left: 0 });
 
   const handleNodeSelect = (id: string, isShift: boolean) => {
     setSelectedConnector(null);
@@ -173,7 +179,7 @@ export default function MainApp() {
       });
     });
     draggingNodeIdRef.current = null;
-  }, [selectedNodeIds, groups]);
+  }, [selectedNodeIds, groups, setNodes]);
 
   const handleCreateGroup = useCallback(() => {
     if (selectedNodeIds.length < 1) {
@@ -208,7 +214,7 @@ export default function MainApp() {
     setSelectedGroupIds([newGroupId]);
     
     toast({ title: "Zone Created", description: `Grouped ${selectedNodeIds.length} nodes functionally.` });
-  }, [selectedNodeIds, nodes, toast]);
+  }, [selectedNodeIds, nodes, toast, setGroups, setNodes]);
 
   const handleDeleteGroup = (groupId: string) => {
     setGroups(prev => prev.filter(g => g.id !== groupId));
@@ -332,7 +338,7 @@ export default function MainApp() {
         title: "Layout Applied",
         description: "Your design and zones have been arranged hierarchically."
     });
-  }, [nodes, connectors, groups, toast]);
+  }, [nodes, connectors, groups, toast, setNodes, setGroups]);
   
   const handleAddNode = useCallback((item: TransformationItem, position: {x: number, y: number}) => {
     if (!canvasRef.current) return;
@@ -413,7 +419,7 @@ export default function MainApp() {
       operation: item.type === 'transformation' ? operation : undefined,
     };
     setNodes((prev) => [...prev, newNode]);
-  }, [pan.x, pan.y, zoom, groups]);
+  }, [pan.x, pan.y, zoom, groups, setNodes]);
 
   const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
     if (e.button !== 0) return;
@@ -480,8 +486,6 @@ export default function MainApp() {
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    e.preventDefault();
-    
     const dx = (e.clientX - lastMousePosRef.current.x) / zoom;
     const dy = (e.clientY - lastMousePosRef.current.y) / zoom;
     lastMousePosRef.current = { x: e.clientX, y: e.clientY };
@@ -702,7 +706,7 @@ export default function MainApp() {
     setNodes(prev => prev.filter(n => n.id !== nodeId));
     setConnectors(prev => prev.filter(c => c.from !== nodeId && c.to !== nodeId));
     setSelectedNodeIds(prev => prev.filter(id => id !== nodeId));
-  }, []);
+  }, [setNodes, setConnectors]);
 
   const handleDeleteSelected = useCallback(() => {
     if (selectedNodeIds.length > 0) {
@@ -715,7 +719,7 @@ export default function MainApp() {
       setNodes(prev => prev.map(n => n.groupId && selectedGroupIds.includes(n.groupId) ? { ...n, groupId: undefined } : n));
       setSelectedGroupIds([]);
     }
-  }, [selectedNodeIds, selectedGroupIds]);
+  }, [selectedNodeIds, selectedGroupIds, setNodes, setConnectors, setGroups]);
 
   const handleGeneratePython = useCallback(() => {
     const pythonCode = generatePythonCode(nodes, connectors);
@@ -814,7 +818,7 @@ export default function MainApp() {
       maxY = Math.max(maxY, node.position.y + 200);  
     });
     
-    const padding = 500;
+    const padding = 1000;
     const finalMinX = minX - padding;
     const finalMinY = minY - padding;
     const width = maxX - minX + (padding * 2);
@@ -826,7 +830,7 @@ export default function MainApp() {
       width: Math.max(width, canvasRect.width / zoom), 
       height: Math.max(height, canvasRect.height / zoom)
     });
-  }, [nodes, zoom, pan]);
+  }, [nodes, zoom]);
   
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
