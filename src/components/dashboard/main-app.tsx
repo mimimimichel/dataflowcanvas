@@ -242,7 +242,7 @@ export default function MainApp() {
     const levels: Record<string, number> = {};
     const assignLevel = (nodeId: string, level: number) => {
         levels[nodeId] = Math.max(levels[nodeId] || 0, level);
-        const downstream = connectors.filter(c => c.from === nodeId);
+        const downstream = connectors.filter(c => c.to === nodeId);
         downstream.forEach(c => assignLevel(c.to, level + 1));
     };
 
@@ -360,22 +360,31 @@ export default function MainApp() {
                 break;
         }
     }
+
+    const x = (position.x - canvasRect.left - pan.x) / zoom;
+    const y = (position.y - canvasRect.top - pan.y) / zoom;
+
+    // Detect group at drop position
+    const groupUnder = groups.find(g => {
+      const currentWidth = g.isCollapsed ? Math.max(250, g.width * 0.4) : g.width;
+      const currentHeight = g.isCollapsed ? 64 : g.height;
+      return x >= g.position.x && x <= g.position.x + currentWidth &&
+             y >= g.position.y && y <= g.position.y + currentHeight;
+    });
     
     const newNode: PipelineNode = {
       id: `${item.type}-${Date.now()}`,
       name: item.name,
       type: item.type,
       status: 'draft',
-      position: {
-        x: (position.x - canvasRect.left - pan.x) / zoom,
-        y: (position.y - canvasRect.top - pan.y) / zoom,
-      },
+      position: { x, y },
+      groupId: groupUnder?.id,
       inputFields: item.type === 'destination' || item.type === 'transformation' || item.type === 'dataset' ? [] : undefined,
       outputFields: item.type === 'source' || item.type === 'transformation' || item.type === 'dataset' ? [] : undefined,
       operation: item.type === 'transformation' ? operation : undefined,
     };
     setNodes((prev) => [...prev, newNode]);
-  }, [pan.x, pan.y, zoom]);
+  }, [pan.x, pan.y, zoom, groups]);
 
   const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
     if (e.button !== 0) return;
@@ -764,6 +773,10 @@ export default function MainApp() {
     setActiveVersionId(newVersion.id);
   };
 
+  const handleVersionChange = (id: string) => {
+    setActiveVersionId(id);
+  };
+
   const handleImportPipeline = (importData: any) => {
     setLineages(currentLineages => currentLineages.map(l => 
       l.id === activeLineageId ? {
@@ -859,7 +872,7 @@ export default function MainApp() {
           activeVersion={activeVersion}
           versions={activeLineage.versions} 
           activeVersionId={activeVersionId} 
-          onVersionChange={(id) => setActiveVersionId(id)} 
+          onVersionChange={handleVersionChange} 
           onCreateVersion={handleCreateVersion}
           onGeneratePython={handleGeneratePython}
           onGenerateSpec={handleGenerateSpec}
