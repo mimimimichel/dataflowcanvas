@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
@@ -364,7 +365,7 @@ export default function MainApp() {
     const x = (position.x - canvasRect.left - pan.x) / zoom;
     const y = (position.y - canvasRect.top - pan.y) / zoom;
 
-    // Detect group at drop position
+    // Detect group at drop position using a central point
     const groupUnder = groups.find(g => {
       const currentWidth = g.isCollapsed ? Math.max(250, g.width * 0.4) : g.width;
       const currentHeight = g.isCollapsed ? 64 : g.height;
@@ -553,21 +554,25 @@ export default function MainApp() {
     }
     
     if (draggingNodeIdRef.current) {
-      // Dynamic grouping on drop
+      // Dynamic grouping or de-grouping on drop
       setNodes(currentNodes => {
         return currentNodes.map(node => {
           if (selectedNodeIds.includes(node.id)) {
-            // Check if node is dropped inside any group zone
+            // Check if node center is dropped inside any group zone
             const groupUnder = groups.find(g => {
               const currentWidth = g.isCollapsed ? Math.max(250, g.width * 0.4) : g.width;
               const currentHeight = g.isCollapsed ? 64 : g.height;
               
-              return node.position.x >= g.position.x && 
-                     node.position.x <= g.position.x + currentWidth &&
-                     node.position.y >= g.position.y &&
-                     node.position.y <= g.position.y + currentHeight;
+              const centerX = node.position.x + (NODE_WIDTH / 2);
+              const centerY = node.position.y + 50; // Approximate center y
+
+              return centerX >= g.position.x && 
+                     centerX <= g.position.x + currentWidth &&
+                     centerY >= g.position.y &&
+                     centerY <= g.position.y + currentHeight;
             });
             
+            // If groupUnder is undefined, groupId will be set to undefined (effectively removing it)
             return { ...node, groupId: groupUnder?.id };
           }
           return node;
@@ -752,6 +757,10 @@ export default function MainApp() {
       setIsSpecLoading(false);
     }
   };
+
+  const handleVersionChange = (id: string) => {
+    setActiveVersionId(id);
+  };
   
   const selectedNode = useMemo(() => {
     if (selectedNodeIds.length !== 1) return undefined;
@@ -771,10 +780,6 @@ export default function MainApp() {
         l.id === activeLineageId ? { ...l, versions: [...l.versions, newVersion] } : l
     ));
     setActiveVersionId(newVersion.id);
-  };
-
-  const handleVersionChange = (id: string) => {
-    setActiveVersionId(id);
   };
 
   const handleImportPipeline = (importData: any) => {
@@ -827,7 +832,7 @@ export default function MainApp() {
     nodes.forEach(node => {
       minX = Math.min(minX, node.position.x);
       minY = Math.min(minY, node.position.y);
-      maxX = Math.max(maxX, node.position.x + 256); 
+      maxX = Math.max(maxX, node.position.x + NODE_WIDTH); 
       maxY = Math.max(maxY, node.position.y + 200);  
     });
     
