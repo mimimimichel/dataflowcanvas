@@ -19,7 +19,7 @@ export type NodeType = 'source' | 'transformation' | 'destination' | 'dataset';
 
 interface NodeProps extends PipelineNode {
   nodes: PipelineNode[];
-  onSelect: () => void;
+  onSelect: (isShift: boolean) => void;
   onConfigOpen: () => void;
   onMouseDown: (event: React.MouseEvent) => void;
   onMouseUp: (event: React.MouseEvent) => void;
@@ -100,6 +100,11 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
   const TypeIcon = getIconForOperation(operation);
   const [isExpanded, setIsExpanded] = useState(false);
   
+  const handleNodeClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSelect(e.shiftKey);
+  }
+
   const handleConfigClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onConfigOpen();
@@ -163,13 +168,13 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
       data-node-id={id}
     >
       <Card
-        onClick={onSelect}
+        onClick={handleNodeClick}
         className={cn(
           'w-64 transition-all duration-300 border-2 relative flex flex-col justify-between cursor-pointer backdrop-blur-md bg-card/90 shadow-2xl',
           'bg-gradient-to-br from-white/[0.05] to-transparent',
           typeConfig[type].glow,
           isSelected 
-            ? 'border-accent shadow-accent/20 accent-glow scale-[1.02]' 
+            ? 'border-primary shadow-primary/20 accent-glow scale-[1.02]' 
             : cn('group-hover:scale-[1.01]', typeConfig[type].border),
         )}
       >

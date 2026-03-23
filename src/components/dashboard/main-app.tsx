@@ -41,7 +41,6 @@ type SvgDimensions = {
   left: number;
 };
 
-// Constant for port positioning (half of node height)
 const PORT_Y_OFFSET = 45;
 const NODE_WIDTH = 256;
 
@@ -85,12 +84,13 @@ export default function MainApp() {
     ));
   };
 
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [selectedConnector, setSelectedConnector] = useState<ConnectorType | null>(null);
   const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [newConnector, setNewConnector] = useState<{ from: string; to: { x: number; y: number } } | null>(null);
+  const [selectionRect, setSelectionRect] = useState<{ startX: number, startY: number, x: number, y: number, width: number, height: number } | null>(null);
   
   const [isPythonModalOpen, setIsPythonModalOpen] = useState(false);
   const [generatedPythonCode, setGeneratedPythonCode] = useState('');
@@ -101,27 +101,35 @@ export default function MainApp() {
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const isPanningRef = useRef(false);
+  const isSelectingRef = useRef(false);
   const panStartRef = useRef({ x: 0, y: 0 });
   const draggingNodeIdRef = useRef<string | null>(null);
+  const dragStartNodesPositionsRef = useRef<Record<string, { x: number, y: number }>>({});
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const isConnectingRef = useRef(false);
 
   const [connectionForFields, setConnectionForFields] = useState<{fromNodeId: string, toNodeId: string} | null>(null);
   const [svgDimensions, setSvgDimensions] = useState<SvgDimensions>({ width: 0, height: 0, top: 0, left: 0 });
 
-  const handleNodeSelect = (id: string) => {
-    setSelectedNodeId(id);
+  const handleNodeSelect = (id: string, isShift: boolean) => {
     setSelectedConnector(null);
+    if (isShift) {
+      setSelectedNodeIds(prev => prev.includes(id) ? prev.filter(nodeId => nodeId !== id) : [...prev, id]);
+    } else {
+      if (!selectedNodeIds.includes(id)) {
+        setSelectedNodeIds([id]);
+      }
+    }
   };
 
   const handleOpenConfig = (nodeId: string) => {
-    setSelectedNodeId(nodeId);
+    setSelectedNodeIds([nodeId]);
     setIsConfigPanelOpen(true);
   }
   
   const handleConnectorClick = (connector: ConnectorType) => {
     setSelectedConnector(connector);
-    setSelectedNodeId(null);
+    setSelectedNodeIds([]);
   };
 
   const handleZoom = (delta: number) => {
@@ -283,12 +291,26 @@ export default function MainApp() {
     const node = nodes.find(n => n.id === nodeId);
     if (!node || isConnectingRef.current) return;
 
+    const isShift = e.shiftKey;
+    handleNodeSelect(nodeId, isShift);
+
     draggingNodeIdRef.current = nodeId;
     if(canvasRef.current) {
         dragOffsetRef.current = {
             x: e.clientX / zoom - node.position.x,
             y: e.clientY / zoom - node.position.y,
         };
+        
+        // Store initial positions of all selected nodes for relative movement
+        const currentSelected = isShift 
+          ? (selectedNodeIds.includes(nodeId) ? selectedNodeIds : [...selectedNodeIds, nodeId])
+          : (selectedNodeIds.includes(nodeId) ? selectedNodeIds : [nodeId]);
+          
+        dragStartNodesPositionsRef.current = {};
+        currentSelected.forEach(id => {
+          const n = nodes.find(node => node.id === id);
+          if (n) dragStartNodesPositionsRef.current[id] = { ...n.position };
+        });
     }
   };
 
@@ -312,10 +334,22 @@ export default function MainApp() {
     if (target.closest('[data-node-id]') || target.closest('[data-port="true"]') || target.closest('[data-connector="true"]')) {
       return;
     }
-    isPanningRef.current = true;
-    panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
-    if (canvasRef.current) canvasRef.current.style.cursor = 'grabbing';
-    setSelectedNodeId(null);
+
+    if (e.button === 0 && !e.altKey) {
+      // Start marquee selection
+      isSelectingRef.current = true;
+      if (!canvasRef.current) return;
+      const rect = canvasRef.current.getBoundingClientRect();
+      const x = (e.clientX - rect.left - pan.x) / zoom;
+      const y = (e.clientY - rect.top - pan.y) / zoom;
+      setSelectionRect({ startX: x, startY: y, x, y, width: 0, height: 0 });
+      if (!e.shiftKey) setSelectedNodeIds([]);
+    } else {
+      isPanningRef.current = true;
+      panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+      if (canvasRef.current) canvasRef.current.style.cursor = 'grabbing';
+    }
+    
     setSelectedConnector(null);
   };
 
@@ -331,11 +365,47 @@ export default function MainApp() {
           y: (e.clientY - canvasRect.top - pan.y) / zoom,
         }
       });
+    } else if (isSelectingRef.current && selectionRect) {
+      if (!canvasRef.current) return;
+      const rect = canvasRef.current.getBoundingClientRect();
+      const currentX = (e.clientX - rect.left - pan.x) / zoom;
+      const currentY = (e.clientY - rect.top - pan.y) / zoom;
+      
+      const x = Math.min(selectionRect.startX, currentX);
+      const y = Math.min(selectionRect.startY, currentY);
+      const width = Math.abs(selectionRect.startX - currentX);
+      const height = Math.abs(selectionRect.startY - currentY);
+      
+      setSelectionRect({ ...selectionRect, x, y, width, height });
+      
+      // Real-time selection update
+      const nodesInRect = nodes.filter(n => 
+        n.position.x >= x && n.position.x <= x + width &&
+        n.position.y >= y && n.position.y <= y + height
+      ).map(n => n.id);
+      
+      if (e.shiftKey) {
+        // Handle additive selection later or keep current logic
+      } else {
+        setSelectedNodeIds(nodesInRect);
+      }
     } else if (draggingNodeIdRef.current) {
       const nodeId = draggingNodeIdRef.current;
-      const newX = e.clientX / zoom - dragOffsetRef.current.x;
-      const newY = e.clientY / zoom - dragOffsetRef.current.y;
-      setNodes(prevNodes => prevNodes.map(n => n.id === nodeId ? { ...n, position: { x: newX, y: newY } } : n));
+      const dx = e.clientX / zoom - dragOffsetRef.current.x - nodes.find(n => n.id === nodeId)!.position.x;
+      const dy = e.clientY / zoom - dragOffsetRef.current.y - nodes.find(n => n.id === nodeId)!.position.y;
+      
+      setNodes(prevNodes => prevNodes.map(n => {
+        if (selectedNodeIds.includes(n.id)) {
+          return {
+            ...n,
+            position: {
+              x: n.position.x + dx,
+              y: n.position.y + dy
+            }
+          };
+        }
+        return n;
+      }));
     } else if (isPanningRef.current) {
       const newX = e.clientX - panStartRef.current.x;
       const newY = e.clientY - panStartRef.current.y;
@@ -347,6 +417,11 @@ export default function MainApp() {
     if (isPanningRef.current) {
       isPanningRef.current = false;
       if (canvasRef.current) canvasRef.current.style.cursor = 'grab';
+    }
+    
+    if (isSelectingRef.current) {
+      isSelectingRef.current = false;
+      setSelectionRect(null);
     }
     
     if (draggingNodeIdRef.current) {
@@ -556,7 +631,7 @@ export default function MainApp() {
             if (downstreamNodeIndex === -1) continue;
 
             const parentNodes = connectors
-                .filter(c => c.to === downstreamId)
+                .filter(c => c.from === downstreamId)
                 .map(c => currentNodes.find(n => n.id === c.from))
                 .filter((n): n is PipelineNode => !!n);
             
@@ -587,87 +662,28 @@ export default function MainApp() {
     };
   
   const handleDeleteNode = useCallback((nodeId: string) => {
-    const nodeToDelete = nodes.find(n => n.id === nodeId);
-    if (!nodeToDelete) return;
-
-    const downstreamConnectors = connectors.filter(c => c.from === nodeId);
-    const downstreamNodeIds = downstreamConnectors.map(c => c.to);
-    const fieldsToRemove = new Set(nodeToDelete.outputFields?.map(f => f.name) || []);
-
-    setNodes(prev => prev.map(n => {
-        if (downstreamNodeIds.includes(n.id)) {
-            let updatedNode = { ...n };
-            updatedNode.inputFields = updatedNode.inputFields?.filter(f => !fieldsToRemove.has(f.name));
-            
-            if (updatedNode.operation?.type === 'join') {
-                const joinOp = { ...updatedNode.operation } as JoinOperation;
-                if (joinOp.settings.leftNodeId === nodeId) joinOp.settings.leftNodeId = '';
-                if (joinOp.settings.rightNodeId === nodeId) joinOp.settings.rightNodeId = '';
-                updatedNode.operation = joinOp;
-            }
-
-            return updatedNode;
-        }
-        return n;
-    }).filter(n => n.id !== nodeId)); 
-
+    setNodes(prev => prev.filter(n => n.id !== nodeId));
     setConnectors(prev => prev.filter(c => c.from !== nodeId && c.to !== nodeId));
+    setSelectedNodeIds(prev => prev.filter(id => id !== nodeId));
+  }, []);
 
-    if(selectedNodeId === nodeId) {
-      setSelectedNodeId(null);
-      setIsConfigPanelOpen(false);
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedNodeIds.length === 0 && !selectedConnector) return;
+
+    if (selectedNodeIds.length > 0) {
+      setNodes(prev => prev.filter(n => !selectedNodeIds.includes(n.id)));
+      setConnectors(prev => prev.filter(c => !selectedNodeIds.includes(c.from) && !selectedNodeIds.includes(c.to)));
+      setSelectedNodeIds([]);
+      toast({ title: "Nodes Deleted", description: `Removed ${selectedNodeIds.length} nodes.` });
+    } else if (selectedConnector) {
+      handleDeleteConnector(selectedConnector);
     }
-  }, [nodes, connectors, selectedNodeId]);
+  }, [selectedNodeIds, selectedConnector, setNodes, setConnectors, toast]);
 
   const handleDeleteConnector = useCallback((connector: ConnectorType) => {
-    const fromNode = nodes.find(n => n.id === connector.from);
-    
-    setNodes(prev => prev.map(n => {
-      if (n.id === connector.to) {
-        let updatedNode = {...n};
-        
-        const fieldsToRemove = new Set(fromNode?.outputFields?.map(f => f.name) || []);
-
-        if (updatedNode.inputFields) {
-            updatedNode.inputFields = updatedNode.inputFields.filter(f => !fieldsToRemove.has(f.name));
-        }
-
-        if (updatedNode.type === 'dataset' || (updatedNode.operation?.type === 'filter')) {
-            updatedNode.outputFields = updatedNode.inputFields;
-        }
-
-        if (updatedNode.operation?.type === 'join') {
-            const joinOp = {...updatedNode.operation} as JoinOperation;
-            let wasModified = false;
-            if (joinOp.settings.leftNodeId === connector.from) {
-                joinOp.settings.leftNodeId = '';
-                wasModified = true;
-            }
-            if (joinOp.settings.rightNodeId === connector.from) {
-                joinOp.settings.rightNodeId = '';
-                wasModified = true;
-            }
-
-            if(wasModified) {
-              const leftNode = nodes.find(node => node.id === joinOp.settings.leftNodeId);
-              const rightNode = nodes.find(node => node.id === joinOp.settings.rightNodeId);
-              
-              if (leftNode && rightNode) {
-                updatedNode.outputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
-              } else {
-                updatedNode.outputFields = leftNode?.outputFields || rightNode?.outputFields || [];
-              }
-               updatedNode.operation = joinOp;
-            }
-        }
-        return updatedNode;
-      }
-      return n;
-    }));
-
     setConnectors(prev => prev.filter(c => !(c.from === connector.from && c.to === connector.to)));
     setSelectedConnector(null);
-  }, [nodes, connectors]);
+  }, []);
 
   const handleGeneratePython = useCallback(() => {
     if (!nodes) return;
@@ -690,9 +706,9 @@ export default function MainApp() {
   };
   
   const selectedNode = useMemo(() => {
-    if (!selectedNodeId) return undefined;
-    return nodes.find(n => n.id === selectedNodeId);
-  }, [nodes, selectedNodeId]);
+    if (selectedNodeIds.length !== 1) return undefined;
+    return nodes.find(n => n.id === selectedNodeIds[0]);
+  }, [nodes, selectedNodeIds]);
   
   const handleCreateVersion = (name: string) => {
     const newVersion: PipelineVersion = {
@@ -826,19 +842,14 @@ export default function MainApp() {
       if (e.key === 'Delete' || e.key === 'Backspace') {
         const target = e.target as HTMLElement;
         if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
-
-        if (selectedNodeId && !isConfigPanelOpen) {
-          handleDeleteNode(selectedNodeId);
-        } else if (selectedConnector) {
-          handleDeleteConnector(selectedConnector);
-        }
+        handleDeleteSelected();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedNodeId, selectedConnector, isConfigPanelOpen, handleDeleteNode, handleDeleteConnector]);
+  }, [handleDeleteSelected]);
 
   const connectionModalSourceNode = nodes.find(n => n.id === connectionForFields?.fromNodeId);
 
@@ -943,19 +954,30 @@ export default function MainApp() {
                     key={node.id}
                     {...node}
                     nodes={nodes}
-                    onSelect={() => handleNodeSelect(node.id)}
+                    onSelect={(isShift) => handleNodeSelect(node.id, isShift)}
                     onConfigOpen={() => handleOpenConfig(node.id)}
                     onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
                     onMouseUp={(e) => handleNodeMouseUp(e, node.id)}
                     onPortMouseDown={(e) => handlePortMouseDown(e, node.id)}
                     onAddNode={handleAddNode}
-                    isSelected={selectedNodeId === node.id}
+                    isSelected={selectedNodeIds.includes(node.id)}
                     onUpdateOperation={handleUpdateOperation}
                   />
                 ))}
+
+                {selectionRect && (
+                  <div 
+                    className="absolute border border-primary bg-primary/10 pointer-events-none z-[100]"
+                    style={{
+                      left: selectionRect.x,
+                      top: selectionRect.y,
+                      width: selectionRect.width,
+                      height: selectionRect.height
+                    }}
+                  />
+                )}
               </div>
 
-              {/* Floating Canvas Controls */}
               <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50">
                 <div className="glass-panel rounded-2xl flex items-center p-1.5 gap-1 border border-white/10 shadow-2xl">
                     <TooltipProvider>
@@ -1008,7 +1030,7 @@ export default function MainApp() {
         )}
         
         <NodeConfigurationPanel
-          key={selectedNodeId}
+          key={selectedNodeIds.join(',')}
           node={selectedNode}
           nodes={nodes}
           isOpen={isConfigPanelOpen}
