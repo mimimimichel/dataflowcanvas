@@ -125,6 +125,7 @@ export default function MainApp() {
   const panStartRef = useRef({ x: 0, y: 0 });
   const draggingNodeIdRef = useRef<string | null>(null);
   const draggingGroupIdRef = useRef<string | null>(null);
+  const resizingGroupIdRef = useRef<string | null>(null);
   const lastMousePosRef = useRef({ x: 0, y: 0 });
   const isConnectingRef = useRef(false);
 
@@ -180,6 +181,35 @@ export default function MainApp() {
     });
     draggingNodeIdRef.current = null;
   }, [selectedNodeIds, groups, setNodes]);
+
+  const finalizeResize = useCallback(() => {
+    const resizingId = resizingGroupIdRef.current;
+    if (!resizingId) return;
+
+    const group = groups.find(g => g.id === resizingId);
+    if (!group) return;
+
+    setNodes(currentNodes => {
+      return currentNodes.map(node => {
+        const centerX = node.position.x + (NODE_WIDTH / 2);
+        const centerY = node.position.y + 60;
+
+        const isInside = centerX >= group.position.x && 
+                        centerX <= group.position.x + group.width &&
+                        centerY >= group.position.y &&
+                        centerY <= group.position.y + group.height;
+
+        if (isInside && node.groupId !== group.id) {
+          return { ...node, groupId: group.id };
+        } else if (!isInside && node.groupId === group.id) {
+          return { ...node, groupId: undefined };
+        }
+        return node;
+      });
+    });
+
+    resizingGroupIdRef.current = null;
+  }, [groups, setNodes]);
 
   const handleCreateGroup = useCallback(() => {
     if (selectedNodeIds.length < 1) {
@@ -443,6 +473,13 @@ export default function MainApp() {
     lastMousePosRef.current = { x: e.clientX, y: e.clientY };
   };
 
+  const handleResizeMouseDown = (e: React.MouseEvent, groupId: string) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    resizingGroupIdRef.current = groupId;
+    lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+  };
+
   const handlePortMouseDown = (e: React.MouseEvent, nodeId: string) => {
     if (e.button !== 0) return;
     e.stopPropagation();
@@ -521,6 +558,18 @@ export default function MainApp() {
       }).map(n => n.id);
       
       setSelectedNodeIds(nodesInRect);
+    } else if (resizingGroupIdRef.current) {
+      const groupId = resizingGroupIdRef.current;
+      setGroups(prev => prev.map(g => {
+        if (g.id === groupId) {
+          return {
+            ...g,
+            width: Math.max(150, g.width + dx),
+            height: Math.max(100, g.height + dy)
+          };
+        }
+        return g;
+      }));
     } else if (draggingNodeIdRef.current) {
       const nodeId = draggingNodeIdRef.current;
       setNodes(prevNodes => prevNodes.map(n => {
@@ -570,6 +619,10 @@ export default function MainApp() {
     
     if (draggingNodeIdRef.current) {
       finalizeNodeDrag();
+    }
+
+    if (resizingGroupIdRef.current) {
+      finalizeResize();
     }
 
     draggingGroupIdRef.current = null;
@@ -927,6 +980,7 @@ export default function MainApp() {
                     key={group.id}
                     {...group}
                     onMouseDown={(e) => handleGroupMouseDown(e, group.id)}
+                    onResizeMouseDown={(e) => handleResizeMouseDown(e, group.id)}
                     onDelete={() => handleDeleteGroup(group.id)}
                     onRename={(newName) => handleRenameGroup(group.id, newName)}
                     onToggleCollapse={() => handleToggleGroupCollapse(group.id)}

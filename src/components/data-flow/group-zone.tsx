@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 
 interface GroupZoneProps extends NodeGroup {
   onMouseDown: (e: React.MouseEvent) => void;
+  onResizeMouseDown: (e: React.MouseEvent) => void;
   onDelete: () => void;
   onRename: (newName: string) => void;
   onToggleCollapse: () => void;
@@ -32,6 +33,7 @@ const GroupZone: React.FC<GroupZoneProps> = ({
   height, 
   isCollapsed,
   onMouseDown, 
+  onResizeMouseDown,
   onDelete, 
   onRename,
   onToggleCollapse,
@@ -70,7 +72,7 @@ const GroupZone: React.FC<GroupZoneProps> = ({
   return (
     <div
       className={cn(
-        "absolute rounded-3xl border-2 border-dashed group/zone z-0 transition-[width,height] duration-300",
+        "absolute rounded-3xl border-2 border-dashed group/zone z-0 transition-[width,height] duration-0",
         colorClass,
         isSelected && "border-primary/50 border-solid bg-white/[0.02]",
         isCollapsed && "border-solid bg-card/40 backdrop-blur-sm"
@@ -136,8 +138,14 @@ const GroupZone: React.FC<GroupZoneProps> = ({
       </div>
 
       {!isCollapsed && (
-        <div className="absolute bottom-4 right-4 text-muted-foreground opacity-20 pointer-events-none">
-          <Maximize2 className="h-4 w-4 rotate-90" />
+        <div 
+          className="absolute bottom-4 right-4 text-muted-foreground opacity-40 hover:opacity-100 transition-opacity cursor-nwse-resize pointer-events-auto p-1"
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            onResizeMouseDown(e);
+          }}
+        >
+          <Maximize2 className="h-5 w-5 rotate-90" />
         </div>
       )}
       
