@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Upload, Download, Share2, GitBranch, PlusCircle, 
-  Terminal, Sparkles, Library, Settings2, Wand2, LayoutDashboard 
+  Terminal, Sparkles, Library, Settings2, Wand2, LayoutDashboard,
+  MoreVertical, FileJson, Menu
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PipelineVersion, LineageInfo } from '@/lib/pipeline-data';
@@ -15,6 +16,13 @@ import { Label } from '../ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import AIArchitectModal from '@/components/modals/ai-architect-modal';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 interface HeaderProps {
   activeLineage?: LineageInfo;
@@ -156,28 +164,28 @@ const Header: React.FC<HeaderProps> = ({
       "bg-gradient-to-b from-card/95 via-card/90 to-card/80 backdrop-blur-xl",
       "after:absolute after:inset-x-0 after:top-0 after:h-[1px] after:bg-white/5"
     )}>
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-3 md:gap-6">
         <div className="flex items-center gap-2">
           <GitBranch className="h-6 w-6 text-primary" />
-          <h1 className="text-lg font-bold tracking-tight text-foreground hidden md:block">DataFlow</h1>
+          <h1 className="text-lg font-bold tracking-tight text-white hidden xl:block">DataFlow</h1>
         </div>
 
-        <Tabs value={activeView} onValueChange={(v) => onViewChange(v as any)} className="w-[300px]">
+        <Tabs value={activeView} onValueChange={(v) => onViewChange(v as any)} className="w-[200px] md:w-[300px]">
           <TabsList className="grid w-full grid-cols-2 bg-background/40">
-            <TabsTrigger value="dashboard" className="flex items-center gap-2">
-              <Library className="h-4 w-4" /> Library
+            <TabsTrigger value="dashboard" className="flex items-center gap-2 text-xs md:text-sm">
+              <Library className="h-4 w-4 hidden sm:block" /> Library
             </TabsTrigger>
-            <TabsTrigger value="editor" className="flex items-center gap-2">
-              <Settings2 className="h-4 w-4" /> Designer
+            <TabsTrigger value="editor" className="flex items-center gap-2 text-xs md:text-sm">
+              <Settings2 className="h-4 w-4 hidden sm:block" /> Designer
             </TabsTrigger>
           </TabsList>
         </Tabs>
 
         {activeView === 'editor' && (
-          <div className="flex items-center gap-2 border-l border-white/10 pl-4 ml-2">
+          <div className="hidden md:flex items-center gap-2 border-l border-white/10 pl-4 ml-2">
             <Select value={activeVersionId} onValueChange={onVersionChange}>
-              <SelectTrigger className="w-48 h-9 bg-background/50 border-white/10">
-                <SelectValue placeholder="Select version" />
+              <SelectTrigger className="w-40 h-9 bg-background/50 border-white/10 text-xs">
+                <SelectValue placeholder="Version" />
               </SelectTrigger>
               <SelectContent>
                 {versions.map(version => (
@@ -192,16 +200,17 @@ const Header: React.FC<HeaderProps> = ({
         )}
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 md:gap-4">
+        {/* Desktop Actions */}
         <div className="hidden lg:flex items-center gap-2 border-r border-white/10 pr-4">
             <Button variant="outline" size="sm" onClick={onAutoLayout} className="h-9 bg-background/40 border-white/10 hover:bg-background/60">
-                <LayoutDashboard className="mr-2 h-4 w-4" /> Auto-Layout
+                <LayoutDashboard className="mr-2 h-4 w-4" /> Layout
             </Button>
             <Button variant="outline" size="sm" onClick={() => setIsArchitectOpen(true)} className="group h-9 bg-primary/10 border-primary/20 hover:bg-primary/20 text-primary">
-                <Wand2 className="mr-2 h-4 w-4" /> AI Architect
+                <Wand2 className="mr-2 h-4 w-4" /> Architect
             </Button>
             <Button variant="outline" size="sm" onClick={onGenerateSpec} className="group h-9 bg-background/40 border-white/10 hover:bg-background/60">
-                <Sparkles className="mr-2 h-4 w-4 text-amber-500 group-hover:scale-110 transition-transform" /> Write Spec
+                <Sparkles className="mr-2 h-4 w-4 text-amber-500 group-hover:scale-110 transition-transform" /> Spec
             </Button>
             <Button variant="outline" size="sm" onClick={onGeneratePython} className="h-9 bg-background/40 border-white/10 hover:bg-background/60">
                 <Terminal className="mr-2 h-4 w-4" /> Foundry
@@ -223,8 +232,43 @@ const Header: React.FC<HeaderProps> = ({
             </Button>
         </div>
 
-        <div className="flex items-center gap-3 pl-2">
-          <Button size="sm" onClick={handleShare} className="h-9 shadow-inner"><Share2 className="mr-2 h-4 w-4" /> Share</Button>
+        {/* Mobile Actions Dropdown */}
+        <div className="lg:hidden flex items-center gap-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="h-9 w-9 bg-background/40 border-white/10">
+                <Menu className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 glass-panel border-white/10">
+              <DropdownMenuItem onClick={() => setIsArchitectOpen(true)} className="gap-2 text-primary">
+                <Wand2 className="h-4 w-4" /> AI Architect
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onAutoLayout} className="gap-2">
+                <LayoutDashboard className="h-4 w-4" /> Auto Layout
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onGenerateSpec} className="gap-2">
+                <Sparkles className="h-4 w-4 text-amber-500" /> Write Spec
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onGeneratePython} className="gap-2">
+                <Terminal className="h-4 w-4" /> Generate Code
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-white/5" />
+              <DropdownMenuItem onClick={handleImportClick} className="gap-2">
+                <Upload className="h-4 w-4" /> Import JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExport} className="gap-2">
+                <Download className="h-4 w-4" /> Export JSON
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={handleShare} className="h-9 shadow-inner px-3 md:px-4">
+            <Share2 className="md:mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Share</span>
+          </Button>
         </div>
       </div>
 
