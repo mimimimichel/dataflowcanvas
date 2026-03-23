@@ -30,7 +30,7 @@ import { generatePythonCode } from '@/lib/python-generator';
 import { generatePipelineSpec } from '@/ai/flows/generate-spec-flow';
 import LineageDashboard from '@/components/dashboard/lineage-dashboard';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronRight, Plus, Minus, Maximize, MousePointer2, ZoomIn, ZoomOut, RotateCcw, Crosshair } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, Crosshair } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -287,6 +287,7 @@ export default function MainApp() {
   }, [pan.x, pan.y, zoom, nodes, connectors]);
 
   const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
+    if (e.button !== 0) return; // Only Left Click for node interaction
     e.stopPropagation();
     const node = nodes.find(n => n.id === nodeId);
     if (!node || isConnectingRef.current) return;
@@ -315,6 +316,7 @@ export default function MainApp() {
   };
 
   const handlePortMouseDown = (e: React.MouseEvent, nodeId: string) => {
+    if (e.button !== 0) return;
     e.stopPropagation();
     isConnectingRef.current = true;
     draggingNodeIdRef.current = null; 
@@ -335,8 +337,8 @@ export default function MainApp() {
       return;
     }
 
-    if (e.button === 0 && !e.altKey) {
-      // Start marquee selection
+    // Right-click (button 2) triggers marquee selection
+    if (e.button === 2) {
       isSelectingRef.current = true;
       if (!canvasRef.current) return;
       const rect = canvasRef.current.getBoundingClientRect();
@@ -344,7 +346,9 @@ export default function MainApp() {
       const y = (e.clientY - rect.top - pan.y) / zoom;
       setSelectionRect({ startX: x, startY: y, x, y, width: 0, height: 0 });
       if (!e.shiftKey) setSelectedNodeIds([]);
-    } else {
+    } 
+    // Left-click (button 0) triggers panning
+    else if (e.button === 0) {
       isPanningRef.current = true;
       panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
       if (canvasRef.current) canvasRef.current.style.cursor = 'grabbing';
@@ -378,14 +382,13 @@ export default function MainApp() {
       
       setSelectionRect({ ...selectionRect, x, y, width, height });
       
-      // Real-time selection update
       const nodesInRect = nodes.filter(n => 
         n.position.x >= x && n.position.x <= x + width &&
         n.position.y >= y && n.position.y <= y + height
       ).map(n => n.id);
       
       if (e.shiftKey) {
-        // Handle additive selection later or keep current logic
+        // Toggle selection for shift-drag selection could be implemented here
       } else {
         setSelectedNodeIds(nodesInRect);
       }
@@ -596,7 +599,7 @@ export default function MainApp() {
               case 'join': {
                 const joinOp = currentNode.operation as JoinOperation;
                 const leftNode = currentNodes.find(ln => ln.id === joinOp.settings.leftNodeId);
-                const rightNode = currentNodes.find(rn => ln.id === joinOp.settings.rightNodeId);
+                const rightNode = currentNodes.find(rn => rn.id === joinOp.settings.rightNodeId);
                 if (leftNode && rightNode) {
                   newOutputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
                 }
@@ -631,7 +634,7 @@ export default function MainApp() {
             if (downstreamNodeIndex === -1) continue;
 
             const parentNodes = connectors
-                .filter(c => c.from === downstreamId)
+                .filter(c => c.to === downstreamId)
                 .map(c => currentNodes.find(n => n.id === c.from))
                 .filter((n): n is PipelineNode => !!n);
             
@@ -894,6 +897,7 @@ export default function MainApp() {
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
+              onContextMenu={(e) => e.preventDefault()}
             >
               <div className="absolute inset-0 canvas-grid pointer-events-none" />
 
