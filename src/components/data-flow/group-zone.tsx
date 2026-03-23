@@ -70,7 +70,7 @@ const GroupZone: React.FC<GroupZoneProps> = ({
   return (
     <div
       className={cn(
-        "absolute rounded-3xl border-2 border-dashed transition-all duration-300 group/zone z-0",
+        "absolute rounded-3xl border-2 border-dashed group/zone z-0 transition-[width,height] duration-300",
         colorClass,
         isSelected && "border-primary/50 border-solid bg-white/[0.02]",
         isCollapsed && "border-solid bg-card/40 backdrop-blur-sm"

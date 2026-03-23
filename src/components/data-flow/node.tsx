@@ -161,7 +161,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
 
   return (
     <div
-      className="absolute transition-all duration-300 group"
+      className="absolute group z-10"
       style={{ top: position.y, left: position.x }}
       onMouseDown={onMouseDown}
       onMouseUp={onMouseUp}
@@ -170,12 +170,12 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
       <Card
         onClick={handleNodeClick}
         className={cn(
-          'w-64 transition-all duration-300 border-2 relative flex flex-col justify-between cursor-pointer backdrop-blur-md bg-card/90 shadow-2xl',
+          'w-64 border-2 relative flex flex-col justify-between cursor-pointer backdrop-blur-md bg-card/90 shadow-2xl',
           'bg-gradient-to-br from-white/[0.05] to-transparent',
           typeConfig[type].glow,
           isSelected 
-            ? 'border-primary shadow-primary/20 accent-glow scale-[1.02]' 
-            : cn('group-hover:scale-[1.01]', typeConfig[type].border),
+            ? 'border-primary shadow-primary/20 accent-glow scale-[1.02] transition-transform duration-200' 
+            : cn('group-hover:scale-[1.01] transition-transform duration-200', typeConfig[type].border),
         )}
       >
         <div className="flex items-center gap-2 p-3">
@@ -275,7 +275,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
                 onClick={handleToggleExpand}
                 title={isExpanded ? "Collapse" : "Expand Details"}
             >
-                <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", isExpanded && "rotate-180")} />
+                <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-200", isExpanded && "rotate-180")} />
             </Button>
         </div>
       </Card>
