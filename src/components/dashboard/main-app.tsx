@@ -764,6 +764,14 @@ export default function MainApp() {
     window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleDeleteSelected, handleCreateGroup]);
 
+  // Function to calculate depth of a group for rendering
+  const getGroupDepth = useCallback((groupId: string | undefined): number => {
+    if (!groupId) return 0;
+    const group = groups.find(g => g.id === groupId);
+    if (!group) return 0;
+    return 1 + getGroupDepth(group.parentGroupId);
+  }, [groups]);
+
   return (
     <div className="flex h-screen w-full flex-col bg-background font-body overflow-hidden">
       <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage.versions} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onGeneratePython={handleGeneratePython} onGenerateSpec={handleGenerateSpec} onImportPipeline={() => {}} onApplyScaffold={() => {}} activeView={activeView} onViewChange={setActiveView} />
@@ -777,12 +785,16 @@ export default function MainApp() {
           <main className={cn("flex-1 relative overflow-hidden bg-background/95", isDrawMode ? "cursor-crosshair" : "cursor-grab")} onDrop={handleDrop} onDragOver={handleDragOver} onWheel={handleWheel} ref={canvasRef} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} onContextMenu={e => e.preventDefault()}>
             <div className="absolute inset-0 canvas-grid pointer-events-none" />
             <div className="absolute top-0 left-0" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'top left' }}>
-              {groups.map((group) => {
-                if (isAncestorCollapsed(group.parentGroupId)) return null;
-                return (
-                  <GroupZone key={group.id} {...group} onMouseDown={e => handleGroupMouseDown(e, group.id)} onResizeMouseDown={e => handleResizeMouseDown(e, group.id)} onDelete={() => handleDeleteGroup(group.id)} onRename={newName => handleRenameGroup(group.id, newName)} onToggleCollapse={() => handleToggleGroupCollapse(group.id)} isSelected={selectedGroupIds.includes(group.id)} />
-                );
-              })}
+              {/* Render groups sorted by depth: parents first (bottom), sub-groups last (top) */}
+              {groups
+                .slice()
+                .sort((a, b) => getGroupDepth(a.id) - getGroupDepth(b.id))
+                .map((group) => {
+                  if (isAncestorCollapsed(group.parentGroupId)) return null;
+                  return (
+                    <GroupZone key={group.id} {...group} onMouseDown={e => handleGroupMouseDown(e, group.id)} onResizeMouseDown={e => handleResizeMouseDown(e, group.id)} onDelete={() => handleDeleteGroup(group.id)} onRename={newName => handleRenameGroup(group.id, newName)} onToggleCollapse={() => handleToggleGroupCollapse(group.id)} isSelected={selectedGroupIds.includes(group.id)} />
+                  );
+                })}
 
               <svg className="absolute pointer-events-none overflow-visible" style={{ left: svgDimensions.left, top: svgDimensions.top, width: svgDimensions.width, height: svgDimensions.height }}>
                   {connectors.map((connector, index) => {
