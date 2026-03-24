@@ -361,7 +361,10 @@ export default function MainApp() {
       isCollapsed: false
     };
 
-    setGroups(prev => [...prev, newGroup.map(g => selectedGroupIds.includes(g.id) ? { ...g, parentGroupId: newGroupId } : g)]);
+    setGroups(prev => [
+      ...prev.map(g => selectedGroupIds.includes(g.id) ? { ...g, parentGroupId: newGroupId } : g),
+      newGroup
+    ]);
     setNodes(prev => prev.map(n => selectedNodeIds.includes(n.id) ? { ...n, groupId: newGroupId } : n));
     setSelectedGroupIds([newGroupId]);
     
@@ -386,8 +389,6 @@ export default function MainApp() {
       isCollapsed: false
     };
 
-    setGroups(prev => [...prev, newGroup]);
-    
     setNodes(currentNodes => {
       return currentNodes.map(node => {
         const centerX = node.position.x + (NODE_WIDTH / 2);
@@ -399,20 +400,20 @@ export default function MainApp() {
     });
 
     setGroups(currentGroups => {
-        return currentGroups.map(g => {
-            if (g.id === newGroupId) return g;
+        const updated = currentGroups.map(g => {
             const centerX = g.position.x + (g.width / 2);
             const centerY = g.position.y + (g.height / 2);
             const isInside = centerX >= drawingZoneRect.x && centerX <= drawingZoneRect.x + drawingZoneRect.width &&
                             centerY >= drawingZoneRect.y && centerY <= drawingZoneRect.y + drawingZoneRect.height;
             return isInside ? { ...g, parentGroupId: newGroupId } : g;
         });
+        return [...updated, newGroup];
     });
 
     setSelectedGroupIds([newGroupId]);
     setDrawingZoneRect(null);
     setIsDrawMode(false); 
-    toast({ title: "Workspace Zone Created", description: "Elements rattachés avec succès." });
+    toast({ title: "Workspace Zone Created", description: "Elements attached successfully." });
   }, [drawingZoneRect, setGroups, setNodes, toast]);
 
   const handleDeleteGroup = (groupId: string) => {
@@ -476,7 +477,6 @@ export default function MainApp() {
 
   const handleAutoLayout = useCallback(() => {
     if (nodes.length === 0) return;
-    // Basic implementation for MVP, does not handle deep nesting well
     const HORIZONTAL_GAP = 350;
     const VERTICAL_GAP = 180;
     const START_X = 100;
@@ -485,7 +485,7 @@ export default function MainApp() {
     const levels: Record<string, number> = {};
     const assignLevel = (nodeId: string, level: number) => {
         levels[nodeId] = Math.max(levels[nodeId] || 0, level);
-        const downstream = connectors.filter(c => c.to === nodeId);
+        const downstream = connectors.filter(c => c.from === nodeId);
         downstream.forEach(c => assignLevel(c.to, level + 1));
     };
 
@@ -602,17 +602,6 @@ export default function MainApp() {
     setSelectedConnector(null);
   };
 
-  const moveGroupRecursively = useCallback((groupId: string, dx: number, dy: number, processedGroups: Set<string>) => {
-    if (processedGroups.has(groupId)) return;
-    processedGroups.add(groupId);
-
-    setGroups(prev => prev.map(g => g.id === groupId ? { ...g, position: { x: g.position.x + dx, y: g.position.y + dy } } : g));
-    setNodes(prev => prev.map(n => n.groupId === groupId ? { ...n, position: { x: n.position.x + dx, y: n.position.y + dy } } : n));
-    
-    // Find sub-groups
-    groups.filter(g => g.parentGroupId === groupId).forEach(sub => moveGroupRecursively(sub.id, dx, dy, processedGroups));
-  }, [groups, setGroups, setNodes]);
-
   const handleMouseMove = (e: React.MouseEvent) => {
     const dx = (e.clientX - lastMousePosRef.current.x) / zoom;
     const dy = (e.clientY - lastMousePosRef.current.y) / zoom;
@@ -642,9 +631,17 @@ export default function MainApp() {
     } else if (draggingNodeIdRef.current) {
       setNodes(prevNodes => prevNodes.map(n => (n.id === draggingNodeIdRef.current || selectedNodeIds.includes(n.id)) ? { ...n, position: { x: n.position.x + dx, y: n.position.y + dy } } : n));
     } else if (draggingGroupIdRef.current) {
-      const processed = new Set<string>();
-      const draggingIds = [draggingGroupIdRef.current, ...selectedGroupIds];
-      draggingIds.forEach(id => moveGroupRecursively(id, dx, dy, processed));
+      const targetIds = [draggingGroupIdRef.current, ...selectedGroupIds];
+      
+      const getDescendants = (id: string, allGroups: NodeGroup[]): string[] => {
+        const direct = allGroups.filter(g => g.parentGroupId === id).map(g => g.id);
+        return [...direct, ...direct.flatMap(d => getDescendants(d, allGroups))];
+      };
+      
+      const allTargetIds = new Set([...targetIds, ...targetIds.flatMap(id => getDescendants(id, groups))]);
+      
+      setGroups(prev => prev.map(g => allTargetIds.has(g.id) ? { ...g, position: { x: g.position.x + dx, y: g.position.y + dy } } : g));
+      setNodes(prev => prev.map(n => (n.groupId && allTargetIds.has(n.groupId)) ? { ...n, position: { x: n.position.x + dx, y: n.position.y + dy } } : n));
     } else if (isPanningRef.current) {
       setPan({ x: e.clientX - panStartRef.current.x, y: e.clientY - panStartRef.current.y });
     }
