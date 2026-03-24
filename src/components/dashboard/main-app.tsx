@@ -32,9 +32,14 @@ import { generatePythonCode } from '@/lib/python-generator';
 import { generatePipelineSpec } from '@/ai/flows/generate-spec-flow';
 import LineageDashboard from '@/components/dashboard/lineage-dashboard';
 import { useToast } from '@/hooks/use-toast';
-import { ZoomIn, ZoomOut, RotateCcw, Crosshair, Keyboard, MousePointer2, BoxSelect, Trash2, Group, Square } from 'lucide-react';
+import { 
+  ZoomIn, ZoomOut, RotateCcw, Crosshair, Keyboard, 
+  MousePointer2, BoxSelect, Trash2, Group, Square, 
+  LayoutDashboard, Boxes
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Separator } from '@/components/ui/separator';
 
 type SvgDimensions = {
   width: number | string;
@@ -271,7 +276,7 @@ export default function MainApp() {
 
   const handleCreateGroup = useCallback(() => {
     if (selectedNodeIds.length < 1) {
-      toast({ title: "No Nodes Selected", description: "Select nodes using right-click to group them.", variant: "destructive" });
+      toast({ title: "No Nodes Selected", description: "Select nodes to group them.", variant: "destructive" });
       return;
     }
 
@@ -407,7 +412,7 @@ export default function MainApp() {
     const levels: Record<string, number> = {};
     const assignLevel = (nodeId: string, level: number) => {
         levels[nodeId] = Math.max(levels[nodeId] || 0, level);
-        const downstream = connectors.filter(c => c.from === nodeId);
+        const downstream = connectors.filter(c => c.to === nodeId);
         downstream.forEach(c => assignLevel(c.to, level + 1));
     };
 
@@ -1045,12 +1050,8 @@ export default function MainApp() {
           onGenerateSpec={handleGenerateSpec}
           onImportPipeline={handleImportPipeline}
           onApplyScaffold={handleApplyScaffold}
-          onAutoLayout={handleAutoLayout}
-          onGroupSelected={handleCreateGroup}
           activeView={activeView}
           onViewChange={setActiveView}
-          isDrawMode={isDrawMode}
-          onToggleDrawMode={() => setIsDrawMode(!isDrawMode)}
         />
         
         {activeView === 'dashboard' ? (
@@ -1103,6 +1104,63 @@ export default function MainApp() {
             >
               <div className="absolute inset-0 canvas-grid pointer-events-none" />
 
+              {/* Editor Specific Toolbar */}
+              <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="glass-panel flex items-center p-1.5 gap-1.5 border border-border shadow-2xl rounded-2xl">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => setIsDrawMode(!isDrawMode)} 
+                          className={cn(
+                            "h-9 px-3 gap-2 rounded-xl text-xs font-semibold",
+                            isDrawMode ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-muted"
+                          )}
+                        >
+                          <Square className="h-4 w-4" />
+                          Draw Zone
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">Draw a new functional zone</TooltipContent>
+                    </Tooltip>
+
+                    <Separator orientation="vertical" className="h-4 bg-border/50" />
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={handleCreateGroup} 
+                          className="h-9 px-3 gap-2 rounded-xl text-xs font-semibold hover:bg-muted"
+                        >
+                          <Boxes className="h-4 w-4" />
+                          Group
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">Group selected nodes (Ctrl+G)</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={handleAutoLayout} 
+                          className="h-9 px-3 gap-2 rounded-xl text-xs font-semibold hover:bg-muted"
+                        >
+                          <LayoutDashboard className="h-4 w-4" />
+                          Auto Layout
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">Arrange nodes automatically</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
+
               <div
                 className="absolute top-0 left-0"
                 style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'top left' }}
@@ -1140,19 +1198,17 @@ export default function MainApp() {
                       const isFromCollapsed = fromGroup?.isCollapsed;
                       const isToCollapsed = toGroup?.isCollapsed;
 
-                      // Hide internal connections if the group is collapsed
                       if (isFromCollapsed && isToCollapsed && fromGroup?.id === toGroup?.id) {
                         return null;
                       }
 
-                      // Calculate effective coordinates
                       let fromX = fromNode.position.x + NODE_WIDTH;
                       let fromY = fromNode.position.y + PORT_Y_OFFSET;
 
                       if (isFromCollapsed && fromGroup) {
                         const collapsedWidth = Math.max(250, fromGroup.width * 0.4);
                         fromX = fromGroup.position.x + collapsedWidth;
-                        fromY = fromGroup.position.y + 32; // Center of the header
+                        fromY = fromGroup.position.y + 32;
                       }
 
                       let toX = toNode.position.x;
@@ -1160,7 +1216,7 @@ export default function MainApp() {
 
                       if (isToCollapsed && toGroup) {
                         toX = toGroup.position.x;
-                        toY = toGroup.position.y + 32; // Center of the header
+                        toY = toGroup.position.y + 32;
                       }
 
                       return (

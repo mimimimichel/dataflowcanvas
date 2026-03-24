@@ -4,11 +4,10 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
-  Upload, Download, Share2, GitBranch, PlusCircle, 
-  Terminal, Sparkles, Library, Settings2, Wand2, LayoutDashboard,
-  MoreVertical, FileJson, Menu, Boxes, Square, Sun, Moon, Laptop
+  Download, Share2, GitBranch, PlusCircle, 
+  Terminal, Sparkles, Library, Settings2, Wand2,
+  Menu, Sun, Moon, Laptop
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import { PipelineVersion, LineageInfo } from '@/lib/pipeline-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '../ui/input';
@@ -36,12 +35,8 @@ interface HeaderProps {
   onGenerateSpec: () => void;
   onImportPipeline: (data: any) => void;
   onApplyScaffold: (scaffold: any) => void;
-  onAutoLayout: () => void;
-  onGroupSelected: () => void;
   activeView: 'dashboard' | 'editor';
   onViewChange: (view: 'dashboard' | 'editor') => void;
-  isDrawMode?: boolean;
-  onToggleDrawMode?: () => void;
 }
 
 const CreateVersionDialog: React.FC<{
@@ -61,7 +56,7 @@ const CreateVersionDialog: React.FC<{
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="glass-panel">
         <DialogHeader>
           <DialogTitle>Create New Version</DialogTitle>
           <DialogDescription>
@@ -77,7 +72,7 @@ const CreateVersionDialog: React.FC<{
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="col-span-3"
+              className="col-span-3 bg-muted/50"
             />
           </div>
         </div>
@@ -100,14 +95,9 @@ const Header: React.FC<HeaderProps> = ({
   onCreateVersion, 
   onGeneratePython, 
   onGenerateSpec,
-  onImportPipeline,
   onApplyScaffold,
-  onAutoLayout,
-  onGroupSelected,
   activeView,
   onViewChange,
-  isDrawMode,
-  onToggleDrawMode
 }) => {
   const [isCreateVersionOpen, setIsCreateVersionOpen] = useState(false);
   const [isArchitectOpen, setIsArchitectOpen] = useState(false);
@@ -127,8 +117,7 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <header className={cn(
       "flex h-16 items-center justify-between border-b px-4 md:px-6 shrink-0 z-30 relative shadow-sm",
-      "bg-card/80 backdrop-blur-xl",
-      "transition-colors duration-300"
+      "bg-card/80 backdrop-blur-xl transition-colors duration-300"
     )}>
       <div className="flex items-center gap-3 md:gap-6">
         <div className="flex items-center gap-2">
@@ -169,23 +158,6 @@ const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-2 md:gap-4">
         {activeView === 'editor' && (
           <div className="hidden lg:flex items-center gap-2 border-r border-border pr-4">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={onToggleDrawMode} 
-                className={cn(
-                  "h-9 bg-background/40 border-border hover:bg-background/60",
-                  isDrawMode && "border-primary text-primary bg-primary/10"
-                )}
-              >
-                  <Square className="mr-2 h-4 w-4" /> Draw Zone
-              </Button>
-              <Button variant="outline" size="sm" onClick={onGroupSelected} className="h-9 bg-background/40 border-border hover:bg-background/60">
-                  <Boxes className="mr-2 h-4 w-4" /> Group
-              </Button>
-              <Button variant="outline" size="sm" onClick={onAutoLayout} className="h-9 bg-background/40 border-border hover:bg-background/60">
-                  <LayoutDashboard className="mr-2 h-4 w-4" /> Layout
-              </Button>
               <Button variant="outline" size="sm" onClick={() => setIsArchitectOpen(true)} className="group h-9 bg-primary/10 border-primary/20 hover:bg-primary/20 text-primary">
                   <Wand2 className="mr-2 h-4 w-4" /> Architect
               </Button>
@@ -228,17 +200,8 @@ const Header: React.FC<HeaderProps> = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52 glass-panel border-border">
-              <DropdownMenuItem onClick={onToggleDrawMode} className={cn("gap-2", isDrawMode && "text-primary")}>
-                <Square className="h-4 w-4" /> Draw Zone Mode
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onGroupSelected} className="gap-2">
-                <Boxes className="h-4 w-4" /> Group Selected
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsArchitectOpen(true)} className="gap-2 text-primary font-bold">
                 <Wand2 className="h-4 w-4" /> AI Architect
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onAutoLayout} className="gap-2">
-                <LayoutDashboard className="h-4 w-4" /> Auto Layout
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-border" />
               <DropdownMenuItem onClick={onGenerateSpec} className="gap-2">
@@ -255,7 +218,7 @@ const Header: React.FC<HeaderProps> = ({
           </DropdownMenu>
         </div>
 
-        <Button size="sm" onClick={() => {}} className="h-9 shadow-inner px-3 md:px-4 bg-primary hover:bg-primary/90">
+        <Button size="sm" className="h-9 shadow-inner px-3 md:px-4 bg-primary hover:bg-primary/90 text-primary-foreground">
           <Share2 className="md:mr-2 h-4 w-4" />
           <span className="hidden sm:inline">Share</span>
         </Button>
