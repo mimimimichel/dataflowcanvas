@@ -249,10 +249,13 @@ export default function MainApp() {
         const centerX = node.position.x + (NODE_WIDTH / 2);
         const centerY = node.position.y + 60;
 
+        const currentWidth = group.isCollapsed ? Math.max(250, group.width * 0.4) : group.width;
+        const currentHeight = group.isCollapsed ? 64 : group.height;
+
         const isInside = centerX >= group.position.x && 
-                        centerX <= group.position.x + group.width &&
+                        centerX <= group.position.x + currentWidth &&
                         centerY >= group.position.y &&
-                        centerY <= group.position.y + group.height;
+                        centerY <= group.position.y + currentHeight;
 
         if (isInside && node.groupId !== group.id) {
           return { ...node, groupId: group.id };
@@ -321,7 +324,6 @@ export default function MainApp() {
 
     setGroups(prev => [...prev, newGroup]);
     
-    // Attach nodes that are inside the drawn rectangle
     setNodes(currentNodes => {
       return currentNodes.map(node => {
         const centerX = node.position.x + (NODE_WIDTH / 2);
@@ -341,7 +343,7 @@ export default function MainApp() {
 
     setSelectedGroupIds([newGroupId]);
     setDrawingZoneRect(null);
-    setIsDrawMode(false); // Disable draw mode after one use for better UX
+    setIsDrawMode(false); 
     toast({ title: "Workspace Zone Created", description: "You can now drag nodes into this new area." });
   }, [drawingZoneRect, setGroups, setNodes, toast]);
 
@@ -659,8 +661,8 @@ export default function MainApp() {
       setSelectionRect({ ...selectionRect, x, y, width, height });
       
       const nodesInRect = nodes.filter(n => {
-        const isParentCollapsed = groups.find(g => g.id === n.groupId)?.isCollapsed;
-        if (isParentCollapsed) return false;
+        const group = groups.find(g => g.id === n.groupId);
+        if (group?.isCollapsed) return false;
         return n.position.x >= x && n.position.x <= x + width &&
                n.position.y >= y && n.position.y <= y + height;
       }).map(n => n.id);
@@ -1131,21 +1133,46 @@ export default function MainApp() {
                       const fromNode = nodes.find((n) => n.id === connector.from);
                       const toNode = nodes.find((n) => n.id === connector.to);
                       if (!fromNode || !toNode) return null;
-                      
-                      const isFromCollapsed = groups.find(g => g.id === fromNode.groupId)?.isCollapsed;
-                      const isToCollapsed = groups.find(g => g.id === toNode.groupId)?.isCollapsed;
-                      if (isFromCollapsed || isToCollapsed) return null;
+
+                      const fromGroup = groups.find(g => g.id === fromNode.groupId);
+                      const toGroup = groups.find(g => g.id === toNode.groupId);
+
+                      const isFromCollapsed = fromGroup?.isCollapsed;
+                      const isToCollapsed = toGroup?.isCollapsed;
+
+                      // Hide internal connections if the group is collapsed
+                      if (isFromCollapsed && isToCollapsed && fromGroup?.id === toGroup?.id) {
+                        return null;
+                      }
+
+                      // Calculate effective coordinates
+                      let fromX = fromNode.position.x + NODE_WIDTH;
+                      let fromY = fromNode.position.y + PORT_Y_OFFSET;
+
+                      if (isFromCollapsed && fromGroup) {
+                        const collapsedWidth = Math.max(250, fromGroup.width * 0.4);
+                        fromX = fromGroup.position.x + collapsedWidth;
+                        fromY = fromGroup.position.y + 32; // Center of the header
+                      }
+
+                      let toX = toNode.position.x;
+                      let toY = toNode.position.y + PORT_Y_OFFSET;
+
+                      if (isToCollapsed && toGroup) {
+                        toX = toGroup.position.x;
+                        toY = toGroup.position.y + 32; // Center of the header
+                      }
 
                       return (
                         <Connector 
                           key={`${connector.from}-${connector.to}-${index}`} 
                           from={{ 
-                            x: fromNode.position.x + NODE_WIDTH - svgDimensions.left, 
-                            y: fromNode.position.y + PORT_Y_OFFSET - svgDimensions.top 
+                            x: fromX - svgDimensions.left, 
+                            y: fromY - svgDimensions.top 
                           }} 
                           to={{ 
-                            x: toNode.position.x - svgDimensions.left, 
-                            y: toNode.position.y + PORT_Y_OFFSET - svgDimensions.top 
+                            x: toX - svgDimensions.left, 
+                            y: toY - svgDimensions.top 
                           }}
                           isSelected={selectedConnector?.from === connector.from && selectedConnector?.to === connector.to}
                           onClick={() => setSelectedConnector(connector)}
@@ -1155,11 +1182,22 @@ export default function MainApp() {
                     {newConnector && (() => {
                       const fromNode = nodes.find(n => n.id === newConnector.from);
                       if (!fromNode) return null;
+                      
+                      const fromGroup = groups.find(g => g.id === fromNode.groupId);
+                      let fromX = fromNode.position.x + NODE_WIDTH;
+                      let fromY = fromNode.position.y + PORT_Y_OFFSET;
+
+                      if (fromGroup?.isCollapsed) {
+                        const collapsedWidth = Math.max(250, fromGroup.width * 0.4);
+                        fromX = fromGroup.position.x + collapsedWidth;
+                        fromY = fromGroup.position.y + 32;
+                      }
+
                       return (
                         <Connector 
                           from={{ 
-                            x: fromNode.position.x + NODE_WIDTH - svgDimensions.left, 
-                            y: fromNode.position.y + PORT_Y_OFFSET - svgDimensions.top 
+                            x: fromX - svgDimensions.left, 
+                            y: fromY - svgDimensions.top 
                           }} 
                           to={{ 
                             x: newConnector.to.x - svgDimensions.left, 
