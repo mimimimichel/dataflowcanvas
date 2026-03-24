@@ -129,6 +129,7 @@ export interface NodeGroup {
   width: number;
   height: number;
   isCollapsed?: boolean;
+  parentGroupId?: string;
 }
 
 export interface Connector {
