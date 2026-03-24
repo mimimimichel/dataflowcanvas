@@ -13,11 +13,6 @@ import {
   Connector as ConnectorType, 
   Field, 
   Operation, 
-  FilterOperation, 
-  JoinOperation, 
-  GroupByOperation, 
-  SortOperation, 
-  SelectColumnsOperation,
   getJoinOutputFields, 
   PipelineVersion,
   mockLineages,
@@ -58,7 +53,7 @@ const ShortcutLegend = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <Keyboard className="h-4 w-4 text-primary" />
-            <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Keyboard Shortcuts</span>
+            <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Raccourcis Clavier</span>
           </div>
           <Button variant="ghost" size="icon" className="h-5 w-5 opacity-50 hover:opacity-100" onClick={onClose}>
             <span className="text-xs">×</span>
@@ -67,33 +62,33 @@ const ShortcutLegend = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-              <MousePointer2 className="h-3 w-3" /> Left Click
+              <MousePointer2 className="h-3 w-3" /> Clic Gauche
             </div>
-            <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground border border-border">Drag / Pan</span>
+            <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground border border-border">Glisser / Pan</span>
           </div>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-              <BoxSelect className="h-3 w-3" /> Right Click
+              <BoxSelect className="h-3 w-3" /> Clic Droit
             </div>
-            <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground border border-border">Multi-select</span>
+            <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground border border-border">Sélection</span>
           </div>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-              <Square className="h-3 w-3" /> Draw Button
+              <Square className="h-3 w-3" /> Bouton Dessiner
             </div>
-            <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground border border-border">Create Zone</span>
+            <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground border border-border">Créer Zone</span>
           </div>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
               <Group className="h-3 w-3" /> Ctrl + G
             </div>
-            <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground border border-border">Group Selection</span>
+            <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground border border-border">Grouper</span>
           </div>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-              <Trash2 className="h-3 w-3" /> Del / Backspace
+              <Trash2 className="h-3 w-3" /> Suppr / Backspace
             </div>
-            <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground border border-border">Remove</span>
+            <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground border border-border">Supprimer</span>
           </div>
         </div>
       </div>
@@ -191,7 +186,27 @@ export default function MainApp() {
   const [connectionForFields, setConnectionForFields] = useState<{fromNodeId: string, toNodeId: string} | null>(null);
   const [svgDimensions, setSvgDimensions] = useState<SvgDimensions>({ width: '100%', height: '100%', top: 0, left: 0 });
 
-  // Helper to check if any parent of a group or node is collapsed (Safe from recursion)
+  // Helper to get all descendants (recursive)
+  const getDescendants = useCallback((parentId: string, currentGroups: NodeGroup[], currentNodes: PipelineNode[], visited = new Set<string>()): { groupIds: string[], nodeIds: string[] } => {
+    if (visited.has(parentId)) return { groupIds: [], nodeIds: [] };
+    visited.add(parentId);
+
+    const childGroups = currentGroups.filter(g => g.parentGroupId === parentId);
+    const childNodes = currentNodes.filter(n => n.groupId === parentId);
+
+    let groupIds = childGroups.map(g => g.id);
+    let nodeIds = childNodes.map(n => n.id);
+
+    childGroups.forEach(cg => {
+      const descendants = getDescendants(cg.id, currentGroups, currentNodes, visited);
+      groupIds = [...groupIds, ...descendants.groupIds];
+      nodeIds = [...nodeIds, ...descendants.nodeIds];
+    });
+
+    return { groupIds, nodeIds };
+  }, []);
+
+  // Cycle safe ancestor collapse check
   const isAncestorCollapsed = useCallback((targetGroupId: string | undefined, visited = new Set<string>()): boolean => {
     if (!targetGroupId || visited.has(targetGroupId)) return false;
     visited.add(targetGroupId);
@@ -202,7 +217,7 @@ export default function MainApp() {
     return isAncestorCollapsed(group.parentGroupId, visited);
   }, [groups]);
 
-  // Helper to find the highest collapsed ancestor for connectors (Safe from recursion)
+  // Cycle safe highest collapsed ancestor finder
   const getHighestCollapsedAncestor = useCallback((targetGroupId: string | undefined, visited = new Set<string>()): NodeGroup | null => {
     if (!targetGroupId || visited.has(targetGroupId)) return null;
     visited.add(targetGroupId);
@@ -234,8 +249,10 @@ export default function MainApp() {
     if (isShift) {
       setSelectedGroupIds(prev => prev.includes(id) ? prev.filter(gid => gid !== id) : [...prev, id]);
     } else {
-      setSelectedGroupIds([id]);
-      setSelectedNodeIds([]);
+      if (!selectedGroupIds.includes(id)) {
+        setSelectedGroupIds([id]);
+        setSelectedNodeIds([]);
+      }
     }
   };
 
@@ -249,17 +266,20 @@ export default function MainApp() {
           const centerX = node.position.x + (NODE_WIDTH / 2);
           const centerY = node.position.y + 60;
 
-          const groupUnder = groups.find(g => {
+          // Find deepest group containing the node
+          const containingGroups = groups.filter(g => {
             const currentWidth = g.isCollapsed ? Math.max(250, g.width * 0.4) : g.width;
             const currentHeight = g.isCollapsed ? 64 : g.height;
-            
-            return centerX >= g.position.x && 
-                   centerX <= g.position.x + currentWidth &&
-                   centerY >= g.position.y &&
-                   centerY <= g.position.y + currentHeight;
+            return centerX >= g.position.x && centerX <= g.position.x + currentWidth &&
+                   centerY >= g.position.y && centerY <= g.position.y + currentHeight;
+          });
+
+          containingGroups.sort((a, b) => {
+              const aLevel = (g: NodeGroup) => { let l = 0, p = g.parentGroupId; while(p){ l++; p = groups.find(x => x.id === p)?.parentGroupId; } return l; };
+              return aLevel(b) - aLevel(a);
           });
           
-          return { ...node, groupId: groupUnder ? groupUnder.id : undefined };
+          return { ...node, groupId: containingGroups[0]?.id || undefined };
         }
         return node;
       });
@@ -271,7 +291,6 @@ export default function MainApp() {
     const draggingId = draggingGroupIdRef.current;
     if (!draggingId) return;
 
-    // Helper to check if a group is a descendant of another (Safe from recursion)
     const isDescendantOf = (childId: string, parentId: string, visited = new Set<string>()): boolean => {
       if (!childId || visited.has(childId)) return false;
       visited.add(childId);
@@ -285,23 +304,22 @@ export default function MainApp() {
       return currentGroups.map(group => {
         if (group.id === draggingId || selectedGroupIds.includes(group.id)) {
           const centerX = group.position.x + (group.width / 2);
-          const centerY = group.position.y + (group.height / 2);
+          const centerY = group.position.y + 32;
 
-          const groupUnder = currentGroups.find(g => {
-            // Cannot drop into itself or one of its descendants to avoid cycles
-            if (g.id === group.id || selectedGroupIds.includes(g.id)) return false;
-            if (isDescendantOf(g.id, group.id)) return false;
-
+          const containingGroups = currentGroups.filter(g => {
+            if (g.id === group.id || selectedGroupIds.includes(g.id) || isDescendantOf(g.id, group.id)) return false;
             const currentWidth = g.isCollapsed ? Math.max(250, g.width * 0.4) : g.width;
             const currentHeight = g.isCollapsed ? 64 : g.height;
-            
-            return centerX >= g.position.x && 
-                   centerX <= g.position.x + currentWidth &&
-                   centerY >= g.position.y &&
-                   centerY <= g.position.y + currentHeight;
+            return centerX >= g.position.x && centerX <= g.position.x + currentWidth &&
+                   centerY >= g.position.y && centerY <= g.position.y + currentHeight;
           });
 
-          return { ...group, parentGroupId: groupUnder ? groupUnder.id : undefined };
+          containingGroups.sort((a, b) => {
+              const aLevel = (g: NodeGroup) => { let l = 0, p = g.parentGroupId; while(p){ l++; p = currentGroups.find(x => x.id === p)?.parentGroupId; } return l; };
+              return aLevel(b) - aLevel(a);
+          });
+
+          return { ...group, parentGroupId: containingGroups[0]?.id || undefined };
         }
         return group;
       });
@@ -320,20 +338,13 @@ export default function MainApp() {
       return currentNodes.map(node => {
         const centerX = node.position.x + (NODE_WIDTH / 2);
         const centerY = node.position.y + 60;
-
         const currentWidth = group.isCollapsed ? Math.max(250, group.width * 0.4) : group.width;
         const currentHeight = group.isCollapsed ? 64 : group.height;
+        const isInside = centerX >= group.position.x && centerX <= group.position.x + currentWidth &&
+                        centerY >= group.position.y && centerY <= group.position.y + currentHeight;
 
-        const isInside = centerX >= group.position.x && 
-                        centerX <= group.position.x + currentWidth &&
-                        centerY >= group.position.y &&
-                        centerY <= group.position.y + currentHeight;
-
-        if (isInside && node.groupId !== group.id) {
-          return { ...node, groupId: group.id };
-        } else if (!isInside && node.groupId === group.id) {
-          return { ...node, groupId: undefined };
-        }
+        if (isInside && node.groupId !== group.id) return { ...node, groupId: group.id };
+        else if (!isInside && node.groupId === group.id) return { ...node, groupId: undefined };
         return node;
       });
     });
@@ -343,7 +354,7 @@ export default function MainApp() {
 
   const handleCreateGroup = useCallback(() => {
     if (selectedNodeIds.length === 0 && selectedGroupIds.length === 0) {
-      toast({ title: "No Elements Selected", description: "Select nodes or zones to group them.", variant: "destructive" });
+      toast({ title: "Aucun élément sélectionné", description: "Sélectionnez des nœuds ou des zones pour les grouper.", variant: "destructive" });
       return;
     }
 
@@ -353,24 +364,20 @@ export default function MainApp() {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     
     selectedNodes.forEach(n => {
-      minX = Math.min(minX, n.position.x);
-      minY = Math.min(minY, n.position.y);
-      maxX = Math.max(maxX, n.position.x + NODE_WIDTH);
-      maxY = Math.max(maxY, n.position.y + 150);
+      minX = Math.min(minX, n.position.x); minY = Math.min(minY, n.position.y);
+      maxX = Math.max(maxX, n.position.x + NODE_WIDTH); maxY = Math.max(maxY, n.position.y + 150);
     });
 
     selectedSubGroups.forEach(g => {
-      minX = Math.min(minX, g.position.x);
-      minY = Math.min(minY, g.position.y);
-      maxX = Math.max(maxX, g.position.x + g.width);
-      maxY = Math.max(maxY, g.position.y + g.height);
+      minX = Math.min(minX, g.position.x); minY = Math.min(minY, g.position.y);
+      maxX = Math.max(maxX, g.position.x + g.width); maxY = Math.max(maxY, g.position.y + g.height);
     });
 
     const padding = 60;
     const newGroupId = `group-${Date.now()}`;
     const newGroup: NodeGroup = {
       id: newGroupId,
-      name: "New Functional Zone",
+      name: "Nouvelle Zone Fonctionnelle",
       color: "slate",
       position: { x: minX - padding, y: minY - padding },
       width: maxX - minX + padding * 2,
@@ -385,7 +392,7 @@ export default function MainApp() {
     setNodes(prev => prev.map(n => selectedNodeIds.includes(n.id) ? { ...n, groupId: newGroupId } : n));
     setSelectedGroupIds([newGroupId]);
     
-    toast({ title: "Zone Created", description: `Grouped ${selectedNodeIds.length + selectedGroupIds.length} elements.` });
+    toast({ title: "Zone créée", description: `${selectedNodeIds.length + selectedGroupIds.length} éléments groupés.` });
   }, [selectedNodeIds, selectedGroupIds, nodes, groups, toast, setGroups, setNodes]);
 
   const finalizeDrawingZone = useCallback(() => {
@@ -398,7 +405,7 @@ export default function MainApp() {
     const newGroupId = `group-${Date.now()}`;
     const newGroup: NodeGroup = {
       id: newGroupId,
-      name: "Custom Workspace Zone",
+      name: "Zone de Travail Personnalisée",
       color: "slate",
       position: { x: drawingZoneRect.x, y: drawingZoneRect.y },
       width: drawingZoneRect.width,
@@ -422,7 +429,7 @@ export default function MainApp() {
             const centerY = g.position.y + (g.height / 2);
             const isInside = centerX >= drawingZoneRect.x && centerX <= drawingZoneRect.x + drawingZoneRect.width &&
                             centerY >= drawingZoneRect.y && centerY <= drawingZoneRect.y + drawingZoneRect.height;
-            return isInside ? { ...g, parentGroupId: newGroupId } : g;
+            return (isInside && g.id !== newGroupId) ? { ...g, parentGroupId: newGroupId } : g;
         });
         return [...updated, newGroup];
     });
@@ -430,7 +437,7 @@ export default function MainApp() {
     setSelectedGroupIds([newGroupId]);
     setDrawingZoneRect(null);
     setIsDrawMode(false); 
-    toast({ title: "Workspace Zone Created", description: "Elements attached successfully." });
+    toast({ title: "Zone de travail créée", description: "Éléments rattachés avec succès." });
   }, [drawingZoneRect, setGroups, setNodes, toast]);
 
   const handleDeleteGroup = (groupId: string) => {
@@ -444,12 +451,7 @@ export default function MainApp() {
   };
 
   const handleToggleGroupCollapse = (groupId: string) => {
-    setGroups(prev => prev.map(g => {
-      if (g.id === groupId) {
-        return { ...g, isCollapsed: !g.isCollapsed };
-      }
-      return g;
-    }));
+    setGroups(prev => prev.map(g => g.id === groupId ? { ...g, isCollapsed: !g.isCollapsed } : g));
   };
 
   const handleOpenConfig = (nodeId: string) => {
@@ -472,10 +474,8 @@ export default function MainApp() {
     
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     nodes.forEach(node => {
-      minX = Math.min(minX, node.position.x);
-      minY = Math.min(minY, node.position.y);
-      maxX = Math.max(maxX, node.position.x + NODE_WIDTH);
-      maxY = Math.max(maxY, node.position.y + 100);
+      minX = Math.min(minX, node.position.x); minY = Math.min(minY, node.position.y);
+      maxX = Math.max(maxX, node.position.x + NODE_WIDTH); maxY = Math.max(maxY, node.position.y + 100);
     });
 
     const padding = 100;
@@ -502,7 +502,7 @@ export default function MainApp() {
     const levels: Record<string, number> = {};
     const assignLevel = (nodeId: string, level: number) => {
         levels[nodeId] = Math.max(levels[nodeId] || 0, level);
-        const downstream = connectors.filter(c => c.from === nodeId);
+        const downstream = connectors.filter(c => c.to === nodeId);
         downstream.forEach(c => assignLevel(c.to, level + 1));
     };
 
@@ -528,7 +528,7 @@ export default function MainApp() {
     });
 
     setNodes(newNodes);
-    toast({ title: "Layout Applied" });
+    toast({ title: "Mise en page appliquée" });
   }, [nodes, connectors, toast, setNodes]);
   
   const handleAddNode = useCallback((item: TransformationItem, position: {x: number, y: number}) => {
@@ -650,15 +650,17 @@ export default function MainApp() {
     } else if (draggingGroupIdRef.current) {
       const targetIds = [draggingGroupIdRef.current, ...selectedGroupIds];
       
-      const getDescendants = (id: string, allGroups: NodeGroup[]): string[] => {
-        const direct = allGroups.filter(g => g.parentGroupId === id).map(g => g.id);
-        return [...direct, ...direct.flatMap(d => getDescendants(d, allGroups))];
-      };
+      let allGroupIds = new Set<string>();
+      let allNodeIds = new Set<string>();
+      targetIds.forEach(id => {
+        allGroupIds.add(id);
+        const descendants = getDescendants(id, groups, nodes);
+        descendants.groupIds.forEach(gid => allGroupIds.add(gid));
+        descendants.nodeIds.forEach(nid => allNodeIds.add(nid));
+      });
       
-      const allTargetIds = new Set([...targetIds, ...targetIds.flatMap(id => getDescendants(id, groups))]);
-      
-      setGroups(prev => prev.map(g => allTargetIds.has(g.id) ? { ...g, position: { x: g.position.x + dx, y: g.position.y + dy } } : g));
-      setNodes(prev => prev.map(n => (n.groupId && allTargetIds.has(n.groupId)) ? { ...n, position: { x: n.position.x + dx, y: n.position.y + dy } } : n));
+      setGroups(prev => prev.map(g => allGroupIds.has(g.id) ? { ...g, position: { x: g.position.x + dx, y: g.position.y + dy } } : g));
+      setNodes(prev => prev.map(n => allNodeIds.has(n.id) ? { ...n, position: { x: n.position.x + dx, y: n.position.y + dy } } : n));
     } else if (isPanningRef.current) {
       setPan({ x: e.clientX - panStartRef.current.x, y: e.clientY - panStartRef.current.y });
     }
@@ -763,88 +765,88 @@ export default function MainApp() {
   }, [handleDeleteSelected, handleCreateGroup]);
 
   return (
-      <div className="flex h-screen w-full flex-col bg-background font-body overflow-hidden">
-        <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage.versions} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onGeneratePython={handleGeneratePython} onGenerateSpec={handleGenerateSpec} onImportPipeline={() => {}} onApplyScaffold={() => {}} activeView={activeView} onViewChange={setActiveView} />
-        
-        {activeView === 'dashboard' ? (
-          <LineageDashboard lineages={lineages} onSelectLineage={(id) => { setActiveLineageId(id); setActiveView('editor'); }} onCreateLineage={(name, description) => { const id = `lineage-${Date.now()}`; setLineages(prev => [{ id, name, description, owner: 'Me', lastEdited: 'Just now', versions: [{ id: 'v1', name: 'Initial Design', nodes: [], connectors: [], groups: [] }] }, ...prev]); setActiveLineageId(id); setActiveVersionId('v1'); setActiveView('editor'); }} />
-        ) : (
-          <div className="flex flex-1 overflow-hidden relative">
-            <TransformationsCatalogue isCollapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
-            
-            <main className={cn("flex-1 relative overflow-hidden bg-background/95", isDrawMode ? "cursor-crosshair" : "cursor-grab")} onDrop={handleDrop} onDragOver={handleDragOver} onWheel={handleWheel} ref={canvasRef} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} onContextMenu={e => e.preventDefault()}>
-              <div className="absolute inset-0 canvas-grid pointer-events-none" />
-              <div className="absolute top-0 left-0" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'top left' }}>
-                {groups.map((group) => {
-                  if (isAncestorCollapsed(group.parentGroupId)) return null;
-                  return (
-                    <GroupZone key={group.id} {...group} onMouseDown={e => handleGroupMouseDown(e, group.id)} onResizeMouseDown={e => handleResizeMouseDown(e, group.id)} onDelete={() => handleDeleteGroup(group.id)} onRename={newName => handleRenameGroup(group.id, newName)} onToggleCollapse={() => handleToggleGroupCollapse(group.id)} isSelected={selectedGroupIds.includes(group.id)} />
-                  );
-                })}
+    <div className="flex h-screen w-full flex-col bg-background font-body overflow-hidden">
+      <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage.versions} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onGeneratePython={handleGeneratePython} onGenerateSpec={handleGenerateSpec} onImportPipeline={() => {}} onApplyScaffold={() => {}} activeView={activeView} onViewChange={setActiveView} />
+      
+      {activeView === 'dashboard' ? (
+        <LineageDashboard lineages={lineages} onSelectLineage={(id) => { setActiveLineageId(id); setActiveView('editor'); }} onCreateLineage={(name, description) => { const id = `lineage-${Date.now()}`; setLineages(prev => [{ id, name, description, owner: 'Me', lastEdited: 'Just now', versions: [{ id: 'v1', name: 'Initial Design', nodes: [], connectors: [], groups: [] }] }, ...prev]); setActiveLineageId(id); setActiveVersionId('v1'); setActiveView('editor'); }} />
+      ) : (
+        <div className="flex flex-1 overflow-hidden relative">
+          <TransformationsCatalogue isCollapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
+          
+          <main className={cn("flex-1 relative overflow-hidden bg-background/95", isDrawMode ? "cursor-crosshair" : "cursor-grab")} onDrop={handleDrop} onDragOver={handleDragOver} onWheel={handleWheel} ref={canvasRef} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} onContextMenu={e => e.preventDefault()}>
+            <div className="absolute inset-0 canvas-grid pointer-events-none" />
+            <div className="absolute top-0 left-0" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'top left' }}>
+              {groups.map((group) => {
+                if (isAncestorCollapsed(group.parentGroupId)) return null;
+                return (
+                  <GroupZone key={group.id} {...group} onMouseDown={e => handleGroupMouseDown(e, group.id)} onResizeMouseDown={e => handleResizeMouseDown(e, group.id)} onDelete={() => handleDeleteGroup(group.id)} onRename={newName => handleRenameGroup(group.id, newName)} onToggleCollapse={() => handleToggleGroupCollapse(group.id)} isSelected={selectedGroupIds.includes(group.id)} />
+                );
+              })}
 
-                <svg className="absolute pointer-events-none overflow-visible" style={{ left: svgDimensions.left, top: svgDimensions.top, width: svgDimensions.width, height: svgDimensions.height }}>
-                    {connectors.map((connector, index) => {
-                      const fromNode = nodes.find(n => n.id === connector.from), toNode = nodes.find(n => n.id === connector.to);
-                      if (!fromNode || !toNode) return null;
+              <svg className="absolute pointer-events-none overflow-visible" style={{ left: svgDimensions.left, top: svgDimensions.top, width: svgDimensions.width, height: svgDimensions.height }}>
+                  {connectors.map((connector, index) => {
+                    const fromNode = nodes.find(n => n.id === connector.from), toNode = nodes.find(n => n.id === connector.to);
+                    if (!fromNode || !toNode) return null;
 
-                      const fromCollapsedAncestor = getHighestCollapsedAncestor(fromNode.groupId);
-                      const toCollapsedAncestor = getHighestCollapsedAncestor(toNode.groupId);
-                      
-                      if (fromCollapsedAncestor && toCollapsedAncestor && fromCollapsedAncestor.id === toCollapsedAncestor.id) return null;
+                    const fromCollapsedAncestor = getHighestCollapsedAncestor(fromNode.groupId);
+                    const toCollapsedAncestor = getHighestCollapsedAncestor(toNode.groupId);
+                    
+                    if (fromCollapsedAncestor && toCollapsedAncestor && fromCollapsedAncestor.id === toCollapsedAncestor.id) return null;
 
-                      let fromX = fromNode.position.x + NODE_WIDTH, fromY = fromNode.position.y + PORT_Y_OFFSET;
-                      if (fromCollapsedAncestor) { fromX = fromCollapsedAncestor.position.x + Math.max(250, fromCollapsedAncestor.width * 0.4); fromY = fromCollapsedAncestor.position.y + 32; }
+                    let fromX = fromNode.position.x + NODE_WIDTH, fromY = fromNode.position.y + PORT_Y_OFFSET;
+                    if (fromCollapsedAncestor) { fromX = fromCollapsedAncestor.position.x + Math.max(250, fromCollapsedAncestor.width * 0.4); fromY = fromCollapsedAncestor.position.y + 32; }
 
-                      let toX = toNode.position.x, toY = toNode.position.y + PORT_Y_OFFSET;
-                      if (toCollapsedAncestor) { toX = toCollapsedAncestor.position.x; toY = toCollapsedAncestor.position.y + 32; }
+                    let toX = toNode.position.x, toY = toNode.position.y + PORT_Y_OFFSET;
+                    if (toCollapsedAncestor) { toX = toCollapsedAncestor.position.x; toY = toCollapsedAncestor.position.y + 32; }
 
-                      return <Connector key={`${connector.from}-${connector.to}-${index}`} from={{ x: fromX - svgDimensions.left, y: fromY - svgDimensions.top }} to={{ x: toX - svgDimensions.left, y: toY - svgDimensions.top }} isSelected={selectedConnector?.from === connector.from && selectedConnector?.to === connector.to} onClick={() => setSelectedConnector(connector)} />;
-                    })}
-                    {newConnector && (() => {
-                      const fromNode = nodes.find(n => n.id === newConnector.from);
-                      if (!fromNode) return null;
-                      const fromCollapsedAncestor = getHighestCollapsedAncestor(fromNode.groupId);
-                      let fromX = fromNode.position.x + NODE_WIDTH, fromY = fromNode.position.y + PORT_Y_OFFSET;
-                      if (fromCollapsedAncestor) { fromX = fromCollapsedAncestor.position.x + Math.max(250, fromCollapsedAncestor.width * 0.4); fromY = fromCollapsedAncestor.position.y + 32; }
-                      return <Connector from={{ x: fromX - svgDimensions.left, y: fromY - svgDimensions.top }} to={{ x: newConnector.to.x - svgDimensions.left, y: newConnector.to.y - svgDimensions.top }} className="opacity-50" />;
-                    })()}
-                </svg>
+                    return <Connector key={`${connector.from}-${connector.to}-${index}`} from={{ x: fromX - svgDimensions.left, y: fromY - svgDimensions.top }} to={{ x: toX - svgDimensions.left, y: toY - svgDimensions.top }} isSelected={selectedConnector?.from === connector.from && selectedConnector?.to === connector.to} onClick={() => setSelectedConnector(connector)} />;
+                  })}
+                  {newConnector && (() => {
+                    const fromNode = nodes.find(n => n.id === newConnector.from);
+                    if (!fromNode) return null;
+                    const fromCollapsedAncestor = getHighestCollapsedAncestor(fromNode.groupId);
+                    let fromX = fromNode.position.x + NODE_WIDTH, fromY = fromNode.position.y + PORT_Y_OFFSET;
+                    if (fromCollapsedAncestor) { fromX = fromCollapsedAncestor.position.x + Math.max(250, fromCollapsedAncestor.width * 0.4); fromY = fromCollapsedAncestor.position.y + 32; }
+                    return <Connector from={{ x: fromX - svgDimensions.left, y: fromY - svgDimensions.top }} to={{ x: newConnector.to.x - svgDimensions.left, y: newConnector.to.y - svgDimensions.top }} className="opacity-50" />;
+                  })()}
+              </svg>
 
-                {nodes.map((node) => {
-                  if (isAncestorCollapsed(node.groupId)) return null;
-                  return <Node key={node.id} {...node} nodes={nodes} onSelect={isShift => handleNodeSelect(node.id, isShift)} onConfigOpen={() => handleOpenConfig(node.id)} onMouseDown={e => handleNodeMouseDown(e, node.id)} onMouseUp={e => handleNodeMouseUp(e, node.id)} onPortMouseDown={e => handlePortMouseDown(e, node.id)} onAddNode={handleAddNode} isSelected={selectedNodeIds.includes(node.id)} onUpdateOperation={handleUpdateOperation} />;
-                })}
+              {nodes.map((node) => {
+                if (isAncestorCollapsed(node.groupId)) return null;
+                return <Node key={node.id} {...node} nodes={nodes} onSelect={isShift => handleNodeSelect(node.id, isShift)} onConfigOpen={() => handleOpenConfig(node.id)} onMouseDown={e => handleNodeMouseDown(e, node.id)} onMouseUp={e => handleNodeMouseUp(e, node.id)} onPortMouseDown={e => handlePortMouseDown(e, node.id)} onAddNode={handleAddNode} isSelected={selectedNodeIds.includes(node.id)} onUpdateOperation={handleUpdateOperation} />;
+              })}
 
-                {selectionRect && <div className="absolute border border-primary bg-primary/10 pointer-events-none z-[100]" style={{ left: selectionRect.x, top: selectionRect.y, width: selectionRect.width, height: selectionRect.height }} />}
-                {drawingZoneRect && <div className="absolute border-2 border-dashed border-primary bg-primary/5 pointer-events-none z-[100] rounded-xl" style={{ left: drawingZoneRect.x, top: drawingZoneRect.y, width: drawingZoneRect.width, height: drawingZoneRect.height }} />}
+              {selectionRect && <div className="absolute border border-primary bg-primary/10 pointer-events-none z-[100]" style={{ left: selectionRect.x, top: selectionRect.y, width: selectionRect.width, height: selectionRect.height }} />}
+              {drawingZoneRect && <div className="absolute border-2 border-dashed border-primary bg-primary/5 pointer-events-none z-[100] rounded-xl" style={{ left: drawingZoneRect.x, top: drawingZoneRect.y, width: drawingZoneRect.width, height: drawingZoneRect.height }} />}
+            </div>
+
+            <ShortcutLegend isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
+            <div className="absolute bottom-6 right-6 z-50">
+              <div className="glass-panel rounded-2xl flex items-center p-1.5 gap-1 border border-border shadow-2xl">
+                  <TooltipProvider>
+                      <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" onClick={() => setIsDrawMode(!isDrawMode)} className={cn("h-9 w-9 rounded-xl", isDrawMode ? "bg-primary text-primary-foreground" : "hover:bg-muted")}><Square className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Dessiner Zone</TooltipContent></Tooltip>
+                      <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" onClick={handleCreateGroup} className="h-9 w-9 rounded-xl hover:bg-muted"><Boxes className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Grouper (Ctrl+G)</TooltipContent></Tooltip>
+                      <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" onClick={handleAutoLayout} className="h-9 w-9 rounded-xl hover:bg-muted"><LayoutDashboard className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Auto Layout</TooltipContent></Tooltip>
+                      <div className="w-px h-4 bg-border mx-1" />
+                      <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={() => handleZoom(0.1)}><ZoomIn className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Zoom Avant</TooltipContent></Tooltip>
+                      <div className="w-14 text-center text-[10px] font-mono font-bold text-muted-foreground bg-muted rounded px-1 py-0.5">{Math.round(zoom * 100)}%</div>
+                      <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={() => handleZoom(-0.1)}><ZoomOut className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Zoom Arrière</TooltipContent></Tooltip>
+                      <div className="w-px h-4 bg-border mx-1" />
+                      <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={handleFitToScreen}><Crosshair className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Adapter l'écran</TooltipContent></Tooltip>
+                      <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className={cn("h-9 w-9 text-muted-foreground hover:text-foreground", showShortcuts && "text-primary")} onClick={() => setShowShortcuts(!showShortcuts)}><Keyboard className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Raccourcis</TooltipContent></Tooltip>
+                      <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={handleResetCanvas}><RotateCcw className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Réinitialiser</TooltipContent></Tooltip>
+                  </TooltipProvider>
               </div>
-
-              <ShortcutLegend isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
-              <div className="absolute bottom-6 right-6 z-50">
-                <div className="glass-panel rounded-2xl flex items-center p-1.5 gap-1 border border-border shadow-2xl">
-                    <TooltipProvider>
-                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" onClick={() => setIsDrawMode(!isDrawMode)} className={cn("h-9 w-9 rounded-xl", isDrawMode ? "bg-primary text-primary-foreground" : "hover:bg-muted")}><Square className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Draw Zone</TooltipContent></Tooltip>
-                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" onClick={handleCreateGroup} className="h-9 w-9 rounded-xl hover:bg-muted"><Boxes className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Group (Ctrl+G)</TooltipContent></Tooltip>
-                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" onClick={handleAutoLayout} className="h-9 w-9 rounded-xl hover:bg-muted"><LayoutDashboard className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Auto Layout</TooltipContent></Tooltip>
-                        <div className="w-px h-4 bg-border mx-1" />
-                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={() => handleZoom(0.1)}><ZoomIn className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Zoom In</TooltipContent></Tooltip>
-                        <div className="w-14 text-center text-[10px] font-mono font-bold text-muted-foreground bg-muted rounded px-1 py-0.5">{Math.round(zoom * 100)}%</div>
-                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={() => handleZoom(-0.1)}><ZoomOut className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Zoom Out</TooltipContent></Tooltip>
-                        <div className="w-px h-4 bg-border mx-1" />
-                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={handleFitToScreen}><Crosshair className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Fit Screen</TooltipContent></Tooltip>
-                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className={cn("h-9 w-9 text-muted-foreground hover:text-foreground", showShortcuts && "text-primary")} onClick={() => setShowShortcuts(!showShortcuts)}><Keyboard className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Keyboard</TooltipContent></Tooltip>
-                        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={handleResetCanvas}><RotateCcw className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Reset</TooltipContent></Tooltip>
-                    </TooltipProvider>
-                </div>
-              </div>
-            </main>
-          </div>
-        )}
-        
-        <NodeConfigurationPanel key={selectedNodeIds.join(',')} node={nodes.find(n => n.id === selectedNodeIds[0])} nodes={nodes} isOpen={isConfigPanelOpen} onClose={() => setIsConfigPanelOpen(false)} onSave={handleNodeConfigChange} onDelete={handleDeleteNode} />
-        {connectionForFields && nodes.find(n => n.id === connectionForFields.fromNodeId) && <ConnectionFieldsModal isOpen={!!connectionForFields} fromNode={nodes.find(n => n.id === connectionForFields.fromNodeId)!} toNode={nodes.find(n => n.id === connectionForFields.toNodeId)!} onClose={() => setConnectionForFields(null)} onSave={handleSaveConnectionFields} />}
-        <PythonCodeModal isOpen={isPythonModalOpen} onClose={() => setIsPythonModalOpen(false)} code={generatedPythonCode} />
-        <SpecModal isOpen={isSpecModalOpen} onClose={() => setIsSpecModalOpen(false)} spec={generatedSpec} isLoading={isSpecLoading} />
-      </div>
+            </div>
+          </main>
+        </div>
+      )}
+      
+      <NodeConfigurationPanel key={selectedNodeIds.join(',')} node={nodes.find(n => n.id === selectedNodeIds[0])} nodes={nodes} isOpen={isConfigPanelOpen} onClose={() => setIsConfigPanelOpen(false)} onSave={handleNodeConfigChange} onDelete={handleDeleteNode} />
+      {connectionForFields && nodes.find(n => n.id === connectionForFields.fromNodeId) && <ConnectionFieldsModal isOpen={!!connectionForFields} fromNode={nodes.find(n => n.id === connectionForFields.fromNodeId)!} toNode={nodes.find(n => n.id === connectionForFields.toNodeId)!} onClose={() => setConnectionForFields(null)} onSave={handleSaveConnectionFields} />}
+      <PythonCodeModal isOpen={isPythonModalOpen} onClose={() => setIsPythonModalOpen(false)} code={generatedPythonCode} />
+      <SpecModal isOpen={isSpecModalOpen} onClose={() => setIsSpecModalOpen(false)} spec={generatedSpec} isLoading={isSpecLoading} />
+    </div>
   );
 }
