@@ -74,7 +74,7 @@ const SchemaEditor: React.FC<{ fields: Field[], onFieldsChange: (fields: Field[]
                   value={field.name} 
                   onChange={e => handleFieldChange(index, 'name', e.target.value)} 
                   disabled={!isEditable}
-                  className="h-8"
+                  className="h-8 bg-muted/30"
                 />
               </TableCell>
               <TableCell>
@@ -82,12 +82,12 @@ const SchemaEditor: React.FC<{ fields: Field[], onFieldsChange: (fields: Field[]
                   value={field.type} 
                   onChange={e => handleFieldChange(index, 'type', e.target.value)} 
                   disabled={!isEditable}
-                  className="h-8"
+                  className="h-8 bg-muted/30"
                 />
               </TableCell>
               {isEditable && (
                 <TableCell>
-                  <Button variant="ghost" size="icon" onClick={() => removeField(index)} className="h-8 w-8">
+                  <Button variant="ghost" size="icon" onClick={() => removeField(index)} className="h-8 w-8 text-muted-foreground hover:text-destructive">
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </TableCell>
@@ -199,11 +199,11 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
             <div className="space-y-4">
               <div className="grid w-full items-center gap-1.5">
                 <Label htmlFor="system">System</Label>
-                <Input type="text" id="system" placeholder="e.g., PostgreSQL, S3, BigQuery" value={displayNode.system || ''} onChange={(e) => handleUpdate('system', e.target.value)} />
+                <Input type="text" id="system" placeholder="e.g., PostgreSQL, S3, BigQuery" value={displayNode.system || ''} onChange={(e) => handleUpdate('system', e.target.value)} className="bg-muted/30" />
               </div>
               <div className="grid w-full items-center gap-1.5">
                 <Label htmlFor="location">Location</Label>
-                <Input type="text" id="location" placeholder="e.g., prod-db-1, /path/to/data" value={displayNode.location || ''} onChange={(e) => handleUpdate('location', e.target.value)} />
+                <Input type="text" id="location" placeholder="e.g., prod-db-1, /path/to/data" value={displayNode.location || ''} onChange={(e) => handleUpdate('location', e.target.value)} className="bg-muted/30" />
               </div>
               <Separator/>
             </div>
@@ -267,7 +267,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                     );
                 case 'union':
                     return (
-                        <div className="p-4 bg-white/5 rounded-lg border border-dashed border-white/10 text-center">
+                        <div className="p-4 bg-muted/30 rounded-lg border border-dashed border-border text-center">
                             <p className="text-sm text-muted-foreground italic">Stacking rows from multiple input sources. No additional configuration needed.</p>
                         </div>
                     );
@@ -299,11 +299,11 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
             <div className="space-y-4">
               <div className="grid w-full items-center gap-1.5">
                 <Label htmlFor="system">System</Label>
-                <Input type="text" id="system" placeholder="e.g., In-Memory, Redis" value={displayNode.system || ''} onChange={(e) => handleUpdate('system', e.target.value)} />
+                <Input type="text" id="system" placeholder="e.g., In-Memory, Redis" value={displayNode.system || ''} onChange={(e) => handleUpdate('system', e.target.value)} className="bg-muted/30" />
               </div>
               <div className="grid w-full items-center gap-1.5">
                 <Label htmlFor="location">Location</Label>
-                <Input type="text" id="location" placeholder="e.g., default-cache" value={displayNode.location || ''} onChange={(e) => handleUpdate('location', e.target.value)} />
+                <Input type="text" id="location" placeholder="e.g., default-cache" value={displayNode.location || ''} onChange={(e) => handleUpdate('location', e.target.value)} className="bg-muted/30" />
               </div>
               <Separator/>
             </div>
@@ -318,11 +318,11 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
             <div className="space-y-4">
               <div className="grid w-full items-center gap-1.5">
                 <Label htmlFor="system">System</Label>
-                <Input type="text" id="system" placeholder="e.g., BigQuery, Snowflake" value={displayNode.system || ''} onChange={(e) => handleUpdate('system', e.target.value)} />
+                <Input type="text" id="system" placeholder="e.g., BigQuery, Snowflake" value={displayNode.system || ''} onChange={(e) => handleUpdate('system', e.target.value)} className="bg-muted/30" />
               </div>
               <div className="grid w-full items-center gap-1.5">
                 <Label htmlFor="location">Location</Label>
-                <Input type="text" id="location" placeholder="e.g., analytics-project.dataset.table" value={displayNode.location || ''} onChange={(e) => handleUpdate('location', e.target.value)} />
+                <Input type="text" id="location" placeholder="e.g., analytics-project.dataset.table" value={displayNode.location || ''} onChange={(e) => handleUpdate('location', e.target.value)} className="bg-muted/30" />
               </div>
               <Separator/>
             </div>
@@ -337,25 +337,25 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="sm:max-w-lg w-full flex flex-col glass-panel border-l border-white/10">
+      <SheetContent className="sm:max-w-lg w-full flex flex-col glass-panel border-l border-border">
         <SheetHeader className="mb-4">
           <SheetTitle className="text-xl">Configure: {displayNode.name}</SheetTitle>
           <SheetDescription>
             Modify configurations, rules, and design specifications.
           </SheetDescription>
         </SheetHeader>
-        <Separator className="bg-white/5" />
+        <Separator className="bg-border/50" />
         <div className="flex-1 overflow-y-auto pr-6 -mr-6 py-4">
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
                <div className="space-y-1.5">
                   <Label htmlFor="node-name">Node Name</Label>
-                  <Input type="text" id="node-name" value={displayNode.name} onChange={(e) => handleUpdate('name', e.target.value)} className="bg-black/20" />
+                  <Input type="text" id="node-name" value={displayNode.name} onChange={(e) => handleUpdate('name', e.target.value)} className="bg-muted/30" />
                </div>
                <div className="space-y-1.5">
                   <Label htmlFor="status">Design Status</Label>
                   <Select value={displayNode.status} onValueChange={(v: DesignStatus) => handleUpdate('status', v)}>
-                    <SelectTrigger className="bg-black/20">
+                    <SelectTrigger className="bg-muted/30">
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -367,8 +367,8 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                </div>
             </div>
 
-            <div className="space-y-3 p-4 bg-blue-500/5 border border-blue-500/10 rounded-xl">
-               <h4 className="text-xs font-bold uppercase tracking-widest text-blue-400 flex items-center gap-2">
+            <div className="space-y-3 p-4 bg-primary/5 border border-primary/10 rounded-xl">
+               <h4 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
                   <ShieldCheck className="h-3 w-3" /> Quality Targets (SLAs)
                </h4>
                <div className="grid grid-cols-2 gap-4">
@@ -379,7 +379,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                       placeholder="99.9" 
                       value={displayNode.qualityMetrics?.completeness || ''} 
                       onChange={(e) => handleQualityUpdate('completeness', parseFloat(e.target.value))}
-                      className="h-8 text-xs bg-black/20"
+                      className="h-8 text-xs bg-muted/30"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -389,23 +389,23 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                       placeholder="1h, 15m, 1d" 
                       value={displayNode.qualityMetrics?.freshness || ''} 
                       onChange={(e) => handleQualityUpdate('freshness', e.target.value)}
-                      className="h-8 text-xs bg-black/20"
+                      className="h-8 text-xs bg-muted/30"
                     />
                   </div>
                </div>
             </div>
 
-            <Separator className="bg-white/5"/>
+            <Separator className="bg-border/50"/>
             {renderConfigContent()}
           </div>
         </div>
-        <SheetFooter className="mt-6 border-t border-white/5 pt-4">
+        <SheetFooter className="mt-6 border-t border-border pt-4">
             <div className="flex justify-between w-full">
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
                         <Button variant="ghost" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4"/> Delete Node</Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="glass-panel border-white/10">
+                    <AlertDialogContent className="glass-panel border-border">
                         <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
@@ -414,14 +414,14 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                         </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                        <AlertDialogCancel className="bg-white/5 border-white/10">Cancel</AlertDialogCancel>
+                        <AlertDialogCancel className="bg-muted/30 border-border">Cancel</AlertDialogCancel>
                         <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
 
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={onClose} className="border-white/10 bg-white/5">Cancel</Button>
+                    <Button variant="outline" onClick={onClose} className="border-border bg-muted/20">Cancel</Button>
                     <Button onClick={handleSave} className="bg-primary text-primary-foreground shadow-lg shadow-primary/20">Save Changes</Button>
                 </div>
             </div>

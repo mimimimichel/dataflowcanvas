@@ -57,9 +57,9 @@ const typeConfig: Record<NodeType, { icon: Icon; color: string; border: string; 
 };
 
 const statusColors: Record<DesignStatus, string> = {
-  draft: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
-  review: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-  ready: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+  draft: 'bg-slate-500/20 text-slate-500 border-slate-500/30',
+  review: 'bg-amber-500/20 text-amber-600 border-amber-500/30',
+  ready: 'bg-emerald-500/20 text-emerald-600 border-emerald-500/30'
 };
 
 const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
@@ -67,7 +67,7 @@ const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
         return <p className="text-xs text-muted-foreground text-center p-2">No fields defined</p>;
     }
     return (
-        <div className="p-2 bg-muted/30 rounded-md border border-white/5">
+        <div className="p-2 bg-muted/30 rounded-md border border-border">
             <div className="space-y-1">
                 {fields.slice(0, 8).map(field => (
                     <div key={field.name} className="flex justify-between items-center text-[10px]">
@@ -129,7 +129,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
   const renderOverview = () => {
     switch(type) {
         case 'transformation':
-            if (!operation) return <div className="p-2 text-xs font-mono bg-muted/20 rounded-md border border-white/5">No operation configured</div>;
+            if (!operation) return <div className="p-2 text-xs font-mono bg-muted/20 rounded-md border border-border">No operation configured</div>;
             switch(operation.type) {
                 case 'filter':
                     return <FilterOperation operation={operation} inputFields={inputFields || []} onUpdate={(op) => onUpdateOperation(id, op)} />;
@@ -146,7 +146,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
                 case 'no_op':
                     return <SchemaOverview fields={inputFields || []} />;
                 default:
-                    return <div className="p-2 text-xs font-mono bg-muted/20 rounded-md border border-white/5">Overview not available.</div>;
+                    return <div className="p-2 text-xs font-mono bg-muted/20 rounded-md border border-border">Overview not available.</div>;
             }
         case 'source':
             return <SchemaOverview fields={outputFields || []} />;
@@ -171,7 +171,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
         onClick={handleNodeClick}
         className={cn(
           'w-64 border-2 relative flex flex-col justify-between cursor-pointer backdrop-blur-md bg-card/90 shadow-2xl',
-          'bg-gradient-to-br from-white/[0.05] to-transparent',
+          'bg-gradient-to-br from-foreground/[0.03] to-transparent',
           typeConfig[type].glow,
           isSelected 
             ? 'border-primary shadow-primary/20 accent-glow scale-[1.02] transition-transform duration-200' 
@@ -183,7 +183,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
               <TypeIcon className="w-5 h-5 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold leading-tight text-left truncate text-white">{name}</p>
+                <p className="text-sm font-bold leading-tight text-left truncate text-foreground">{name}</p>
                 <div className="flex items-center gap-2">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold opacity-70">{type}</p>
                   <Badge variant="outline" className={cn("text-[8px] h-3.5 px-1 py-0 border leading-none capitalize", statusColors[status])}>
@@ -196,13 +196,13 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
         {(system || location) && (type === 'source' || type === 'dataset' || type === 'destination') && (
             <div className="px-3 pb-3 space-y-1">
                 {system && (
-                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/80 bg-white/5 px-2 py-0.5 rounded border border-white/5">
+                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/80 bg-muted/50 px-2 py-0.5 rounded border border-border">
                         <Server className="w-3 h-3 flex-shrink-0 text-primary"/>
                         <span className="truncate font-medium" title={system}>{system}</span>
                     </div>
                 )}
                 {location && (
-                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/80 bg-white/5 px-2 py-0.5 rounded border border-white/5">
+                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/80 bg-muted/50 px-2 py-0.5 rounded border border-border">
                         <Pin className="w-3 h-3 flex-shrink-0 text-primary"/>
                         <span className="truncate font-medium" title={location}>{location}</span>
                     </div>
@@ -216,13 +216,13 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
                 {qualityMetrics.completeness && (
                   <div className="flex flex-col">
                     <span className="text-[8px] text-muted-foreground/60 uppercase">Completeness</span>
-                    <span className="text-[10px] font-mono text-emerald-400 font-bold">{qualityMetrics.completeness}%</span>
+                    <span className="text-[10px] font-mono text-emerald-500 font-bold">{qualityMetrics.completeness}%</span>
                   </div>
                 )}
                 {qualityMetrics.freshness && (
                   <div className="flex flex-col">
                     <span className="text-[8px] text-muted-foreground/60 uppercase">Freshness</span>
-                    <span className="text-[10px] font-mono text-blue-400 font-bold">{qualityMetrics.freshness}</span>
+                    <span className="text-[10px] font-mono text-blue-500 font-bold">{qualityMetrics.freshness}</span>
                   </div>
                 )}
              </div>
@@ -253,7 +253,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
             <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-7 w-7 glass-panel hover:bg-white/10 text-white rounded-md border border-white/10"
+                className="h-7 w-7 glass-panel hover:bg-muted text-foreground rounded-md border border-border"
                 onClick={handleDuplicate}
                 title="Duplicate Node"
             >
@@ -262,7 +262,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
             <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-7 w-7 glass-panel hover:bg-white/10 text-white rounded-md border border-white/10"
+                className="h-7 w-7 glass-panel hover:bg-muted text-foreground rounded-md border border-border"
                 onClick={handleConfigClick}
                 title="Configuration"
             >
@@ -271,7 +271,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
             <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-7 w-7 glass-panel hover:bg-white/10 text-white rounded-md border border-white/10"
+                className="h-7 w-7 glass-panel hover:bg-muted text-foreground rounded-md border border-border"
                 onClick={handleToggleExpand}
                 title={isExpanded ? "Collapse" : "Expand Details"}
             >
