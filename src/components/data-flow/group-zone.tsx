@@ -74,7 +74,7 @@ const GroupZone: React.FC<GroupZoneProps> = ({
       className={cn(
         "absolute rounded-3xl border-2 border-dashed group/zone z-0 transition-[width,height] duration-0",
         colorClass,
-        isSelected && "border-primary/50 border-solid bg-white/[0.02]",
+        isSelected && "border-primary/50 border-solid bg-primary/5",
         isCollapsed && "border-solid bg-card/40 backdrop-blur-sm"
       )}
       style={{
@@ -89,7 +89,7 @@ const GroupZone: React.FC<GroupZoneProps> = ({
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 pointer-events-auto hover:bg-white/10"
+          className="h-6 w-6 pointer-events-auto hover:bg-muted"
           onClick={(e) => {
             e.stopPropagation();
             onToggleCollapse();
@@ -103,7 +103,7 @@ const GroupZone: React.FC<GroupZoneProps> = ({
         {isEditing ? (
           <Input
             ref={inputRef}
-            className="h-7 bg-black/40 border-primary/30 text-xs font-bold uppercase tracking-widest pointer-events-auto"
+            className="h-7 bg-background border-primary/30 text-xs font-bold uppercase tracking-widest pointer-events-auto"
             value={tempName}
             onChange={(e) => setTempName(e.target.value)}
             onBlur={handleRename}

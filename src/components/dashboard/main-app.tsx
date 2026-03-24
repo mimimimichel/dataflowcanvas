@@ -50,11 +50,11 @@ const ShortcutLegend = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
   if (!isOpen) return null;
   return (
     <div className="absolute bottom-20 left-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
-      <div className="glass-panel rounded-2xl p-4 space-y-3 border border-white/10 shadow-2xl min-w-[240px]">
+      <div className="glass-panel rounded-2xl p-4 space-y-3 border border-border shadow-2xl min-w-[240px]">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <Keyboard className="h-4 w-4 text-primary" />
-            <span className="text-[11px] font-bold uppercase tracking-widest text-white/70">Keyboard Shortcuts</span>
+            <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Keyboard Shortcuts</span>
           </div>
           <Button variant="ghost" size="icon" className="h-5 w-5 opacity-50 hover:opacity-100" onClick={onClose}>
             <span className="text-xs">×</span>
@@ -65,31 +65,31 @@ const ShortcutLegend = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
               <MousePointer2 className="h-3 w-3" /> Left Click
             </div>
-            <span className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 rounded text-white/50 border border-white/5">Drag / Pan</span>
+            <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground border border-border">Drag / Pan</span>
           </div>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
               <BoxSelect className="h-3 w-3" /> Right Click
             </div>
-            <span className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 rounded text-white/50 border border-white/5">Multi-select</span>
+            <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground border border-border">Multi-select</span>
           </div>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
               <Square className="h-3 w-3" /> Draw Button
             </div>
-            <span className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 rounded text-white/50 border border-white/5">Create Zone</span>
+            <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground border border-border">Create Zone</span>
           </div>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
               <Group className="h-3 w-3" /> Ctrl + G
             </div>
-            <span className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 rounded text-white/50 border border-white/5">Group Selection</span>
+            <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground border border-border">Group Selection</span>
           </div>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
               <Trash2 className="h-3 w-3" /> Del / Backspace
             </div>
-            <span className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 rounded text-white/50 border border-white/5">Remove</span>
+            <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground border border-border">Remove</span>
           </div>
         </div>
       </div>
@@ -1088,7 +1088,7 @@ export default function MainApp() {
             
             <main
               className={cn(
-                "flex-1 relative overflow-hidden bg-slate-950",
+                "flex-1 relative overflow-hidden bg-background/95",
                 isDrawMode ? "cursor-crosshair" : "cursor-grab"
               )}
               onDrop={handleDrop}
@@ -1258,35 +1258,35 @@ export default function MainApp() {
               <ShortcutLegend isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
 
               <div className="absolute bottom-6 right-6 z-50">
-                <div className="glass-panel rounded-2xl flex items-center p-1.5 gap-1 border border-white/10 shadow-2xl">
+                <div className="glass-panel rounded-2xl flex items-center p-1.5 gap-1 border border-border shadow-2xl">
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-white" onClick={() => handleZoom(0.1)}>
+                                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={() => handleZoom(0.1)}>
                                     <ZoomIn className="h-4 w-4" />
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent side="top">Zoom In</TooltipContent>
                         </Tooltip>
                         
-                        <div className="w-14 text-center text-[10px] font-mono font-bold text-muted-foreground bg-white/5 rounded px-1 py-0.5">
+                        <div className="w-14 text-center text-[10px] font-mono font-bold text-muted-foreground bg-muted rounded px-1 py-0.5">
                             {Math.round(zoom * 100)}%
                         </div>
 
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-white" onClick={() => handleZoom(-0.1)}>
+                                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={() => handleZoom(-0.1)}>
                                     <ZoomOut className="h-4 w-4" />
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent side="top">Zoom Out</TooltipContent>
                         </Tooltip>
 
-                        <div className="w-px h-4 bg-white/10 mx-1" />
+                        <div className="w-px h-4 bg-border mx-1" />
 
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-white" onClick={handleFitToScreen}>
+                                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={handleFitToScreen}>
                                     <Crosshair className="h-4 w-4" />
                                 </Button>
                             </TooltipTrigger>
@@ -1298,7 +1298,7 @@ export default function MainApp() {
                                 <Button 
                                   variant="ghost" 
                                   size="icon" 
-                                  className={cn("h-9 w-9 text-muted-foreground hover:text-white", showShortcuts && "text-primary")} 
+                                  className={cn("h-9 w-9 text-muted-foreground hover:text-foreground", showShortcuts && "text-primary")} 
                                   onClick={() => setShowShortcuts(!showShortcuts)}
                                 >
                                     <Keyboard className="h-4 w-4" />
@@ -1309,7 +1309,7 @@ export default function MainApp() {
 
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-white" onClick={handleResetCanvas}>
+                                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={handleResetCanvas}>
                                     <RotateCcw className="h-4 w-4" />
                                 </Button>
                             </TooltipTrigger>

@@ -90,6 +90,6 @@
   .canvas-grid {
     background-image: radial-gradient(circle, currentColor 1px, transparent 1px);
     background-size: 30px 30px;
-    opacity: 0.05;
+    opacity: 0.1;
   }
 }
