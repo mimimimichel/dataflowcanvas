@@ -191,22 +191,26 @@ export default function MainApp() {
   const [connectionForFields, setConnectionForFields] = useState<{fromNodeId: string, toNodeId: string} | null>(null);
   const [svgDimensions, setSvgDimensions] = useState<SvgDimensions>({ width: '100%', height: '100%', top: 0, left: 0 });
 
-  // Helper to check if any parent of a group or node is collapsed
-  const isAncestorCollapsed = useCallback((targetGroupId: string | undefined): boolean => {
-    if (!targetGroupId) return false;
+  // Helper to check if any parent of a group or node is collapsed (Safe from recursion)
+  const isAncestorCollapsed = useCallback((targetGroupId: string | undefined, visited = new Set<string>()): boolean => {
+    if (!targetGroupId || visited.has(targetGroupId)) return false;
+    visited.add(targetGroupId);
+    
     const group = groups.find(g => g.id === targetGroupId);
     if (!group) return false;
     if (group.isCollapsed) return true;
-    return isAncestorCollapsed(group.parentGroupId);
+    return isAncestorCollapsed(group.parentGroupId, visited);
   }, [groups]);
 
-  // Helper to find the highest collapsed ancestor for connectors
-  const getHighestCollapsedAncestor = useCallback((targetGroupId: string | undefined): NodeGroup | null => {
-    if (!targetGroupId) return null;
+  // Helper to find the highest collapsed ancestor for connectors (Safe from recursion)
+  const getHighestCollapsedAncestor = useCallback((targetGroupId: string | undefined, visited = new Set<string>()): NodeGroup | null => {
+    if (!targetGroupId || visited.has(targetGroupId)) return null;
+    visited.add(targetGroupId);
+    
     const group = groups.find(g => g.id === targetGroupId);
     if (!group) return null;
     
-    const parentCollapsed = getHighestCollapsedAncestor(group.parentGroupId);
+    const parentCollapsed = getHighestCollapsedAncestor(group.parentGroupId, visited);
     if (parentCollapsed) return parentCollapsed;
     
     if (group.isCollapsed) return group;
@@ -267,6 +271,16 @@ export default function MainApp() {
     const draggingId = draggingGroupIdRef.current;
     if (!draggingId) return;
 
+    // Helper to check if a group is a descendant of another (Safe from recursion)
+    const isDescendantOf = (childId: string, parentId: string, visited = new Set<string>()): boolean => {
+      if (!childId || visited.has(childId)) return false;
+      visited.add(childId);
+      const childGroup = groups.find(g => g.id === childId);
+      if (!childGroup || !childGroup.parentGroupId) return false;
+      if (childGroup.parentGroupId === parentId) return true;
+      return isDescendantOf(childGroup.parentGroupId, parentId, visited);
+    };
+
     setGroups(currentGroups => {
       return currentGroups.map(group => {
         if (group.id === draggingId || selectedGroupIds.includes(group.id)) {
@@ -274,7 +288,10 @@ export default function MainApp() {
           const centerY = group.position.y + (group.height / 2);
 
           const groupUnder = currentGroups.find(g => {
+            // Cannot drop into itself or one of its descendants to avoid cycles
             if (g.id === group.id || selectedGroupIds.includes(g.id)) return false;
+            if (isDescendantOf(g.id, group.id)) return false;
+
             const currentWidth = g.isCollapsed ? Math.max(250, g.width * 0.4) : g.width;
             const currentHeight = g.isCollapsed ? 64 : g.height;
             
@@ -290,7 +307,7 @@ export default function MainApp() {
       });
     });
     draggingGroupIdRef.current = null;
-  }, [selectedGroupIds, setGroups]);
+  }, [selectedGroupIds, groups, setGroups]);
 
   const finalizeResize = useCallback(() => {
     const resizingId = resizingGroupIdRef.current;
