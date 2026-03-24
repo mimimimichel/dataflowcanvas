@@ -363,7 +363,12 @@ export default function MainApp() {
   };
 
   const handleToggleGroupCollapse = (groupId: string) => {
-    setGroups(prev => prev.map(g => g.id === groupId ? { ...g, isCollapsed: !g.isCollapsed } : g));
+    setGroups(prev => prev.map(g => {
+      if (g.id === groupId) {
+        return { ...g, isCollapsed: !g.isCollapsed };
+      }
+      return g;
+    }));
   };
 
   const handleOpenConfig = (nodeId: string) => {
@@ -1104,63 +1109,6 @@ export default function MainApp() {
             >
               <div className="absolute inset-0 canvas-grid pointer-events-none" />
 
-              {/* Editor Specific Toolbar */}
-              <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-500">
-                <div className="glass-panel flex items-center p-1.5 gap-1.5 border border-border shadow-2xl rounded-2xl">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => setIsDrawMode(!isDrawMode)} 
-                          className={cn(
-                            "h-9 px-3 gap-2 rounded-xl text-xs font-semibold",
-                            isDrawMode ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-muted"
-                          )}
-                        >
-                          <Square className="h-4 w-4" />
-                          Draw Zone
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom">Draw a new functional zone</TooltipContent>
-                    </Tooltip>
-
-                    <Separator orientation="vertical" className="h-4 bg-border/50" />
-
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={handleCreateGroup} 
-                          className="h-9 px-3 gap-2 rounded-xl text-xs font-semibold hover:bg-muted"
-                        >
-                          <Boxes className="h-4 w-4" />
-                          Group
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom">Group selected nodes (Ctrl+G)</TooltipContent>
-                    </Tooltip>
-
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={handleAutoLayout} 
-                          className="h-9 px-3 gap-2 rounded-xl text-xs font-semibold hover:bg-muted"
-                        >
-                          <LayoutDashboard className="h-4 w-4" />
-                          Auto Layout
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom">Arrange nodes automatically</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              </div>
-
               <div
                 className="absolute top-0 left-0"
                 style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'top left' }}
@@ -1316,6 +1264,56 @@ export default function MainApp() {
               <div className="absolute bottom-6 right-6 z-50">
                 <div className="glass-panel rounded-2xl flex items-center p-1.5 gap-1 border border-border shadow-2xl">
                     <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => setIsDrawMode(!isDrawMode)} 
+                                  className={cn(
+                                    "h-9 px-3 gap-2 rounded-xl text-xs font-semibold",
+                                    isDrawMode ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-muted"
+                                  )}
+                                >
+                                  <Square className="h-4 w-4" />
+                                  <span className="hidden sm:inline">Draw Zone</span>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Draw a new functional zone</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={handleCreateGroup} 
+                                  className="h-9 px-3 gap-2 rounded-xl text-xs font-semibold hover:bg-muted"
+                                >
+                                  <Boxes className="h-4 w-4" />
+                                  <span className="hidden sm:inline">Group</span>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Group selected nodes (Ctrl+G)</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={handleAutoLayout} 
+                                  className="h-9 px-3 gap-2 rounded-xl text-xs font-semibold hover:bg-muted"
+                                >
+                                  <LayoutDashboard className="h-4 w-4" />
+                                  <span className="hidden sm:inline">Auto Layout</span>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Arrange nodes automatically</TooltipContent>
+                        </Tooltip>
+
+                        <div className="w-px h-4 bg-border mx-1" />
+
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={() => handleZoom(0.1)}>
