@@ -4,6 +4,29 @@
 
 @layer base {
   :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 4%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 4%;
+    --primary: 199 89% 48%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 38 92% 50%;
+    --accent-foreground: 222 47% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 199 89% 48%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
     --background: 222 47% 4%;
     --foreground: 210 40% 98%;
     --card: 222 47% 6%;
@@ -23,7 +46,6 @@
     --border: 217 32% 25%;
     --input: 217 32% 17%;
     --ring: 38 92% 50%;
-    --radius: 0.75rem;
   }
 }
 
@@ -32,7 +54,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground transition-colors duration-300;
   }
 }
 
@@ -53,20 +75,20 @@
   }
 
   .glass-panel {
-    @apply bg-white/[0.03] backdrop-blur-xl border border-white/10 shadow-2xl;
-    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
+    @apply backdrop-blur-xl border border-border/50 shadow-2xl;
+    background-color: hsl(var(--card) / 0.8);
   }
 
   .apple-card {
-    @apply rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.08] to-transparent backdrop-blur-md transition-all duration-300;
+    @apply rounded-xl border border-border/50 bg-card/50 backdrop-blur-md transition-all duration-300;
   }
   
   .apple-card:hover {
-    @apply border-white/20 bg-white/[0.12];
+    @apply border-primary/30 bg-card/80;
   }
 
   .canvas-grid {
-    background-image: radial-gradient(circle, white 1px, transparent 1px);
+    background-image: radial-gradient(circle, currentColor 1px, transparent 1px);
     background-size: 30px 30px;
     opacity: 0.05;
   }
