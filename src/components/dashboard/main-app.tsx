@@ -1268,15 +1268,14 @@ export default function MainApp() {
                             <TooltipTrigger asChild>
                                 <Button 
                                   variant="ghost" 
-                                  size="sm" 
+                                  size="icon" 
                                   onClick={() => setIsDrawMode(!isDrawMode)} 
                                   className={cn(
-                                    "h-9 px-3 gap-2 rounded-xl text-xs font-semibold",
+                                    "h-9 w-9 rounded-xl",
                                     isDrawMode ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-muted"
                                   )}
                                 >
                                   <Square className="h-4 w-4" />
-                                  <span className="hidden sm:inline">Draw Zone</span>
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent side="top">Draw a new functional zone</TooltipContent>
@@ -1286,12 +1285,11 @@ export default function MainApp() {
                             <TooltipTrigger asChild>
                                 <Button 
                                   variant="ghost" 
-                                  size="sm" 
+                                  size="icon" 
                                   onClick={handleCreateGroup} 
-                                  className="h-9 px-3 gap-2 rounded-xl text-xs font-semibold hover:bg-muted"
+                                  className="h-9 w-9 rounded-xl hover:bg-muted"
                                 >
                                   <Boxes className="h-4 w-4" />
-                                  <span className="hidden sm:inline">Group</span>
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent side="top">Group selected nodes (Ctrl+G)</TooltipContent>
@@ -1301,12 +1299,11 @@ export default function MainApp() {
                             <TooltipTrigger asChild>
                                 <Button 
                                   variant="ghost" 
-                                  size="sm" 
+                                  size="icon" 
                                   onClick={handleAutoLayout} 
-                                  className="h-9 px-3 gap-2 rounded-xl text-xs font-semibold hover:bg-muted"
+                                  className="h-9 w-9 rounded-xl hover:bg-muted"
                                 >
                                   <LayoutDashboard className="h-4 w-4" />
-                                  <span className="hidden sm:inline">Auto Layout</span>
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent side="top">Arrange nodes automatically</TooltipContent>
