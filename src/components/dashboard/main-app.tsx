@@ -13,7 +13,6 @@ import {
   Connector as ConnectorType, 
   Field, 
   Operation, 
-  getJoinOutputFields, 
   PipelineVersion,
   mockLineages,
   LineageInfo,
@@ -186,7 +185,7 @@ export default function MainApp() {
   const [connectionForFields, setConnectionForFields] = useState<{fromNodeId: string, toNodeId: string} | null>(null);
   const [svgDimensions, setSvgDimensions] = useState<SvgDimensions>({ width: '100%', height: '100%', top: 0, left: 0 });
 
-  // Helper to get all descendants (recursive)
+  // Cycle safe descendant retriever
   const getDescendants = useCallback((parentId: string, currentGroups: NodeGroup[], currentNodes: PipelineNode[], visited = new Set<string>()): { groupIds: string[], nodeIds: string[] } => {
     if (visited.has(parentId)) return { groupIds: [], nodeIds: [] };
     visited.add(parentId);
@@ -266,7 +265,6 @@ export default function MainApp() {
           const centerX = node.position.x + (NODE_WIDTH / 2);
           const centerY = node.position.y + 60;
 
-          // Find deepest group containing the node
           const containingGroups = groups.filter(g => {
             const currentWidth = g.isCollapsed ? Math.max(250, g.width * 0.4) : g.width;
             const currentHeight = g.isCollapsed ? 64 : g.height;
@@ -495,9 +493,9 @@ export default function MainApp() {
   const handleAutoLayout = useCallback(() => {
     if (nodes.length === 0) return;
     
-    const HORIZONTAL_GAP = 350;
-    const VERTICAL_GAP = 180;
-    const PADDING = 80;
+    const HORIZONTAL_GAP = 450;
+    const VERTICAL_GAP = 280;
+    const PADDING = 100;
 
     // 1. Calculate levels for nodes (Topological levels)
     const levels: Record<string, number> = {};
@@ -539,8 +537,8 @@ export default function MainApp() {
       return {
         ...node,
         position: {
-          x: level * HORIZONTAL_GAP + 100,
-          y: indexInLevel * VERTICAL_GAP + 100
+          x: level * HORIZONTAL_GAP + 200,
+          y: indexInLevel * VERTICAL_GAP + 200
         }
       };
     });
@@ -557,7 +555,6 @@ export default function MainApp() {
     let updatedGroups = [...groups];
     
     sortedGroups.forEach(group => {
-      // Elements that are directly in this group
       const immediateNodes = newNodes.filter(n => n.groupId === group.id);
       const immediateSubGroups = updatedGroups.filter(g => g.parentGroupId === group.id);
 
@@ -569,7 +566,7 @@ export default function MainApp() {
         minX = Math.min(minX, n.position.x);
         minY = Math.min(minY, n.position.y);
         maxX = Math.max(maxX, n.position.x + NODE_WIDTH);
-        maxY = Math.max(maxY, n.position.y + 150);
+        maxY = Math.max(maxY, n.position.y + 180);
       });
 
       immediateSubGroups.forEach(g => {
@@ -595,8 +592,8 @@ export default function MainApp() {
     setNodes(newNodes);
     setGroups(updatedGroups);
     toast({ 
-      title: "Auto-layout appliqué", 
-      description: "La hiérarchie des nœuds et le redimensionnement des groupes ont été synchronisés." 
+      title: "Auto-layout optimisé", 
+      description: "Les espacements ont été augmentés pour garantir la lisibilité du pipeline." 
     });
   }, [nodes, connectors, groups, setNodes, setGroups, toast]);
   
@@ -682,7 +679,7 @@ export default function MainApp() {
         setDrawingZoneRect({ startX: x, startY: y, x, y, width: 0, height: 0 });
       } else {
         isPanningRef.current = true;
-        panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+        panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - panStartRef.current.y };
       }
     }
     setSelectedConnector(null);
@@ -781,7 +778,7 @@ export default function MainApp() {
   };
   
   const handleNodeConfigChange = (nodeId: string, newConfig: Partial<PipelineNode>) => setNodes(prev => prev.map(n => n.id === nodeId ? { ...n, ...newConfig } : n));
-  const handleUpdateOperation = (nodeId: string, operation: Operation) => setNodes(prev => prev.map(n => n.id === nodeId ? { ...n, operation } : n));
+  const handleUpdateOperation = (nodeId: string, operation: Operation) => setNodes(prev => prev.map(n => nodeId === n.id ? { ...n, operation } : n));
   const handleDeleteNode = useCallback((nodeId: string) => {
     setNodes(prev => prev.filter(n => n.id !== nodeId));
     setConnectors(prev => prev.filter(c => c.from !== nodeId && c.to !== nodeId));
@@ -833,7 +830,6 @@ export default function MainApp() {
     window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleDeleteSelected, handleCreateGroup]);
 
-  // Function to calculate depth of a group for rendering
   const getGroupDepth = useCallback((groupId: string | undefined): number => {
     if (!groupId) return 0;
     const group = groups.find(g => g.id === groupId);
@@ -854,7 +850,6 @@ export default function MainApp() {
           <main className={cn("flex-1 relative overflow-hidden bg-background/95", isDrawMode ? "cursor-crosshair" : "cursor-grab")} onDrop={handleDrop} onDragOver={handleDragOver} onWheel={handleWheel} ref={canvasRef} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} onContextMenu={e => e.preventDefault()}>
             <div className="absolute inset-0 canvas-grid pointer-events-none" />
             <div className="absolute top-0 left-0" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'top left' }}>
-              {/* Render groups sorted by depth: parents first (bottom), sub-groups last (top) */}
               {groups
                 .slice()
                 .sort((a, b) => getGroupDepth(a.id) - getGroupDepth(b.id))
