@@ -494,42 +494,111 @@ export default function MainApp() {
 
   const handleAutoLayout = useCallback(() => {
     if (nodes.length === 0) return;
+    
     const HORIZONTAL_GAP = 350;
     const VERTICAL_GAP = 180;
-    const START_X = 100;
-    const START_Y = 100;
+    const PADDING = 80;
 
+    // 1. Calculate levels for nodes (Topological levels)
     const levels: Record<string, number> = {};
-    const assignLevel = (nodeId: string, level: number) => {
-        levels[nodeId] = Math.max(levels[nodeId] || 0, level);
-        const downstream = connectors.filter(c => c.to === nodeId);
-        downstream.forEach(c => assignLevel(c.to, level + 1));
+    const getLevel = (nodeId: string, visited = new Set<string>()): number => {
+      if (levels[nodeId] !== undefined) return levels[nodeId];
+      if (visited.has(nodeId)) return 0;
+      visited.add(nodeId);
+
+      const incoming = connectors.filter(c => c.to === nodeId);
+      if (incoming.length === 0) return 0;
+
+      const level = Math.max(...incoming.map(c => getLevel(c.from, visited))) + 1;
+      levels[nodeId] = level;
+      return level;
     };
 
-    const sources = nodes.filter(n => !connectors.some(c => c.to === n.id));
-    sources.forEach(s => assignLevel(s.id, 0));
+    nodes.forEach(n => getLevel(n.id));
 
+    // 2. Group nodes by level, but sort by groupId to keep group members together
     const levelGroups: Record<number, string[]> = {};
     Object.entries(levels).forEach(([id, level]) => {
-        if (!levelGroups[level]) levelGroups[level] = [];
-        levelGroups[level].push(id);
+      if (!levelGroups[level]) levelGroups[level] = [];
+      levelGroups[level].push(id);
+    });
+    
+    Object.keys(levelGroups).forEach(level => {
+      const l = parseInt(level);
+      levelGroups[l].sort((a, b) => {
+        const nodeA = nodes.find(n => n.id === a);
+        const nodeB = nodes.find(n => n.id === b);
+        return (nodeA?.groupId || '').localeCompare(nodeB?.groupId || '');
+      });
     });
 
+    // 3. Assign new positions to all nodes globally
     const newNodes = nodes.map(node => {
-        const level = levels[node.id] || 0;
-        const indexInLevel = levelGroups[level]?.indexOf(node.id) || 0;
-        return {
-            ...node,
-            position: {
-                x: START_X + level * HORIZONTAL_GAP,
-                y: START_Y + indexInLevel * VERTICAL_GAP
-            }
-        };
+      const level = levels[node.id] || 0;
+      const indexInLevel = levelGroups[level]?.indexOf(node.id) || 0;
+      return {
+        ...node,
+        position: {
+          x: level * HORIZONTAL_GAP + 100,
+          y: indexInLevel * VERTICAL_GAP + 100
+        }
+      };
+    });
+
+    // 4. Update groups bottom-up (resize children then parents)
+    const getGroupHierarchyDepth = (groupId: string | undefined): number => {
+      if (!groupId) return 0;
+      const group = groups.find(g => g.id === groupId);
+      return 1 + getGroupHierarchyDepth(group?.parentGroupId);
+    };
+
+    const sortedGroups = [...groups].sort((a, b) => getGroupHierarchyDepth(b.id) - getGroupHierarchyDepth(a.id));
+
+    let updatedGroups = [...groups];
+    
+    sortedGroups.forEach(group => {
+      // Elements that are directly in this group
+      const immediateNodes = newNodes.filter(n => n.groupId === group.id);
+      const immediateSubGroups = updatedGroups.filter(g => g.parentGroupId === group.id);
+
+      if (immediateNodes.length === 0 && immediateSubGroups.length === 0) return;
+
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+      immediateNodes.forEach(n => {
+        minX = Math.min(minX, n.position.x);
+        minY = Math.min(minY, n.position.y);
+        maxX = Math.max(maxX, n.position.x + NODE_WIDTH);
+        maxY = Math.max(maxY, n.position.y + 150);
+      });
+
+      immediateSubGroups.forEach(g => {
+        minX = Math.min(minX, g.position.x);
+        minY = Math.min(minY, g.position.y);
+        maxX = Math.max(maxX, g.position.x + g.width);
+        maxY = Math.max(maxY, g.position.y + g.height);
+      });
+
+      updatedGroups = updatedGroups.map(ug => {
+        if (ug.id === group.id) {
+          return {
+            ...ug,
+            position: { x: minX - PADDING, y: minY - PADDING },
+            width: (maxX - minX) + (PADDING * 2),
+            height: (maxY - minY) + (PADDING * 2)
+          };
+        }
+        return ug;
+      });
     });
 
     setNodes(newNodes);
-    toast({ title: "Mise en page appliquée" });
-  }, [nodes, connectors, toast, setNodes]);
+    setGroups(updatedGroups);
+    toast({ 
+      title: "Auto-layout appliqué", 
+      description: "La hiérarchie des nœuds et le redimensionnement des groupes ont été synchronisés." 
+    });
+  }, [nodes, connectors, groups, setNodes, setGroups, toast]);
   
   const handleAddNode = useCallback((item: TransformationItem, position: {x: number, y: number}) => {
     if (!canvasRef.current) return;
