@@ -494,7 +494,7 @@ export default function MainApp() {
     if (nodes.length === 0) return;
     
     const HORIZONTAL_GAP = 450;
-    const VERTICAL_GAP = 280;
+    const VERTICAL_GAP = 320; // Increased vertical gap to prevent overlaps
     const PADDING = 100;
 
     // 1. Calculate levels for nodes (Topological levels)
@@ -526,7 +526,10 @@ export default function MainApp() {
       levelGroups[l].sort((a, b) => {
         const nodeA = nodes.find(n => n.id === a);
         const nodeB = nodes.find(n => n.id === b);
-        return (nodeA?.groupId || '').localeCompare(nodeB?.groupId || '');
+        // Secondary sort by name to be deterministic
+        const groupCompare = (nodeA?.groupId || '').localeCompare(nodeB?.groupId || '');
+        if (groupCompare !== 0) return groupCompare;
+        return (nodeA?.name || '').localeCompare(nodeB?.name || '');
       });
     });
 
@@ -566,7 +569,8 @@ export default function MainApp() {
         minX = Math.min(minX, n.position.x);
         minY = Math.min(minY, n.position.y);
         maxX = Math.max(maxX, n.position.x + NODE_WIDTH);
-        maxY = Math.max(maxY, n.position.y + 180);
+        // Use a larger buffer for height to account for expanded state
+        maxY = Math.max(maxY, n.position.y + 250);
       });
 
       immediateSubGroups.forEach(g => {
@@ -679,7 +683,7 @@ export default function MainApp() {
         setDrawingZoneRect({ startX: x, startY: y, x, y, width: 0, height: 0 });
       } else {
         isPanningRef.current = true;
-        panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - panStartRef.current.y };
+        panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
       }
     }
     setSelectedConnector(null);
