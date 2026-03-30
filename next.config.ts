@@ -18,6 +18,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Allow Cloudflare tunnel domains for development
+  allowedDevOrigins: ['trycloudflare.com'],
 };
 
 export default nextConfig;

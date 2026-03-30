@@ -1,5 +1,4 @@
-import type { ForwardRefExoticComponent, RefAttributes } from 'react';
-import type { LucideProps } from 'lucide-react';
+import type { Icon } from 'lucide-react';
 import { 
   Database, Filter, Combine, BarChart3, DatabaseZap, Trash2, GitCommit, 
   ArrowRightLeft, Columns, Replace, CheckSquare, Rows, SortAsc, UnfoldVertical,
@@ -10,8 +9,6 @@ import {
   Fingerprint, Bot, Group, Shuffle, Blend, BoxSelect, Code, Unplug, Layers,
   Table, Activity, CheckCircle2, XCircle, Clock3, Server, Pin, Copy
 } from 'lucide-react';
-
-export type Icon = ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>;
 import type { NodeType } from '@/components/data-flow/node';
 
 export interface Field {
@@ -367,19 +364,19 @@ export interface TransformationCategory {
 
 export const transformations = {
     sources: [
-        { name: 'Database Source', icon: Database, type: 'source' as NodeType, description: "Connect to a SQL database." },
-        { name: 'File Source', icon: FileText, type: 'source' as NodeType, description: "Use a file (CSV, JSON, etc.) as a source." }
+        { name: 'Database Source', icon: Database, description: "Connect to a SQL database." },
+        { name: 'File Source', icon: FileText, description: "Use a file (CSV, JSON, etc.) as a source." }
     ],
-    dataset: { name: 'Intermediate Dataset', icon: Layers, type: 'dataset' as NodeType, description: "Store intermediate results of a pipeline." },
-    destination: { name: 'Data Warehouse', icon: DatabaseZap, type: 'destination' as NodeType, description: "Load data into a data warehouse." },
+    dataset: { name: 'Intermediate Dataset', icon: Layers, description: "Store intermediate results of a pipeline." },
+    destination: { name: 'Data Warehouse', icon: DatabaseZap, description: "Load data into a data warehouse." },
     common: [
-        { name: 'Filter', icon: Filter, type: 'transformation' as NodeType, operationType: 'filter', description: "Filter rows according to one or more conditions." },
-        { name: 'Join', icon: GitCompare, type: 'transformation' as NodeType, operationType: 'join', description: "Combine data from two different sources." },
-        { name: 'Aggregate', icon: Group, type: 'transformation' as NodeType, operationType: 'group_by', description: "Group data and apply aggregation functions (SUM, AVG...)." },
-        { name: 'Sort', icon: SortAsc, type: 'transformation' as NodeType, operationType: 'sort', description: "Sort data according to one or more columns." },
-        { name: 'Select Columns', icon: Table, type: 'transformation' as NodeType, operationType: 'select_columns', description: "Choose columns to keep or exclude." },
-        { name: 'Union', icon: Combine, type: 'transformation' as NodeType, operationType: 'union', description: "Combine rows from two data sources." },
-        { name: 'Pass-through (No-op)', icon: ArrowRightLeft, type: 'transformation' as NodeType, operationType: 'no_op', description: "A pass-through transformation that doesn't modify the data." },
+        { name: 'Filter', icon: Filter, operationType: 'filter', description: "Filter rows according to one or more conditions." },
+        { name: 'Join', icon: GitCompare, operationType: 'join', description: "Combine data from two different sources." },
+        { name: 'Aggregate', icon: Group, operationType: 'group_by', description: "Group data and apply aggregation functions (SUM, AVG...)." },
+        { name: 'Sort', icon: SortAsc, operationType: 'sort', description: "Sort data according to one or more columns." },
+        { name: 'Select Columns', icon: Table, operationType: 'select_columns', description: "Choose columns to keep or exclude." },
+        { name: 'Union', icon: Combine, operationType: 'union', description: "Combine rows from two data sources." },
+        { name: 'Pass-through (No-op)', icon: ArrowRightLeft, operationType: 'no_op', description: "A pass-through transformation that doesn't modify the data." },
     ],
 };
 
@@ -387,23 +384,23 @@ export const advancedTransformations: TransformationCategory[] = [
     {
         category: 'Cleaning and Quality',
         items: [
-            { name: 'Deduplication', icon: Trash2, type: 'transformation', operationType: 'deduplication', description: 'Remove duplicate rows.' },
-            { name: 'Handle Missing Values', icon: Replace, type: 'transformation', operationType: 'handle_missing_values', description: 'Replace or remove null values.' },
-            { name: 'Normalize Formats', icon: Settings, type: 'transformation', operationType: 'normalize_formats', description: 'Standardize data formats (dates, numbers...).' },
-            { name: 'Fix Typos', icon: SpellCheck, type: 'transformation', operationType: 'fix_typos', description: 'Correct common typing errors.' },
-            { name: 'Quality Control', icon: CheckSquare, type: 'transformation', operationType: 'quality_control', description: 'Validate data against defined rules.' },
-            { name: 'Standardize Strings', icon: CaseSensitive, type: 'transformation', operationType: 'standardize_strings', description: 'Convert to uppercase, lowercase, etc.' },
+            { name: 'Deduplication', icon: Trash2, operationType: 'deduplication', description: 'Remove duplicate rows.' },
+            { name: 'Handle Missing Values', icon: Replace, operationType: 'handle_missing_values', description: 'Replace or remove null values.' },
+            { name: 'Normalize Formats', icon: Settings, operationType: 'normalize_formats', description: 'Standardize data formats (dates, numbers...).' },
+            { name: 'Fix Typos', icon: SpellCheck, operationType: 'fix_typos', description: 'Correct common typing errors.' },
+            { name: 'Quality Control', icon: CheckSquare, operationType: 'quality_control', description: 'Validate data against defined rules.' },
+            { name: 'Standardize Strings', icon: CaseSensitive, operationType: 'standardize_strings', description: 'Convert to uppercase, lowercase, etc.' },
         ]
     },
     {
         category: 'Structural Transformations',
         items: [
-            { name: 'Pivot/Unpivot', icon: UnfoldVertical, type: 'transformation' as NodeType, operationType: 'pivot_unpivot', description: 'Pivot rows to columns and vice versa.' },
-            { name: 'Split/Merge Columns', icon: Columns, type: 'transformation' as NodeType, operationType: 'split_merge_columns', description: 'Divide or merge columns.' },
-            { name: 'Transpose', icon: ArrowRightLeft, type: 'transformation' as NodeType, operationType: 'transpose', description: 'Swap rows and columns.' },
-            { name: 'Denormalize/Normalize', icon: GitCommit, type: 'transformation' as NodeType, operationType: 'denormalize', description: 'Modify the database structure.' },
-            { name: 'Nested to Flat', icon: FileJson, type: 'transformation' as NodeType, operationType: 'nested_to_flat', description: 'Flatten JSON or nested structures.' },
-            { name: 'Array Operations', icon: Rows, type: 'transformation' as NodeType, operationType: 'array_operations', description: 'Operations on arrays (explode, etc.).' },
+            { name: 'Pivot/Unpivot', icon: UnfoldVertical, operationType: 'pivot_unpivot', description: 'Pivot rows to columns and vice versa.' },
+            { name: 'Split/Merge Columns', icon: Columns, operationType: 'split_merge_columns', description: 'Divide or merge columns.' },
+            { name: 'Transpose', icon: ArrowRightLeft, operationType: 'transpose', description: 'Swap rows and columns.' },
+            { name: 'Denormalize/Normalize', icon: GitCommit, operationType: 'denormalize', description: 'Modify the database structure.' },
+            { name: 'Nested to Flat', icon: FileJson, operationType: 'nested_to_flat', description: 'Flatten JSON or nested structures.' },
+            { name: 'Array Operations', icon: Rows, operationType: 'array_operations', description: 'Operations on arrays (explode, etc.).' },
         ]
     }
 ];

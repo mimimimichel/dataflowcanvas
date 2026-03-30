@@ -29,7 +29,7 @@ interface NodeProps extends PipelineNode {
   onUpdateOperation: (nodeId: string, operation: Operation) => void;
 }
 
-const typeConfig: Record<NodeType, { icon: Icon; color: string; border: string; glow: string; }> = {
+const typeConfig = {
   source: { 
     icon: Database, 
     color: 'bg-blue-600', 
@@ -54,7 +54,7 @@ const typeConfig: Record<NodeType, { icon: Icon; color: string; border: string; 
     border: 'border-violet-500/40',
     glow: 'shadow-violet-500/10'
   },
-};
+} as const;
 
 const statusColors: Record<DesignStatus, string> = {
   draft: 'bg-slate-500/20 text-slate-500 border-slate-500/30',
@@ -132,13 +132,13 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
             if (!operation) return <div className="p-2 text-xs font-mono bg-muted/20 rounded-md border border-border">No operation configured</div>;
             switch(operation.type) {
                 case 'filter':
-                    return <FilterOperation operation={operation} inputFields={inputFields || []} onUpdate={(op) => onUpdateOperation(id, op)} />;
+                    return <FilterOperation operation={operation as any} inputFields={inputFields || []} onUpdate={(op) => onUpdateOperation(id, op)} />;
                 case 'join':
-                    return <JoinOperation operation={operation} nodes={nodes} />;
+                    return <JoinOperation operation={operation as any} nodes={nodes} />;
                 case 'group_by':
-                    return <GroupByOperation operation={operation} />;
+                    return <GroupByOperation operation={operation as any} />;
                 case 'sort':
-                    return <SortOperation operation={operation} />;
+                    return <SortOperation operation={operation as any} />;
                 case 'select_columns':
                     return <SelectColumnsOperation operation={operation as SelectColumnsType} />;
                 case 'union':

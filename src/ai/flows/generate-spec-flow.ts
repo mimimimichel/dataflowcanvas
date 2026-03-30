@@ -19,7 +19,7 @@ export type GenerateSpecOutput = z.infer<typeof GenerateSpecOutputSchema>;
 
 const prompt = ai.definePrompt({
   name: 'generateSpecPrompt',
-  input: { schema: GenerateSpecInputSchema },
+  input: { schema: z.object({ nodes: z.string(), connectors: z.string() }) },
   output: { schema: GenerateSpecOutputSchema },
   prompt: `You are an expert Data Architect and Technical Writer. 
 Your task is to write a professional Functional Specification for a data pipeline designed in a visual tool.
