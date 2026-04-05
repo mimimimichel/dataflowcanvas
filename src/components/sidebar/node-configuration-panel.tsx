@@ -122,7 +122,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
 
   const sourceNodesForJoin = useMemo(() => {
     const operation = draftNode.operation || node?.operation;
-    if (!node || operation?.type !== 'join') return { left: undefined, right: undefined };
+    if (!node || !operation || operation.type !== 'join') return { left: undefined, right: undefined };
     
     const joinOp = operation as JoinOperation;
     const left = nodes.find(n => n.id === joinOp.settings.leftNodeId);
@@ -163,7 +163,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
   
   const handleOperationUpdate = (updatedOperation: Operation) => {
     const newConfig: Partial<PipelineNode> = { operation: updatedOperation };
-    const effectiveOperation = { ...displayNode.operation, ...updatedOperation };
+    const effectiveOperation = { ...displayNode.operation, ...updatedOperation } as Operation;
     const effectiveInputFields = displayNode.inputFields || [];
 
     // Auto-propagate schema based on operation type
@@ -181,11 +181,11 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
     } else if (effectiveOperation.type === 'group_by') {
       const groupOp = effectiveOperation as GroupByOperation;
       const newOutputFields: Field[] = [];
-      groupOp.settings.groupByFields.forEach(fieldName => {
+      (groupOp.settings.groupByFields || []).forEach(fieldName => {
           const field = effectiveInputFields.find(f => f.name === fieldName);
           if(field) newOutputFields.push(field);
       });
-      groupOp.settings.aggregations.forEach(agg => {
+      (groupOp.settings.aggregations || []).forEach(agg => {
           const originalField = effectiveInputFields.find(f => f.name === agg.field);
           newOutputFields.push({ name: agg.newName, type: originalField?.type || 'unknown' });
       });
@@ -194,13 +194,49 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
       const selectOp = effectiveOperation as SelectColumnsOperation;
       newConfig.outputFields = effectiveInputFields.filter(f => selectOp.settings.selectedFields?.includes(f.name));
     } else {
-        // Fallback: copy input to output if not specified
         newConfig.outputFields = effectiveInputFields;
     }
     
     setDraftNode(prev => ({ ...prev, ...newConfig }));
   }
   
+  const renderOperationEditor = () => {
+      const operation = displayNode.operation;
+      if (!operation) {
+          return (
+              <div className="p-4 bg-muted/20 border border-dashed rounded-lg text-center">
+                  <p className="text-sm text-muted-foreground">Select a transformation type from the catalogue to configure it.</p>
+              </div>
+          );
+      }
+
+      switch(operation.type) {
+          case 'filter':
+              return <FilterOperationEditor operation={operation as FilterOperation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
+          case 'join': {
+               const { left, right } = sourceNodesForJoin;
+               if (left && right) {
+                  return <JoinOperationEditor operationSettings={operation as JoinOperation} leftNode={left} rightNode={right} onUpdate={handleOperationUpdate} />;
+               }
+               return <p className="text-sm text-muted-foreground italic bg-muted/20 p-4 rounded border">Connect two sources to this node to configure the join parameters.</p>;
+          }
+          case 'group_by':
+              return <GroupByOperationEditor operation={operation as GroupByOperation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
+          case 'sort':
+              return <SortOperationEditor operation={operation as SortOperation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
+          case 'select_columns':
+              return <SelectColumnsOperationEditor operation={operation as SelectColumnsOperation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
+          case 'deduplication':
+              return <DeduplicationOperationEditor operation={operation as DeduplicationOperation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
+          case 'handle_missing_values':
+              return <MissingValuesOperationEditor operation={operation as MissingValuesOperation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
+          case 'union':
+              return <div className="p-4 bg-muted/30 rounded-lg border border-dashed border-border text-center"><p className="text-sm text-muted-foreground italic">Stacking rows from multiple input sources. No additional configuration needed.</p></div>;
+          default:
+              return <GenericOperationEditor operation={operation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
+      }
+  };
+
   const renderConfigContent = () => {
     switch(displayNode.type) {
       case 'source':
@@ -222,43 +258,6 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
           </>
         );
       case 'transformation':
-        const renderOperationEditor = () => {
-            const operation = displayNode.operation;
-            if (!operation) {
-                return (
-                    <div className="p-4 bg-muted/20 border border-dashed rounded-lg text-center">
-                        <p className="text-sm text-muted-foreground">Select a transformation type from the catalogue to configure it.</p>
-                    </div>
-                );
-            }
-
-            switch(operation.type) {
-                case 'filter':
-                    return <FilterOperationEditor operation={operation as FilterOperation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
-                case 'join': {
-                     const { left, right } = sourceNodesForJoin;
-                     if (left && right) {
-                        return <JoinOperationEditor operationSettings={operation as JoinOperation} leftNode={left} rightNode={right} onUpdate={handleOperationUpdate} />;
-                     }
-                     return <p className="text-sm text-muted-foreground italic bg-muted/20 p-4 rounded border">Connect two sources to this node to configure the join parameters.</p>;
-                }
-                case 'group_by':
-                    return <GroupByOperationEditor operation={operation as GroupByOperation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
-                case 'sort':
-                    return <SortOperationEditor operation={operation as SortOperation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
-                case 'select_columns':
-                    return <SelectColumnsOperationEditor operation={operation as SelectColumnsOperation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
-                case 'deduplication':
-                    return <DeduplicationOperationEditor operation={operation as DeduplicationOperation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
-                case 'handle_missing_values':
-                    return <MissingValuesOperationEditor operation={operation as MissingValuesOperation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
-                case 'union':
-                    return <div className="p-4 bg-muted/30 rounded-lg border border-dashed border-border text-center"><p className="text-sm text-muted-foreground italic">Stacking rows from multiple input sources. No additional configuration needed.</p></div>;
-                default:
-                    return <GenericOperationEditor operation={operation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
-            }
-        };
-
         return (
           <>
             <h3 className="text-md font-medium mb-2">Input Schema</h3>
