@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import ConnectionFieldsModal from '@/components/data-flow/connection-fields-modal';
 import PythonCodeModal from '@/components/modals/python-code-modal';
 import SpecModal from '@/components/modals/spec-modal';
+import ExportDialog from '@/components/modals/export-dialog';
 import { generatePythonCode } from '@/lib/python-generator';
 import { generatePipelineSpec } from '@/ai/flows/generate-spec-flow';
 import LineageDashboard from '@/components/dashboard/lineage-dashboard';
@@ -169,6 +170,7 @@ export default function MainApp() {
   const [generatedPythonCode, setGeneratedPythonCode] = useState('');
   
   const [isSpecModalOpen, setIsSpecModalOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [generatedSpec, setGeneratedSpec] = useState('');
   const [isSpecLoading, setIsSpecLoading] = useState(false);
 
@@ -839,7 +841,7 @@ export default function MainApp() {
 
   return (
     <div className="flex h-screen w-full flex-col bg-background font-body overflow-hidden">
-      <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage.versions} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onGeneratePython={handleGeneratePython} onGenerateSpec={handleGenerateSpec} onImportPipeline={() => {}} onApplyScaffold={() => {}} activeView={activeView} onViewChange={setActiveView} />
+      <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage.versions} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onGeneratePython={handleGeneratePython} onGenerateSpec={handleGenerateSpec} onImportPipeline={() => {}} onApplyScaffold={() => {}} onExport={() => setIsExportDialogOpen(true)} activeView={activeView} onViewChange={setActiveView} />
       
       {activeView === 'dashboard' ? (
         <LineageDashboard lineages={lineages} onSelectLineage={(id) => { setActiveLineageId(id); setActiveView('editor'); }} onCreateLineage={(name, description) => { const id = `lineage-${Date.now()}`; setLineages(prev => [{ id, name, description, owner: 'Me', lastEdited: 'Just now', versions: [{ id: 'v1', name: 'Initial Design', nodes: [], connectors: [], groups: [] }] }, ...prev]); setActiveLineageId(id); setActiveVersionId('v1'); setActiveView('editor'); }} />
@@ -923,6 +925,7 @@ export default function MainApp() {
       {connectionForFields && nodes.find(n => n.id === connectionForFields.fromNodeId) && <ConnectionFieldsModal isOpen={!!connectionForFields} fromNode={nodes.find(n => n.id === connectionForFields.fromNodeId)!} toNode={nodes.find(n => n.id === connectionForFields.toNodeId)!} onClose={() => setConnectionForFields(null)} onSave={handleSaveConnectionFields} />}
       <PythonCodeModal isOpen={isPythonModalOpen} onClose={() => setIsPythonModalOpen(false)} code={generatedPythonCode} />
       <SpecModal isOpen={isSpecModalOpen} onClose={() => setIsSpecModalOpen(false)} spec={generatedSpec} isLoading={isSpecLoading} />
+      <ExportDialog nodes={nodes} connectors={connectors} open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen} />
     </div>
   );
 }

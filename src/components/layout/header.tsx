@@ -33,6 +33,7 @@ interface HeaderProps {
   onCreateVersion: (name: string) => void;
   onGeneratePython: () => void;
   onGenerateSpec: () => void;
+  onExport: () => void;
   onImportPipeline: (data: any) => void;
   onApplyScaffold: (scaffold: any) => void;
   activeView: 'dashboard' | 'editor';
@@ -95,6 +96,7 @@ const Header: React.FC<HeaderProps> = ({
   onCreateVersion, 
   onGeneratePython, 
   onGenerateSpec,
+  onExport,
   onApplyScaffold,
   activeView,
   onViewChange,
@@ -165,6 +167,10 @@ const Header: React.FC<HeaderProps> = ({
                   <Sparkles className="mr-2 h-4 w-4 text-amber-500" /> Spec
               </Button>
               <Button variant="outline" size="sm" onClick={onGeneratePython} className="h-9 bg-background/40 border-border hover:bg-background/60">
+              <Button variant="outline" size="sm" onClick={onExport} className="h-9 bg-background/40 border-border hover:bg-background/60 ml-1">
+                <Download className="h-4 w-4 mr-1" />
+                Export
+              </Button>
                   <Terminal className="mr-2 h-4 w-4" /> PySpark Code
               </Button>
               <Button variant="outline" size="sm" onClick={handleExport} className="h-9 bg-background/40 border-border hover:bg-background/60">
