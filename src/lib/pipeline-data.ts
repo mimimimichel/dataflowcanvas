@@ -192,6 +192,29 @@ export interface LineageInfo {
   versions: PipelineVersion[];
 }
 
+export function getDefaultOperation(type: OperationType): Operation {
+  switch (type) {
+    case 'filter':
+      return { type: 'filter', settings: { field: '', operator: '==', value: '' } };
+    case 'join':
+      return { type: 'join', settings: { leftNodeId: '', rightNodeId: '', joinType: 'inner', condition: { leftField: '', rightField: '' } } };
+    case 'group_by':
+      return { type: 'group_by', settings: { groupByFields: [], aggregations: [] } };
+    case 'sort':
+      return { type: 'sort', settings: { conditions: [] } };
+    case 'select_columns':
+      return { type: 'select_columns', settings: { selectedFields: [] } };
+    case 'deduplication':
+      return { type: 'deduplication', settings: { columns: [] } };
+    case 'handle_missing_values':
+      return { type: 'handle_missing_values', settings: { strategy: 'drop', columns: [] } };
+    case 'union':
+      return { type: 'union', settings: {} };
+    default:
+      return { type, settings: {} };
+  }
+}
+
 export function getJoinOutputFields(leftNode: PipelineNode, rightNode: PipelineNode, joinType: JoinType): Field[] {
     const leftFields = leftNode.outputFields || [];
     const rightFields = rightNode.outputFields || [];

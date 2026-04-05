@@ -16,7 +16,8 @@ import {
   PipelineVersion,
   mockLineages,
   LineageInfo,
-  NodeGroup
+  NodeGroup,
+  getDefaultOperation
 } from '@/lib/pipeline-data';
 import { cn } from '@/lib/utils';
 import ConnectionFieldsModal from '@/components/data-flow/connection-fields-modal';
@@ -494,10 +495,9 @@ export default function MainApp() {
     if (nodes.length === 0) return;
     
     const HORIZONTAL_GAP = 450;
-    const VERTICAL_GAP = 320; // Increased vertical gap to prevent overlaps
+    const VERTICAL_GAP = 320; 
     const PADDING = 100;
 
-    // 1. Calculate levels for nodes (Topological levels)
     const levels: Record<string, number> = {};
     const getLevel = (nodeId: string, visited = new Set<string>()): number => {
       if (levels[nodeId] !== undefined) return levels[nodeId];
@@ -514,7 +514,6 @@ export default function MainApp() {
 
     nodes.forEach(n => getLevel(n.id));
 
-    // 2. Group nodes by level, but sort by groupId to keep group members together
     const levelGroups: Record<number, string[]> = {};
     Object.entries(levels).forEach(([id, level]) => {
       if (!levelGroups[level]) levelGroups[level] = [];
@@ -526,14 +525,12 @@ export default function MainApp() {
       levelGroups[l].sort((a, b) => {
         const nodeA = nodes.find(n => n.id === a);
         const nodeB = nodes.find(n => n.id === b);
-        // Secondary sort by name to be deterministic
         const groupCompare = (nodeA?.groupId || '').localeCompare(nodeB?.groupId || '');
         if (groupCompare !== 0) return groupCompare;
         return (nodeA?.name || '').localeCompare(nodeB?.name || '');
       });
     });
 
-    // 3. Assign new positions to all nodes globally
     const newNodes = nodes.map(node => {
       const level = levels[node.id] || 0;
       const indexInLevel = levelGroups[level]?.indexOf(node.id) || 0;
@@ -546,7 +543,6 @@ export default function MainApp() {
       };
     });
 
-    // 4. Update groups bottom-up (resize children then parents)
     const getGroupHierarchyDepth = (groupId: string | undefined): number => {
       if (!groupId) return 0;
       const group = groups.find(g => g.id === groupId);
@@ -569,7 +565,6 @@ export default function MainApp() {
         minX = Math.min(minX, n.position.x);
         minY = Math.min(minY, n.position.y);
         maxX = Math.max(maxX, n.position.x + NODE_WIDTH);
-        // Use a larger buffer for height to account for expanded state
         maxY = Math.max(maxY, n.position.y + 250);
       });
 
@@ -623,6 +618,7 @@ export default function MainApp() {
       groupId: groupUnder?.id,
       inputFields: [],
       outputFields: [],
+      operation: item.operationType ? getDefaultOperation(item.operationType) : undefined,
     };
     setNodes((prev) => [...prev, newNode]);
   }, [pan.x, pan.y, zoom, groups, setNodes]);
