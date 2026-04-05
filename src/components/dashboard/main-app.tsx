@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import ConnectionFieldsModal from '@/components/data-flow/connection-fields-modal';
 import PythonCodeModal from '@/components/modals/python-code-modal';
 import SpecModal from '@/components/modals/spec-modal';
+import DataPreviewPanel from '@/components/data-flow/data-preview-panel';
 import { generatePythonCode } from '@/lib/python-generator';
 import { generatePipelineSpec } from '@/ai/flows/generate-spec-flow';
 import LineageDashboard from '@/components/dashboard/lineage-dashboard';
@@ -171,6 +172,7 @@ export default function MainApp() {
   const [isSpecModalOpen, setIsSpecModalOpen] = useState(false);
   const [generatedSpec, setGeneratedSpec] = useState('');
   const [isSpecLoading, setIsSpecLoading] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const isPanningRef = useRef(false);
@@ -456,6 +458,11 @@ export default function MainApp() {
   const handleOpenConfig = (nodeId: string) => {
     setSelectedNodeIds([nodeId]);
     setIsConfigPanelOpen(true);
+  }
+
+  const handleOpenPreview = (nodeId: string) => {
+    setSelectedNodeIds([nodeId]);
+    setIsPreviewOpen(true);
   }
 
   const handleZoom = (delta: number) => {
@@ -890,7 +897,7 @@ export default function MainApp() {
 
               {nodes.map((node) => {
                 if (isAncestorCollapsed(node.groupId)) return null;
-                return <Node key={node.id} {...node} nodes={nodes} onSelect={isShift => handleNodeSelect(node.id, isShift)} onConfigOpen={() => handleOpenConfig(node.id)} onMouseDown={e => handleNodeMouseDown(e, node.id)} onMouseUp={e => handleNodeMouseUp(e, node.id)} onPortMouseDown={e => handlePortMouseDown(e, node.id)} onAddNode={handleAddNode} isSelected={selectedNodeIds.includes(node.id)} onUpdateOperation={handleUpdateOperation} />;
+                return <Node key={node.id} {...node} nodes={nodes} onSelect={isShift => { handleNodeSelect(node.id, isShift); handleOpenPreview(node.id); }} onConfigOpen={() => handleOpenConfig(node.id)} onMouseDown={e => handleNodeMouseDown(e, node.id)} onMouseUp={e => handleNodeMouseUp(e, node.id)} onPortMouseDown={e => handlePortMouseDown(e, node.id)} onAddNode={handleAddNode} isSelected={selectedNodeIds.includes(node.id)} onUpdateOperation={handleUpdateOperation} />;
               })}
 
               {selectionRect && <div className="absolute border border-primary bg-primary/10 pointer-events-none z-[100]" style={{ left: selectionRect.x, top: selectionRect.y, width: selectionRect.width, height: selectionRect.height }} />}
@@ -916,10 +923,17 @@ export default function MainApp() {
               </div>
             </div>
           </main>
+          {isPreviewOpen && (
+            <div
+              className="absolute inset-0 z-40"
+              onClick={() => setIsPreviewOpen(false)}
+            />
+          )}
         </div>
       )}
       
       <NodeConfigurationPanel key={selectedNodeIds.join(',')} node={nodes.find(n => n.id === selectedNodeIds[0])} nodes={nodes} isOpen={isConfigPanelOpen} onClose={() => setIsConfigPanelOpen(false)} onSave={handleNodeConfigChange} onDelete={handleDeleteNode} />
+      <DataPreviewPanel node={nodes.find(n => n.id === selectedNodeIds[0]) || null} isOpen={isPreviewOpen} onClose={() => setIsPreviewOpen(false)} />
       {connectionForFields && nodes.find(n => n.id === connectionForFields.fromNodeId) && <ConnectionFieldsModal isOpen={!!connectionForFields} fromNode={nodes.find(n => n.id === connectionForFields.fromNodeId)!} toNode={nodes.find(n => n.id === connectionForFields.toNodeId)!} onClose={() => setConnectionForFields(null)} onSave={handleSaveConnectionFields} />}
       <PythonCodeModal isOpen={isPythonModalOpen} onClose={() => setIsPythonModalOpen(false)} code={generatedPythonCode} />
       <SpecModal isOpen={isSpecModalOpen} onClose={() => setIsSpecModalOpen(false)} spec={generatedSpec} isLoading={isSpecLoading} />
