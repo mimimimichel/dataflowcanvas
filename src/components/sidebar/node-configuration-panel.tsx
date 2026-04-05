@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { 
   PipelineNode, Field, Operation, FilterOperation, JoinOperation, 
-  GroupByOperation, SortOperation, SelectColumnsOperation, UnionOperation, getJoinOutputFields, DesignStatus, DataQualityMetrics 
+  GroupByOperation, SortOperation, SelectColumnsOperation, UnionOperation, 
+  DeduplicationOperation, MissingValuesOperation, getJoinOutputFields, DesignStatus, DataQualityMetrics 
 } from '@/lib/pipeline-data';
 import { Trash2, PlusCircle, Activity, ShieldCheck, Clock3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -30,6 +31,9 @@ import JoinOperationEditor from '@/components/operations/join-operation-editor';
 import GroupByOperationEditor from '@/components/operations/group-by-operation-editor';
 import SortOperationEditor from '@/components/operations/sort-operation-editor';
 import SelectColumnsOperationEditor from '@/components/operations/select-columns-operation-editor';
+import DeduplicationOperationEditor from '@/components/operations/deduplication-operation-editor';
+import MissingValuesOperationEditor from '@/components/operations/missing-values-operation-editor';
+import GenericOperationEditor from '@/components/operations/generic-operation-editor';
 
 
 interface NodeConfigurationPanelProps {
@@ -162,7 +166,10 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
     const effectiveOperation = { ...displayNode.operation, ...updatedOperation };
     const effectiveInputFields = displayNode.inputFields || [];
 
-    if (effectiveOperation.type === 'filter' || effectiveOperation.type === 'sort' || effectiveOperation.type === 'union') {
+    // Auto-propagate schema based on operation type
+    const passThroughTypes = ['filter', 'sort', 'union', 'deduplication', 'handle_missing_values', 'no_op', 'normalize_formats', 'fix_typos', 'quality_control', 'standardize_strings'];
+    
+    if (passThroughTypes.includes(effectiveOperation.type)) {
       newConfig.outputFields = effectiveInputFields;
     } else if (effectiveOperation.type === 'join') {
       const joinOp = effectiveOperation as JoinOperation;
@@ -186,6 +193,9 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
     } else if (effectiveOperation.type === 'select_columns') {
       const selectOp = effectiveOperation as SelectColumnsOperation;
       newConfig.outputFields = effectiveInputFields.filter(f => selectOp.settings.selectedFields?.includes(f.name));
+    } else {
+        // Fallback: copy input to output if not specified
+        newConfig.outputFields = effectiveInputFields;
     }
     
     setDraftNode(prev => ({ ...prev, ...newConfig }));
@@ -215,64 +225,37 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
         const renderOperationEditor = () => {
             const operation = displayNode.operation;
             if (!operation) {
-                return <p className="text-sm text-muted-foreground">No operation configured for this transformation.</p>;
+                return (
+                    <div className="p-4 bg-muted/20 border border-dashed rounded-lg text-center">
+                        <p className="text-sm text-muted-foreground">Select a transformation type from the catalogue to configure it.</p>
+                    </div>
+                );
             }
 
             switch(operation.type) {
                 case 'filter':
-                    return (
-                        <FilterOperationEditor 
-                            operation={operation as FilterOperation}
-                            inputFields={displayNode.inputFields || []}
-                            onUpdate={handleOperationUpdate}
-                        />
-                    );
+                    return <FilterOperationEditor operation={operation as FilterOperation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
                 case 'join': {
                      const { left, right } = sourceNodesForJoin;
                      if (left && right) {
-                        return (
-                            <JoinOperationEditor
-                                operationSettings={operation as JoinOperation}
-                                leftNode={left}
-                                rightNode={right}
-                                onUpdate={handleOperationUpdate}
-                            />
-                        );
+                        return <JoinOperationEditor operationSettings={operation as JoinOperation} leftNode={left} rightNode={right} onUpdate={handleOperationUpdate} />;
                      }
-                     return <p className="text-sm text-muted-foreground">Please connect two nodes to configure the join.</p>;
+                     return <p className="text-sm text-muted-foreground italic bg-muted/20 p-4 rounded border">Connect two sources to this node to configure the join parameters.</p>;
                 }
                 case 'group_by':
-                    return (
-                        <GroupByOperationEditor
-                            operation={operation as GroupByOperation}
-                            inputFields={displayNode.inputFields || []}
-                            onUpdate={handleOperationUpdate}
-                        />
-                    );
+                    return <GroupByOperationEditor operation={operation as GroupByOperation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
                 case 'sort':
-                    return (
-                        <SortOperationEditor
-                            operation={operation as SortOperation}
-                            inputFields={displayNode.inputFields || []}
-                            onUpdate={handleOperationUpdate}
-                        />
-                    );
+                    return <SortOperationEditor operation={operation as SortOperation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
                 case 'select_columns':
-                    return (
-                        <SelectColumnsOperationEditor
-                            operation={operation as SelectColumnsOperation}
-                            inputFields={displayNode.inputFields || []}
-                            onUpdate={handleOperationUpdate}
-                        />
-                    );
+                    return <SelectColumnsOperationEditor operation={operation as SelectColumnsOperation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
+                case 'deduplication':
+                    return <DeduplicationOperationEditor operation={operation as DeduplicationOperation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
+                case 'handle_missing_values':
+                    return <MissingValuesOperationEditor operation={operation as MissingValuesOperation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
                 case 'union':
-                    return (
-                        <div className="p-4 bg-muted/30 rounded-lg border border-dashed border-border text-center">
-                            <p className="text-sm text-muted-foreground italic">Stacking rows from multiple input sources. No additional configuration needed.</p>
-                        </div>
-                    );
+                    return <div className="p-4 bg-muted/30 rounded-lg border border-dashed border-border text-center"><p className="text-sm text-muted-foreground italic">Stacking rows from multiple input sources. No additional configuration needed.</p></div>;
                 default:
-                    return <p className="text-sm text-muted-foreground">Configuration for '{operation.type}' is not yet available.</p>;
+                    return <GenericOperationEditor operation={operation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
             }
         };
 
@@ -285,7 +268,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
             {renderOperationEditor()}
             <Separator className="my-4"/>
             <h3 className="text-md font-medium mb-2">Output Schema</h3>
-             <p className="text-sm text-muted-foreground mb-2">The output schema is automatically determined by the operation.</p>
+             <p className="text-[10px] text-muted-foreground mb-2">Calculated based on the selected transformation.</p>
             <SchemaEditor 
                 fields={displayNode.outputFields || []} 
                 onFieldsChange={(fields) => handleUpdate('outputFields', fields)} 
@@ -308,7 +291,6 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
               <Separator/>
             </div>
             <h3 className="text-md font-medium mb-2 mt-4">Dataset Schema</h3>
-            <p className="text-sm text-muted-foreground mb-2">The schema is defined by its inputs. You can rename fields here.</p>
             <SchemaEditor fields={displayNode.inputFields || []} onFieldsChange={(fields) => handleUpdate('inputFields', fields)} isEditable={true} />
           </>
         );

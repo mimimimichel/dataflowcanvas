@@ -24,7 +24,27 @@ export interface DataQualityMetrics {
   validity?: number;
 }
 
-export type OperationType = 'filter' | 'join' | 'group_by' | 'sort' | 'select_columns' | 'union' | 'no_op' | string;
+export type OperationType = 
+  | 'filter' 
+  | 'join' 
+  | 'group_by' 
+  | 'sort' 
+  | 'select_columns' 
+  | 'union' 
+  | 'no_op' 
+  | 'deduplication' 
+  | 'handle_missing_values'
+  | 'normalize_formats'
+  | 'fix_typos'
+  | 'quality_control'
+  | 'standardize_strings'
+  | 'pivot_unpivot'
+  | 'split_merge_columns'
+  | 'transpose'
+  | 'denormalize'
+  | 'nested_to_flat'
+  | 'array_operations'
+  | string;
 
 export interface BaseOperation {
     type: OperationType;
@@ -97,6 +117,22 @@ export interface UnionOperation extends BaseOperation {
     settings: {}
 }
 
+export interface DeduplicationOperation extends BaseOperation {
+    type: 'deduplication';
+    settings: {
+        columns: string[];
+    }
+}
+
+export interface MissingValuesOperation extends BaseOperation {
+    type: 'handle_missing_values';
+    settings: {
+        strategy: 'drop' | 'fill';
+        fillValue?: string | number | boolean;
+        columns: string[];
+    }
+}
+
 export type Operation = 
     | FilterOperation 
     | JoinOperation 
@@ -104,6 +140,8 @@ export type Operation =
     | SortOperation 
     | SelectColumnsOperation 
     | UnionOperation 
+    | DeduplicationOperation
+    | MissingValuesOperation
     | BaseOperation;
 
 export interface PipelineNode {
@@ -197,7 +235,7 @@ export const initialNodes: PipelineNode[] = [
     id: 'source-2', 
     name: 'Orders DB', 
     type: 'source', 
-    position: { x: 100, y: 350 },
+    position: { x: 100, y: 450 },
     system: 'PostgreSQL',
     location: 'prod-orders-db',
     status: 'ready',
@@ -213,7 +251,7 @@ export const initialNodes: PipelineNode[] = [
     id: 'transform-1', 
     name: 'Filter Inactive', 
     type: 'transformation', 
-    position: { x: 450, y: 150 },
+    position: { x: 550, y: 150 },
     status: 'review',
     operation: {
         type: 'filter',
@@ -243,7 +281,7 @@ export const initialNodes: PipelineNode[] = [
     id: 'transform-2', 
     name: 'Join Orders', 
     type: 'transformation', 
-    position: { x: 750, y: 250 },
+    position: { x: 550, y: 450 },
     status: 'draft',
     operation: {
         type: 'join',
@@ -290,16 +328,16 @@ export const initialGroups: NodeGroup[] = [
     color: 'blue',
     position: { x: 50, y: 100 },
     width: 350,
-    height: 400,
+    height: 600,
     isCollapsed: false
   },
   {
     id: 'group-clean',
     name: 'Processing & Cleanup',
     color: 'amber',
-    position: { x: 420, y: 100 },
-    width: 650,
-    height: 400,
+    position: { x: 450, y: 100 },
+    width: 450,
+    height: 600,
     isCollapsed: false
   }
 ];

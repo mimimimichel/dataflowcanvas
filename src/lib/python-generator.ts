@@ -1,4 +1,4 @@
-import { PipelineNode, Connector, JoinOperation, FilterOperation, GroupByOperation, SortOperation, SelectColumnsOperation } from './pipeline-data';
+import { PipelineNode, Connector, JoinOperation, FilterOperation, GroupByOperation, SortOperation, SelectColumnsOperation, DeduplicationOperation, MissingValuesOperation } from './pipeline-data';
 
 /**
  * Generates a Palantir Foundry PySpark transform script based on the pipeline.
@@ -46,7 +46,7 @@ export function generatePythonCode(nodes: PipelineNode[] = [], connectors: Conne
   const sortedNodeIds: string[] = [];
 
   const visit = (nodeId: string) => {
-    if (visiting.has(nodeId)) return; // Cycle detected: skip to avoid recursion error
+    if (visiting.has(nodeId)) return; 
     if (visited.has(nodeId)) return;
     
     visiting.add(nodeId);
@@ -63,7 +63,7 @@ export function generatePythonCode(nodes: PipelineNode[] = [], connectors: Conne
   // Internal Logic
   sortedNodeIds.forEach(nodeId => {
     const node = nodes.find(n => n.id === nodeId);
-    if (!node || node.type === 'source') return; // Sources handled in signature
+    if (!node || node.type === 'source') return; 
     
     if (node.type === 'destination') {
         const parentId = connectors.find(c => c.to === nodeId)?.from;
@@ -92,10 +92,11 @@ export function generatePythonCode(nodes: PipelineNode[] = [], connectors: Conne
         return;
       }
 
+      const inputVar = getVarName(parentIds[0]);
+
       switch (op.type) {
         case 'filter': {
           const fOp = op as FilterOperation;
-          const inputVar = getVarName(parentIds[0]);
           let val = fOp.settings.value;
           if (typeof val === 'string') val = `'${val}'`;
           code += `    ${varName} = ${inputVar}.filter("${fOp.settings.field} ${fOp.settings.operator} ${val}")\n`;
@@ -109,17 +110,16 @@ export function generatePythonCode(nodes: PipelineNode[] = [], connectors: Conne
             const rightVar = getVarName(jOp.settings.rightNodeId || parentIds[1]);
             code += `    ${varName} = ${leftVar}.join(\n        ${rightVar}, \n        ${leftVar}['${jOp.settings.condition.leftField}'] == ${rightVar}['${jOp.settings.condition.rightField}'], \n        how='${jOp.settings.joinType}'\n    )\n`;
           } else {
-            code += `    ${varName} = ${getVarName(parentIds[0])}  # Join requires 2 inputs\n`;
+            code += `    ${varName} = ${inputVar}  # Join requires 2 inputs\n`;
           }
           break;
         }
 
         case 'group_by': {
           const gOp = op as GroupByOperation;
-          const gInputVar = getVarName(parentIds[0]);
           const groupByCols = (gOp.settings.groupByFields || []).map(f => `'${f}'`).join(', ');
           
-          code += `    ${varName} = ${gInputVar}.groupBy(${groupByCols}).agg(\n`;
+          code += `    ${varName} = ${inputVar}.groupBy(${groupByCols}).agg(\n`;
           (gOp.settings.aggregations || []).forEach((agg, idx) => {
             const isLast = idx === gOp.settings.aggregations.length - 1;
             const pyFunc = agg.type === 'avg' ? 'mean' : agg.type;
@@ -131,40 +131,65 @@ export function generatePythonCode(nodes: PipelineNode[] = [], connectors: Conne
 
         case 'sort': {
           const sOp = op as SortOperation;
-          const sInputVar = getVarName(parentIds[0]);
           const sortExprs = (sOp.settings.conditions || []).map(c => `F.col('${c.field}').${c.direction}()`).join(', ');
-          code += `    ${varName} = ${sInputVar}.orderBy(${sortExprs || "F.col('id').asc()"})\n`;
+          code += `    ${varName} = ${inputVar}.orderBy(${sortExprs || "F.col('id').asc()"})\n`;
           break;
         }
 
         case 'select_columns': {
           const selOp = op as SelectColumnsOperation;
-          const selInputVar = getVarName(parentIds[0]);
           const cols = (selOp.settings.selectedFields || []).map(f => `'${f}'`).join(', ');
-          code += `    ${varName} = ${selInputVar}.select(${cols || '*'})\n`;
+          code += `    ${varName} = ${inputVar}.select(${cols || '*'})\n`;
+          break;
+        }
+
+        case 'deduplication': {
+          const dOp = op as DeduplicationOperation;
+          const cols = (dOp.settings.columns || []).map(f => `'${f}'`).join(', ');
+          if (cols) {
+             code += `    ${varName} = ${inputVar}.dropDuplicates([${cols}])\n`;
+          } else {
+             code += `    ${varName} = ${inputVar}.dropDuplicates()\n`;
+          }
+          break;
+        }
+
+        case 'handle_missing_values': {
+          const mvOp = op as MissingValuesOperation;
+          const cols = (mvOp.settings.columns || []);
+          if (mvOp.settings.strategy === 'drop') {
+             const colParam = cols.length ? `, subset=[${cols.map(c => `'${c}'`).join(', ')}]` : '';
+             code += `    ${varName} = ${inputVar}.dropna(how='any'${colParam})\n`;
+          } else {
+             let fillVal = mvOp.settings.fillValue;
+             if (typeof fillVal === 'string') fillVal = `'${fillVal}'`;
+             const colParam = cols.length ? `, subset=[${cols.map(c => `'${c}'`).join(', ')}]` : '';
+             code += `    ${varName} = ${inputVar}.fillna(${fillVal}${colParam})\n`;
+          }
           break;
         }
 
         case 'union': {
           if (parentIds.length >= 2) {
-            const firstVar = getVarName(parentIds[0]);
             const otherVars = parentIds.slice(1).map(id => getVarName(id));
-            code += `    ${varName} = ${firstVar}\n`;
+            code += `    ${varName} = ${inputVar}\n`;
             otherVars.forEach(v => {
                code += `    ${varName} = ${varName}.unionByName(${v})\n`;
             });
           } else {
-            code += `    ${varName} = ${getVarName(parentIds[0])}\n`;
+            code += `    ${varName} = ${inputVar}\n`;
           }
           break;
         }
 
         default:
-          code += `    ${varName} = ${getVarName(parentIds[0])}  # Transformation: ${op.type}\n`;
+          code += `    # Custom transformation: ${op.type}\n`;
+          code += `    # Settings: ${JSON.stringify(op.settings)}\n`;
+          code += `    ${varName} = ${inputVar} # Pass-through by default\n`;
       }
     } else if (node.type === 'dataset') {
         if (parentIds.length > 0) {
-            code += `    ${varName} = ${getVarName(parentIds[0])}.checkpoint()  # Cache point\n`;
+            code += `    ${varName} = ${getVarName(parentIds[0])}.checkpoint() # Force materialization\n`;
         }
     }
     code += `\n`;
