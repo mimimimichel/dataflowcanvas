@@ -47,8 +47,8 @@ export async function generatePipelineSpec(input: GenerateSpecInput): Promise<Ge
     },
     async (input) => {
       const { output } = await prompt({
-        nodes: JSON.stringify(input.nodes),
-        connectors: JSON.stringify(input.connectors),
+        nodes: input.nodes as any[],
+        connectors: input.connectors as any[],
       });
       return output!;
     }

@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
-import { transformations, TransformationItem, advancedTransformations } from '@/lib/pipeline-data';
+import { transformations, TransformationItem, advancedTransformations , NodeType } from '@/lib/pipeline-data';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -99,10 +99,10 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ isC
       .filter(category => category.items.length > 0);
 
     return {
-      sources: filterItems(transformations.sources),
-      dataset: filterItems([transformations.dataset])[0] || { name: '', icon: () => null, type: 'dataset', description: ''},
-      destination: filterItems([transformations.destination])[0] || { name: '', icon: () => null, type: 'destination', description: ''},
-      common: filterItems(transformations.common),
+      sources: filterItems(transformations.sources as TransformationItem[]) as TransformationItem[],
+      dataset: (filterItems([transformations.dataset] as TransformationItem[])[0] as TransformationItem | undefined) || { name: '', icon: () => null, type: 'dataset' as NodeType, description: ''},
+      destination: (filterItems([transformations.destination] as TransformationItem[])[0] as TransformationItem | undefined) || { name: '', icon: () => null, type: 'destination' as NodeType, description: ''},
+      common: filterItems(transformations.common as TransformationItem[]) as TransformationItem[],
       advanced: filteredAdvanced,
     };
   }, [searchTerm]);
@@ -156,7 +156,7 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ isC
                                         <h4 className="px-2.5 text-[9px] uppercase font-semibold text-muted-foreground/60 tracking-wider">{category.category}</h4>
                                         <div className="space-y-0.5">
                                           {category.items.map(item => (
-                                            <DraggableItem key={item.operationType || item.name} item={{...item, type: 'transformation'}} isMini={isCollapsed} />
+                                            <DraggableItem key={item.operationType || item.name} item={{...item, type: 'transformation' as NodeType}} isMini={isCollapsed} />
                                           ))}
                                         </div>
                                       </div>
@@ -168,11 +168,11 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ isC
                 </div>
                
                 {filteredTransformations.dataset.name && (
-                    <CatalogueSection title="Datasets" items={[filteredTransformations.dataset]} itemType="dataset" isMini={isCollapsed} />
+                    <CatalogueSection title="Datasets" items={[filteredTransformations.dataset as TransformationItem]} itemType="dataset" isMini={isCollapsed} />
                 )}
                 
                 {filteredTransformations.destination.name && (
-                    <CatalogueSection title="Destinations" items={[filteredTransformations.destination]} itemType="destination" isMini={isCollapsed} />
+                    <CatalogueSection title="Destinations" items={[filteredTransformations.destination as TransformationItem]} itemType="destination" isMini={isCollapsed} />
                 )}
             </div>
         </ScrollArea>
