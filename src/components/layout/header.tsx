@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   Download, Share2, GitBranch, PlusCircle, 
   Terminal, Sparkles, Library, Settings2, Wand2,
-  Menu, Sun, Moon, Laptop
+  Menu, Sun, Moon, Laptop, BarChart3
 } from 'lucide-react';
 import { PipelineVersion, LineageInfo } from '@/lib/pipeline-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -34,6 +34,7 @@ interface HeaderProps {
   onGeneratePython: () => void;
   onGenerateSpec: () => void;
   onExport: () => void;
+  onProfile: () => void;
   onImportPipeline: (data: any) => void;
   onApplyScaffold: (scaffold: any) => void;
   activeView: 'dashboard' | 'editor';
@@ -97,6 +98,7 @@ const Header: React.FC<HeaderProps> = ({
   onGeneratePython, 
   onGenerateSpec,
   onExport,
+  onProfile,
   onApplyScaffold,
   activeView,
   onViewChange,
@@ -168,8 +170,24 @@ const Header: React.FC<HeaderProps> = ({
               </Button>
               <Button variant="outline" size="sm" onClick={onGeneratePython} className="h-9 bg-background/40 border-border hover:bg-background/60">
               <Button variant="outline" size="sm" onClick={onExport} className="h-9 bg-background/40 border-border hover:bg-background/60 ml-1">
+              <Button variant="outline" size="sm" onClick={onProfile} className="h-9 bg-background/40 border-border hover:bg-background/60 ml-1">
+                <BarChart3 className="h-4 w-4 mr-1" />
+                Profile
+              </Button>
                 <Download className="h-4 w-4 mr-1" />
+              <Button variant="outline" size="sm" onClick={onProfile} className="h-9 bg-background/40 border-border hover:bg-background/60 ml-1">
+                <BarChart3 className="h-4 w-4 mr-1" />
+                Profile
+              </Button>
                 Export
+              <Button variant="outline" size="sm" onClick={onProfile} className="h-9 bg-background/40 border-border hover:bg-background/60 ml-1">
+                <BarChart3 className="h-4 w-4 mr-1" />
+                Profile
+              </Button>
+              </Button>
+              <Button variant="outline" size="sm" onClick={onProfile} className="h-9 bg-background/40 border-border hover:bg-background/60 ml-1">
+                <BarChart3 className="h-4 w-4 mr-1" />
+                Profile
               </Button>
                   <Terminal className="mr-2 h-4 w-4" /> PySpark Code
               </Button>

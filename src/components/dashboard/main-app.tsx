@@ -24,7 +24,9 @@ import ConnectionFieldsModal from '@/components/data-flow/connection-fields-moda
 import PythonCodeModal from '@/components/modals/python-code-modal';
 import SpecModal from '@/components/modals/spec-modal';
 import ExportDialog from '@/components/modals/export-dialog';
+import DataProfilePanel from '@/components/panels/data-profile-panel';
 import { generatePythonCode } from '@/lib/python-generator';
+import { profileDataset, type DatasetProfile } from '@/lib/data-profiler';
 import { generatePipelineSpec } from '@/ai/flows/generate-spec-flow';
 import LineageDashboard from '@/components/dashboard/lineage-dashboard';
 import { useToast } from '@/hooks/use-toast';
@@ -171,6 +173,9 @@ export default function MainApp() {
   
   const [isSpecModalOpen, setIsSpecModalOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [profileData, setProfileData] = useState<DatasetProfile | null>(null);
+  const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(false);
+  const [selectedNodeIdForProfile, setSelectedNodeIdForProfile] = useState<string | null>(null);
   const [generatedSpec, setGeneratedSpec] = useState('');
   const [isSpecLoading, setIsSpecLoading] = useState(false);
 
@@ -801,6 +806,17 @@ export default function MainApp() {
   }, [selectedNodeIds, selectedGroupIds, setNodes, setConnectors, setGroups]);
 
   const handleGeneratePython = useCallback(() => { setGeneratedPythonCode(generatePythonCode(nodes, connectors)); setIsPythonModalOpen(true); }, [nodes, connectors]);
+
+  const handleProfileNode = useCallback((nodeId: string) => {
+    const node = nodes.find(n => n.id === nodeId);
+    const fields = node?.inputFields?.length ? node.inputFields : node?.outputFields || [];
+    if (fields.length > 0) {
+      setProfileData(profileDataset(fields, nodeId));
+      setSelectedNodeIdForProfile(nodeId);
+      setIsProfilePanelOpen(true);
+    }
+  }, [nodes]);
+
   
   const handleGenerateSpec = async () => {
     setIsSpecModalOpen(true); setIsSpecLoading(true);
@@ -841,7 +857,10 @@ export default function MainApp() {
 
   return (
     <div className="flex h-screen w-full flex-col bg-background font-body overflow-hidden">
-      <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage.versions} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onGeneratePython={handleGeneratePython} onGenerateSpec={handleGenerateSpec} onImportPipeline={() => {}} onApplyScaffold={() => {}} onExport={() => setIsExportDialogOpen(true)} activeView={activeView} onViewChange={setActiveView} />
+      <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage.versions} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onGeneratePython={handleGeneratePython} onGenerateSpec={handleGenerateSpec} onImportPipeline={() => {}} onApplyScaffold={() => {}} onExport={() => setIsExportDialogOpen(true)} onProfile={() => {
+        const srcNode = nodes.find(n => n.type === 'source');
+        if (srcNode) handleProfileNode(srcNode.id);
+      }} activeView={activeView} onViewChange={setActiveView} />
       
       {activeView === 'dashboard' ? (
         <LineageDashboard lineages={lineages} onSelectLineage={(id) => { setActiveLineageId(id); setActiveView('editor'); }} onCreateLineage={(name, description) => { const id = `lineage-${Date.now()}`; setLineages(prev => [{ id, name, description, owner: 'Me', lastEdited: 'Just now', versions: [{ id: 'v1', name: 'Initial Design', nodes: [], connectors: [], groups: [] }] }, ...prev]); setActiveLineageId(id); setActiveVersionId('v1'); setActiveView('editor'); }} />
@@ -926,6 +945,7 @@ export default function MainApp() {
       <PythonCodeModal isOpen={isPythonModalOpen} onClose={() => setIsPythonModalOpen(false)} code={generatedPythonCode} />
       <SpecModal isOpen={isSpecModalOpen} onClose={() => setIsSpecModalOpen(false)} spec={generatedSpec} isLoading={isSpecLoading} />
       <ExportDialog nodes={nodes} connectors={connectors} open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen} />
+      <DataProfilePanel profile={profileData} onClose={() => setIsProfilePanelOpen(false)} />
     </div>
   );
 }
