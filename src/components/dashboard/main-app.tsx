@@ -961,7 +961,7 @@ export default function MainApp() {
       <SpecModal isOpen={isSpecModalOpen} onClose={() => setIsSpecModalOpen(false)} spec={generatedSpec} isLoading={isSpecLoading} />
       <ExportDialog nodes={nodes} connectors={connectors} open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen} />
       <TemplateMarketplace open={isTemplateMarketplaceOpen} onOpenChange={setIsTemplateMarketplaceOpen} onSelectTemplate={handleApplyTemplate} />
-      <DataProfilePanel profile={profileData} onClose={() => setIsProfilePanelOpen(false)} />
+      <DataProfilePanel profile={profileData} open={isProfilePanelOpen} onOpenChange={setIsProfilePanelOpen} />
     </div>
   );
 }

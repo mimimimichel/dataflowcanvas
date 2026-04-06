@@ -2,12 +2,13 @@
 
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { Search, ArrowRight, Layers, Eye } from 'lucide-react';
-import { ALL_TEMPLATES, TEMPLATE_CATEGORIES } from '@/lib/pipeline-templates';
+import { Badge } from '@/components/ui/badge';
+import { Search, Package, Brain, ArrowRight } from 'lucide-react';
+import { ALL_TEMPLATES } from '@/lib/pipeline-templates';
 import type { PipelineTemplate } from '@/lib/pipeline-templates';
+import { cn } from '@/lib/utils';
 
 interface TemplateMarketplaceProps {
   open: boolean;
@@ -15,98 +16,155 @@ interface TemplateMarketplaceProps {
   onSelectTemplate: (template: PipelineTemplate) => void;
 }
 
-const difficultyStyle: Record<string, string> = {
-  beginner: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-  intermediate: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  advanced: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+const CATEGORY_META: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
+  'flight-ops': { label: 'Flight Ops', icon: <Package className="h-3.5 w-3.5" />, color: 'bg-sky-500/10 text-sky-500' },
+  maintenance: { label: 'Maintenance', icon: <Brain className="h-3.5 w-3.5" />, color: 'bg-amber-500/10 text-amber-500' },
+  'supply-chain': { label: 'Supply Chain', icon: <Package className="h-3.5 w-3.5" />, color: 'bg-emerald-500/10 text-emerald-500' },
+  'data-ingestion': { label: 'Data Pipeline', icon: <Package className="h-3.5 w-3.5" />, color: 'bg-violet-500/10 text-violet-500' },
+  quality: { label: 'Quality', icon: <Search className="h-3.5 w-3.5" />, color: 'bg-rose-500/10 text-rose-500' },
 };
+
+const DIFFICULTY: Record<string, { label: string; color: string }> = {
+  beginner: { label: 'Beginner', color: 'bg-emerald-500/10 text-emerald-500' },
+  intermediate: { label: 'Intermediate', color: 'bg-amber-500/10 text-amber-500' },
+  advanced: { label: 'Advanced', color: 'bg-rose-500/10 text-rose-500' },
+};
+
+function TemplateCard({ template, onClick }: { template: PipelineTemplate; onClick: () => void }) {
+  const meta = CATEGORY_META[template.category];
+  const diff = DIFFICULTY[template.difficulty] || DIFFICULTY.beginner;
+
+  return (
+    <button
+      onClick={onClick}
+      className="w-full text-left rounded-xl border border-border/60 bg-card p-4
+        hover:border-primary/30 hover:bg-primary/5 transition-all duration-200
+        group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <div className={cn("p-1.5 rounded-lg", meta.color)}>
+            {meta.icon}
+          </div>
+          <h3 className="text-sm font-medium tracking-tight">{template.name}</h3>
+        </div>
+        <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+      </div>
+
+      {/* Description */}
+      <p className="text-xs text-muted-foreground leading-relaxed mb-3 line-clamp-2">
+        {template.description}
+      </p>
+
+      {/* Footer */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <Badge variant="secondary" className={`text-[10px] px-2 py-0 rounded-full font-medium border-none ${meta.color}`}>
+          {meta.label}
+        </Badge>
+        <Badge variant="secondary" className={`text-[10px] px-2 py-0 rounded-full font-medium border-none ${diff.color}`}>
+          {diff.label}
+        </Badge>
+        <span className="ml-auto text-[10px] text-muted-foreground">
+          {template.nodes.length} nodes
+        </span>
+      </div>
+    </button>
+  );
+}
 
 export default function TemplateMarketplace({ open, onOpenChange, onSelectTemplate }: TemplateMarketplaceProps) {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
 
   const filtered = ALL_TEMPLATES.filter(t => {
-    const matchSearch = search === '' || t.name.toLowerCase().includes(search.toLowerCase()) ||
-      t.tags.some(tag => tag.toLowerCase().includes(search.toLowerCase())) ||
-      t.description.toLowerCase().includes(search.toLowerCase());
     const matchCat = activeCategory === 'all' || t.category === activeCategory;
-    return matchSearch && matchCat;
+    const matchSearch = search === '' ||
+      t.name.toLowerCase().includes(search.toLowerCase()) ||
+      t.description.toLowerCase().includes(search.toLowerCase()) ||
+      t.tags.some(tag => tag.toLowerCase().includes(search.toLowerCase()));
+    return matchCat && matchSearch;
   });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-[95vw] sm:w-[90vw] h-[85vh] flex flex-col p-3 sm:p-6">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
-            <Layers className="h-5 w-5" /> Template Marketplace
-          </DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm">
-            Pre-built Foundry pipeline templates — click to load into your canvas.
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Search + Filters */}
-        <div className="space-y-3 flex-shrink-0">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search templates..." className="pl-8 h-8 sm:h-9 text-sm" value={search} onChange={e => setSearch(e.target.value)} />
+      <DialogContent className="max-w-3xl w-[95vw] h-[85vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b space-y-4">
+          <div className="space-y-1">
+            <DialogTitle className="text-lg flex items-center gap-2">
+              <Package className="h-5 w-5 text-primary" />
+              Template Marketplace
+            </DialogTitle>
+            <DialogDescription className="text-sm">
+              Pre-built Foundry data pipelines — click to load into your canvas
+            </DialogDescription>
           </div>
-          <div className="flex gap-1.5 flex-wrap">
-            <button onClick={() => setActiveCategory('all')}
-              className={`text-[10px] sm:text-xs px-2.5 py-1 rounded-full border transition ${activeCategory === 'all' ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/30 text-muted-foreground border-border hover:bg-muted/50'}`}>
+
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search templates, tags..."
+              className="pl-9 h-10 text-sm"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+
+          {/* Category pills */}
+          <div className="flex items-center flex-wrap gap-1.5">
+            <button
+              onClick={() => setActiveCategory('all')}
+              className={cn(
+                "text-xs px-3 py-1.5 rounded-full font-medium transition-all border",
+                activeCategory === 'all'
+                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                  : "bg-muted/40 text-muted-foreground hover:bg-muted/60 border-transparent"
+              )}
+            >
               All ({ALL_TEMPLATES.length})
             </button>
-            {TEMPLATE_CATEGORIES.map(cat => {
-              const count = ALL_TEMPLATES.filter(t => t.category === cat.id).length;
+            {Object.entries(CATEGORY_META).map(([key, meta]) => {
+              const count = ALL_TEMPLATES.filter(t => t.category === key).length;
               return (
-                <button key={cat.id} onClick={() => setActiveCategory(cat.id)}
-                  className={`text-[10px] sm:text-xs px-2.5 py-1 rounded-full border transition ${activeCategory === cat.id ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/30 text-muted-foreground border-border hover:bg-muted/50'}`}>
-                  {cat.icon} {cat.label} ({count})
+                <button
+                  key={key}
+                  onClick={() => setActiveCategory(key)}
+                  className={cn(
+                    "text-xs px-3 py-1.5 rounded-full font-medium transition-all border flex items-center gap-1",
+                    activeCategory === key
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-muted/40 text-muted-foreground hover:bg-muted/60 border-transparent"
+                  )}
+                >
+                  {meta.icon}
+                  {meta.label} ({count})
                 </button>
               );
             })}
           </div>
-        </div>
+        </DialogHeader>
 
-        {/* Template Cards */}
-        <ScrollArea className="flex-1 mt-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pr-2">
-            {filtered.map(template => (
-              <div key={template.id} className="rounded-lg border border-border bg-card p-4 hover:border-primary/50 transition-colors group">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-sm font-semibold flex items-center gap-2">
-                    <span className="text-lg">{template.icon}</span>
-                    {template.name}
-                  </h3>
-                  <Badge className={`text-[9px] ${difficultyStyle[template.difficulty]}`}>
-                    {template.difficulty}
-                  </Badge>
-                </div>
-                <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed line-clamp-2">{template.description}</p>
-                <div className="flex flex-wrap gap-1 mb-3">
-                  {template.tags.map(tag => (
-                    <Badge key={tag} variant="outline" className="text-[9px] py-0 h-4">{tag}</Badge>
-                  ))}
-                </div>
-                <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                  <span className="text-[10px] text-muted-foreground">
-                    {template.nodes.length} nodes · {template.connectors.length} connectors
-                  </span>
-                  <button
-                    onClick={() => onSelectTemplate(template)}
-                    className="text-xs font-medium text-primary flex items-center gap-1 hover:underline"
-                  >
-                    Load <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
-                  </button>
-                </div>
+        {/* Template list */}
+        <ScrollArea className="flex-1">
+          <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {filtered.length === 0 && (
+              <div className="col-span-full py-12 text-center text-sm text-muted-foreground">
+                <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                No templates found
               </div>
+            )}
+            {filtered.map(t => (
+              <TemplateCard
+                key={t.id}
+                template={t}
+                onClick={() => {
+                  onSelectTemplate(t);
+                  onOpenChange(false);
+                }}
+              />
             ))}
           </div>
-          {filtered.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              <p className="text-sm">No templates match your search.</p>
-            </div>
-          )}
         </ScrollArea>
       </DialogContent>
     </Dialog>

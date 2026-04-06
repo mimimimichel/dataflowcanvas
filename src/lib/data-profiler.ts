@@ -80,8 +80,8 @@ export function qualityColor(pct: number): string {
   return 'text-red-500';
 }
 
-export function qualityBadge(pct: number): { bg: string; text: string } {
-  if (pct >= 95) return { bg: 'bg-emerald-50 dark:bg-emerald-950/20', text: 'text-emerald-700 dark:text-emerald-400' };
-  if (pct >= 85) return { bg: 'bg-amber-50 dark:bg-amber-950/20', text: 'text-amber-700 dark:text-amber-400' };
-  return { bg: 'bg-red-50 dark:bg-red-950/20', text: 'text-red-700 dark:text-red-400' };
+export function qualityBadge(pct: number): { bg: string; text: string; ring: string } {
+  if (pct >= 95) return { bg: 'bg-emerald-50 dark:bg-emerald-950/20', text: 'text-emerald-700 dark:text-emerald-400', ring: 'ring-emerald-200 dark:ring-emerald-800' };
+  if (pct >= 85) return { bg: 'bg-amber-50 dark:bg-amber-950/20', text: 'text-amber-700 dark:text-amber-400', ring: 'ring-amber-200 dark:ring-amber-800' };
+  return { bg: 'bg-red-50 dark:bg-red-950/20', text: 'text-red-700 dark:text-red-400', ring: 'ring-red-200 dark:ring-red-800' };
 }

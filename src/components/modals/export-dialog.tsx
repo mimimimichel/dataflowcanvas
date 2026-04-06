@@ -1,12 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Download, FileJson, FileCode, Workflow, Check } from 'lucide-react';
+import { Copy, Download, FileJson, FileCode, Workflow, Check, Code2 } from 'lucide-react';
 import { generateOntologyJSON, generateTransformsCode, generatePipelineConfig } from '@/lib/code-generators';
 import type { PipelineNode, Connector } from '@/lib/pipeline-data';
 
@@ -19,6 +24,7 @@ interface ExportDialogProps {
 
 export default function ExportDialog({ nodes, connectors, open, onOpenChange }: ExportDialogProps) {
   const [copiedTab, setCopiedTab] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('ontology');
 
   const handleCopy = async (content: string, tab: string) => {
     await navigator.clipboard.writeText(content);
@@ -41,59 +47,91 @@ export default function ExportDialog({ nodes, connectors, open, onOpenChange }: 
   const pipelineConfig = generatePipelineConfig(nodes, connectors);
 
   const tabData = [
-    { id: 'ontology', label: 'Ontology', short: 'Ont.', icon: FileJson, code: ontologyCode, filename: 'foundry-ontology.json' },
-    { id: 'transforms', label: 'Transforms', short: 'Py', icon: FileCode, code: transformsCode, filename: 'foundry-transforms.py' },
-    { id: 'pipeline', label: 'Pipeline Config', short: 'Cfg', icon: Workflow, code: pipelineConfig, filename: 'foundry-pipeline-config.json' },
+    { id: 'ontology', label: 'Ontology', icon: FileJson, color: 'text-sky-500', code: ontologyCode, filename: 'foundry-ontology.json', lang: 'JSON' },
+    { id: 'transforms', label: 'Transforms', icon: FileCode, color: 'text-amber-500', code: transformsCode, filename: 'foundry-transforms.py', lang: 'Python' },
+    { id: 'pipeline', label: 'Pipeline', icon: Workflow, color: 'text-emerald-500', code: pipelineConfig, filename: 'foundry-pipeline-config.json', lang: 'JSON' },
   ];
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-[95vw] sm:w-[90vw] h-[90vh] sm:h-[85vh] flex flex-col p-3 sm:p-6 gap-3">
-        <DialogHeader className="pb-1">
-          <DialogTitle className="flex items-center gap-2 text-sm sm:text-lg">
-            Export to Foundry
-            <Badge variant="secondary" className="text-[9px] sm:text-[10px]">v1.0</Badge>
-          </DialogTitle>
-          <DialogDescription className="text-[11px] sm:text-sm">
-            Generate Foundry ontology, transforms &amp; pipeline config.
-          </DialogDescription>
-        </DialogHeader>
+  const activeTabData = tabData.find(t => t.id === activeTab)!;
 
-        <Tabs defaultValue="ontology" className="flex-1 flex flex-col min-h-0">
-          <div className="flex items-center justify-between mb-1.5 flex-shrink-0">
-            <TabsList className="grid w-full max-w-[280px] sm:max-w-md grid-cols-3 h-7 sm:h-10">
-              {tabData.map(tab => (
-                <TabsTrigger key={tab.id} value={tab.id} className="flex items-center justify-center gap-1 text-[10px] sm:text-xs px-0.5 sm:px-2">
-                  <tab.icon className="h-3 w-3 flex-shrink-0" />
-                  <span className="hidden sm:inline">{tab.label}</span>
-                  <span className="sm:hidden">{tab.short}</span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-[640px] max-w-[95vw] p-0 flex flex-col overflow-hidden" side="right">
+        {/* Header */}
+        <div className="shrink-0 px-5 pt-5 pb-4 border-b bg-gradient-to-br from-primary/5 to-transparent">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-primary/10 ring-1 ring-primary/20">
+              <Code2 className="h-4 w-4 text-primary" />
+            </div>
+            <div className="flex-1">
+              <SheetTitle className="text-sm font-semibold">Export to Foundry</SheetTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Generate ontology, transforms &amp; pipeline config
+              </p>
+            </div>
+            <Badge variant="secondary" className="text-[10px] px-2 py-0.5">v1.0</Badge>
+          </div>
+        </div>
+
+        {/* Tab selector */}
+        <div className="shrink-0 px-5 py-3 border-b bg-muted/10">
+          <div className="flex gap-1 bg-muted/50 rounded-lg p-1">
+            {tabData.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-medium transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-background shadow-sm text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <tab.icon className={`h-3.5 w-3.5 ${activeTab === tab.id ? tab.color : ''}`} />
+                <span className="hidden sm:inline">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Code viewer */}
+        <div className="flex-1 flex flex-col min-h-0">
+          {/* File info + actions bar */}
+          <div className="shrink-0 flex items-center justify-between px-4 py-2 border-b bg-muted/10">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono text-muted-foreground">{activeTabData.filename}</span>
+              <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono">{activeTabData.lang}</Badge>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => handleCopy(activeTabData.code, activeTab)}
+              >
+                {copiedTab === activeTab
+                  ? <><Check className="h-3 w-3 mr-1 text-emerald-500" /> Copied</>
+                  : <><Copy className="h-3 w-3 mr-1" /> Copy</>
+                }
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => handleDownload(activeTabData.code, activeTabData.filename)}
+              >
+                <Download className="h-3 w-3 mr-1" /> Download
+              </Button>
+            </div>
           </div>
 
-          {tabData.map(tab => (
-            <TabsContent key={tab.id} value={tab.id} className="flex-1 mt-0 flex flex-col min-h-0">
-              <div className="flex items-center justify-between mb-1 sm:mb-2 flex-shrink-0 gap-1">
-                <span className="text-[10px] sm:text-xs font-mono text-muted-foreground truncate">
-                  {tab.filename}
-                </span>
-                <div className="flex items-center gap-0.5 sm:gap-2 flex-shrink-0">
-                  <Button variant="ghost" size="sm" className="h-6 sm:h-7 px-1.5 text-[10px] sm:text-xs text-muted-foreground" onClick={() => handleCopy(tab.code, tab.id)}>
-                    {copiedTab === tab.id ? <><Check className="h-3 w-3 mr-1 text-green-500" />Copié</> : <><Copy className="h-3 w-3 mr-1" />Copy</>}
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-6 sm:h-7 px-1.5 text-[10px] sm:text-xs text-muted-foreground" onClick={() => handleDownload(tab.code, tab.filename)}>
-                    <Download className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-0.5 sm:mr-1" /><span className="hidden sm:inline">Download</span>
-                  </Button>
-                </div>
-              </div>
-              <ScrollArea className="flex-1 border border-border rounded-md bg-muted/30 p-1.5 sm:p-4">
-                <pre className="text-[9px] sm:text-xs font-mono whitespace-pre-wrap leading-relaxed">{tab.code}</pre>
-              </ScrollArea>
-            </TabsContent>
-          ))}
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+          {/* Code content */}
+          <ScrollArea className="flex-1">
+            <pre className="text-xs font-mono leading-relaxed p-4 whitespace-pre-wrap text-foreground/90">
+              {activeTabData.code}
+            </pre>
+          </ScrollArea>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
