@@ -2,11 +2,11 @@
 
 import React, { useState } from 'react';
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -55,8 +55,8 @@ export default function ExportDialog({ nodes, connectors, open, onOpenChange }: 
   const activeTabData = tabData.find(t => t.id === activeTab)!;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-[640px] max-w-[95vw] p-0 flex flex-col overflow-hidden" side="right">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[700px] w-[95vw] max-h-[85vh] p-0 flex flex-col overflow-hidden">
         {/* Header */}
         <div className="shrink-0 px-5 pt-5 pb-4 border-b bg-gradient-to-br from-primary/5 to-transparent">
           <div className="flex items-center gap-3">
@@ -64,7 +64,7 @@ export default function ExportDialog({ nodes, connectors, open, onOpenChange }: 
               <Code2 className="h-4 w-4 text-primary" />
             </div>
             <div className="flex-1">
-              <SheetTitle className="text-sm font-semibold">Export to Foundry</SheetTitle>
+              <DialogTitle className="text-lg font-semibold">Export to Foundry</DialogTitle>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Generate ontology, transforms &amp; pipeline config
               </p>
@@ -131,7 +131,7 @@ export default function ExportDialog({ nodes, connectors, open, onOpenChange }: 
             </pre>
           </ScrollArea>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

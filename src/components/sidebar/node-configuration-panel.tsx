@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -317,14 +317,14 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
   }
 
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="sm:max-w-lg w-full flex flex-col glass-panel border-l border-border">
-        <SheetHeader className="mb-4">
-          <SheetTitle className="text-xl">Configure: {displayNode.name}</SheetTitle>
-          <SheetDescription>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[600px] w-[95vw] max-h-[85vh] flex flex-col glass-panel">
+        <DialogHeader className="mb-4">
+          <DialogTitle className="text-xl">Configure: {displayNode.name}</DialogTitle>
+          <DialogDescription>
             Modify configurations, rules, and design specifications.
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
         <Separator className="bg-border/50" />
         <div className="flex-1 overflow-y-auto pr-6 -mr-6 py-4">
           <div className="space-y-6">
@@ -380,7 +380,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
             {renderConfigContent()}
           </div>
         </div>
-        <SheetFooter className="mt-6 border-t border-border pt-4">
+        <DialogFooter className="mt-6 border-t border-border pt-4">
             <div className="flex justify-between w-full">
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -406,9 +406,9 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                     <Button onClick={handleSave} className="bg-primary text-primary-foreground shadow-lg shadow-primary/20">Save Changes</Button>
                 </div>
             </div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

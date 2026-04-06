@@ -43,6 +43,7 @@ interface HeaderProps {
   onZoomOut?: () => void;
   onZoomFit?: () => void;
   zoom?: number;
+  onShare?: () => void;
   onAccountSettings?: () => void;
 }
 
@@ -111,6 +112,7 @@ const Header: React.FC<HeaderProps> = ({
   onZoomFit,
   zoom,
   onAccountSettings,
+  onShare,
 }) => {
   const [isCreateVersionOpen, setIsCreateVersionOpen] = useState(false);
   const [isArchitectOpen, setIsArchitectOpen] = useState(false);
@@ -299,7 +301,7 @@ const Header: React.FC<HeaderProps> = ({
           )}
 
           {/* Share button */}
-          <Button size="sm" className="h-8 px-3 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm text-xs">
+          <Button size="sm" className="h-8 px-3 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm text-xs" onClick={() => onShare?.()}>
             <Share2 className="h-3.5 w-3.5 sm:mr-1.5" />
             <span className="hidden sm:inline">Share</span>
           </Button>

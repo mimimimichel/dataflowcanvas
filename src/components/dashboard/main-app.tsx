@@ -31,6 +31,10 @@ import { executePipelinePreview } from '@/lib/pipeline-executor';
 import { useUser } from '@/firebase';
 import { signOut, getAuth } from 'firebase/auth';
 import AccountSettingsDialog from '@/components/modals/account-settings-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Copy, Check, Link2 } from 'lucide-react';
 import type { PipelinePreviewResult } from '@/lib/pipeline-executor';
 import { generatePythonCode } from '@/lib/python-generator';
 import { generatePipelineSpec } from '@/ai/flows/generate-spec-flow';
@@ -41,7 +45,6 @@ import {
   MousePointer2, BoxSelect, Trash2, Group, Square, 
   LayoutDashboard, Boxes
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type SvgDimensions = {
@@ -181,6 +184,9 @@ export default function MainApp() {
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isTemplateMarketplaceOpen, setIsTemplateMarketplaceOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const shareUrl = typeof window !== 'undefined' ? window.location.href : 'https://dataflowcanvas-deploy.vercel.app';
   const { user } = useUser();
 
   const handleApplyTemplate = (template: PipelineTemplate) => {
@@ -927,7 +933,7 @@ export default function MainApp() {
 
   return (
     <div className="flex h-screen w-full flex-col bg-background font-body overflow-hidden">
-      <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage.versions} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onGeneratePython={handleGeneratePython} onGenerateSpec={handleGenerateSpec} onImportPipeline={handleImportPipeline} onApplyScaffold={handleApplyScaffold} onAccountSettings={() => setIsAccountOpen(true)} onExport={() => setIsExportDialogOpen(true)} onTemplates={() => setIsTemplateMarketplaceOpen(true)} activeView={activeView} onViewChange={setActiveView} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onZoomFit={handleResetCanvas} zoom={zoom} />
+      <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage.versions} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onGeneratePython={handleGeneratePython} onGenerateSpec={handleGenerateSpec} onImportPipeline={handleImportPipeline} onApplyScaffold={handleApplyScaffold} onAccountSettings={() => setIsAccountOpen(true)} onShare={() => setIsShareOpen(true)} onExport={() => setIsExportDialogOpen(true)} onTemplates={() => setIsTemplateMarketplaceOpen(true)} activeView={activeView} onViewChange={setActiveView} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onZoomFit={handleResetCanvas} zoom={zoom} />
       
       {activeView === 'dashboard' ? (
         <LineageDashboard lineages={lineages} onSelectLineage={(id) => { setActiveLineageId(id); setActiveView('editor'); }} onCreateLineage={(name, description) => { const id = `lineage-${Date.now()}`; setLineages(prev => [{ id, name, description, owner: 'Me', lastEdited: 'Just now', versions: [{ id: 'v1', name: 'Initial Design', nodes: [], connectors: [], groups: [] }] }, ...prev]); setActiveLineageId(id); setActiveVersionId('v1'); setActiveView('editor'); }} />
