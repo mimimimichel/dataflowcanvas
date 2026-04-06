@@ -880,6 +880,14 @@ export default function MainApp() {
   }, [setNodes, setConnectors]);
 
   const handleDeleteSelected = useCallback(() => {
+    // Delete selected connector (link) only —— doesn't touch nodes
+    if (selectedConnector) {
+      setConnectors(prev => prev.filter(
+        c => !(c.from === selectedConnector.from && c.to === selectedConnector.to)
+      ));
+      setSelectedConnector(null);
+      return; // connector deleted, nothing else
+    }
     if (selectedNodeIds.length > 0) {
       setNodes(prev => prev.filter(n => !selectedNodeIds.includes(n.id)));
       setConnectors(prev => prev.filter(c => !selectedNodeIds.includes(c.from) && !selectedNodeIds.includes(c.to)));
@@ -890,7 +898,7 @@ export default function MainApp() {
       setNodes(prev => prev.map(n => selectedGroupIds.includes(n.groupId!) ? { ...n, groupId: undefined } : n));
       setSelectedGroupIds([]);
     }
-  }, [selectedNodeIds, selectedGroupIds, setNodes, setConnectors, setGroups]);
+  }, [selectedConnector, selectedNodeIds, selectedGroupIds, setNodes, setConnectors, setGroups]);
 
   const handleGeneratePython = useCallback(() => { setGeneratedPythonCode(generatePythonCode(nodes, connectors)); setIsPythonModalOpen(true); }, [nodes, connectors]);
 
