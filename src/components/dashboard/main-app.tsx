@@ -189,6 +189,51 @@ export default function MainApp() {
     ));
     setIsTemplateMarketplaceOpen(false);
   };
+
+  // Import pipeline from JSON file
+  const handleImportPipeline = useCallback((data: any) => {
+    if (!data?.nodes?.length) return;
+    const importedNodes = data.nodes.map((n: any, i: number) => ({
+      ...n,
+      position: n.position || { x: 100 + (i % 4) * 280, y: 100 + Math.floor(i / 4) * 180 }
+    }));
+    const importedConnectors = data.connectors || [];
+    const importedGroups = data.groups || [];
+    setLineages(prev => prev.map(l =>
+      l.id === activeLineageId
+        ? { ...l, versions: l.versions.map(v =>
+            v.id === activeVersionId
+              ? { ...v, nodes: importedNodes, connectors: importedConnectors, groups: importedGroups }
+              : v
+          )}
+        : l
+    ));
+    handleResetCanvas();
+  }, [activeLineageId, activeVersionId]);
+
+  // Apply scaffold: creates a basic 3-node pipeline (source -> transform -> output)
+  const handleApplyScaffold = useCallback(() => {
+    const scaffoldId = Date.now().toString(36);
+    const scaffoldNodes = [
+      { id: `${scaffoldId}-src`, name: "Source", type: "source" as const, position: { x: 100, y: 200 }, outputFields: [], inputFields: [], description: "Data source" },
+      { id: `${scaffoldId}-xfm`, name: "Transform", type: "transformation" as const, position: { x: 400, y: 200 }, outputFields: [], inputFields: [], operation: { type: "filter", settings: {} }, description: "Data transformation" },
+      { id: `${scaffoldId}-out`, name: "Output", type: "destination" as const, position: { x: 700, y: 200 }, outputFields: [], inputFields: [], description: "Destination" },
+    ];
+    const scaffoldConnectors = [
+      { from: `${scaffoldId}-src`, to: `${scaffoldId}-xfm` },
+      { from: `${scaffoldId}-xfm`, to: `${scaffoldId}-out` },
+    ];
+    setLineages(prev => prev.map(l =>
+      l.id === activeLineageId
+        ? { ...l, versions: l.versions.map(v =>
+            v.id === activeVersionId
+              ? { ...v, nodes: scaffoldNodes, connectors: scaffoldConnectors, groups: [] }
+              : v
+          )}
+        : l
+    ));
+    handleResetCanvas();
+  }, [activeLineageId, activeVersionId]);
   const [generatedSpec, setGeneratedSpec] = useState('');
   const [isSpecLoading, setIsSpecLoading] = useState(false);
 
@@ -877,7 +922,7 @@ export default function MainApp() {
 
   return (
     <div className="flex h-screen w-full flex-col bg-background font-body overflow-hidden">
-      <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage.versions} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onGeneratePython={handleGeneratePython} onGenerateSpec={handleGenerateSpec} onImportPipeline={() => {}} onApplyScaffold={() => {}} onExport={() => setIsExportDialogOpen(true)} onTemplates={() => setIsTemplateMarketplaceOpen(true)} activeView={activeView} onViewChange={setActiveView} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onZoomFit={handleResetCanvas} zoom={zoom} />
+      <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage.versions} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onGeneratePython={handleGeneratePython} onGenerateSpec={handleGenerateSpec} onImportPipeline={handleImportPipeline} onApplyScaffold={handleApplyScaffold} onExport={() => setIsExportDialogOpen(true)} onTemplates={() => setIsTemplateMarketplaceOpen(true)} activeView={activeView} onViewChange={setActiveView} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onZoomFit={handleResetCanvas} zoom={zoom} />
       
       {activeView === 'dashboard' ? (
         <LineageDashboard lineages={lineages} onSelectLineage={(id) => { setActiveLineageId(id); setActiveView('editor'); }} onCreateLineage={(name, description) => { const id = `lineage-${Date.now()}`; setLineages(prev => [{ id, name, description, owner: 'Me', lastEdited: 'Just now', versions: [{ id: 'v1', name: 'Initial Design', nodes: [], connectors: [], groups: [] }] }, ...prev]); setActiveLineageId(id); setActiveVersionId('v1'); setActiveView('editor'); }} />
