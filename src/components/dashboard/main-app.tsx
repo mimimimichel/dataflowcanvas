@@ -24,10 +24,8 @@ import ConnectionFieldsModal from '@/components/data-flow/connection-fields-moda
 import PythonCodeModal from '@/components/modals/python-code-modal';
 import SpecModal from '@/components/modals/spec-modal';
 import ExportDialog from '@/components/modals/export-dialog';
-import DataPreviewPanel from '@/components/panels/data-preview-panel';
 import TemplateMarketplace from '@/components/modals/template-marketplace';
 import { type PipelineTemplate } from '@/lib/pipeline-templates';
-import { executePipelinePreview } from '@/lib/pipeline-executor';
 import { useUser } from '@/firebase';
 import { signOut, getAuth } from 'firebase/auth';
 import AccountSettingsDialog from '@/components/modals/account-settings-dialog';
@@ -35,7 +33,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Copy, Check, Link2 } from 'lucide-react';
-import type { PipelinePreviewResult } from '@/lib/pipeline-executor';
 import { generatePythonCode } from '@/lib/python-generator';
 import { generatePipelineSpec } from '@/ai/flows/generate-spec-flow';
 import LineageDashboard from '@/components/dashboard/lineage-dashboard';
@@ -248,21 +245,7 @@ export default function MainApp() {
   const [generatedSpec, setGeneratedSpec] = useState('');
   const [isSpecLoading, setIsSpecLoading] = useState(false);
 
-  // Data Sample Preview state
-  const [isPreviewPanelOpen, setIsPreviewPanelOpen] = useState(false);
-  const [previewNodeId, setPreviewNodeId] = useState<string | null>(null);
-  const [previewResult, setPreviewResult] = useState<PipelinePreviewResult | null>(null);
-  const [previewNodeName, setPreviewNodeName] = useState<string>('');
-
-  const handlePreviewNode = useCallback((nodeId: string) => {
-    const node = nodes.find(n => n.id === nodeId);
-    if (!node) return;
-    const result = executePipelinePreview(nodeId, nodes, connectors);
-    setPreviewResult(result);
-    setPreviewNodeId(nodeId);
-    setPreviewNodeName(node.name);
-    setIsPreviewPanelOpen(true);
-  }, [nodes, connectors]);
+  // Preview removed — fake data was not useful
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const isPanningRef = useRef(false);
@@ -992,7 +975,7 @@ export default function MainApp() {
 
               {nodes.map((node) => {
                 if (isAncestorCollapsed(node.groupId)) return null;
-                return <Node key={node.id} {...node} nodes={nodes} onSelect={isShift => handleNodeSelect(node.id, isShift)} onConfigOpen={() => handleOpenConfig(node.id)} onMouseDown={e => handleNodeMouseDown(e, node.id)} onMouseUp={e => handleNodeMouseUp(e, node.id)} onPortMouseDown={e => handlePortMouseDown(e, node.id)} onAddNode={handleAddNode} isSelected={selectedNodeIds.includes(node.id)} onUpdateOperation={handleUpdateOperation} onPreview={handlePreviewNode} />;
+                return <Node key={node.id} {...node} nodes={nodes} onSelect={isShift => handleNodeSelect(node.id, isShift)} onConfigOpen={() => handleOpenConfig(node.id)} onMouseDown={e => handleNodeMouseDown(e, node.id)} onMouseUp={e => handleNodeMouseUp(e, node.id)} onPortMouseDown={e => handlePortMouseDown(e, node.id)} onAddNode={handleAddNode} isSelected={selectedNodeIds.includes(node.id)} onUpdateOperation={handleUpdateOperation} />;
               })}
 
               {selectionRect && <div className="absolute border border-primary bg-primary/10 pointer-events-none z-[100]" style={{ left: selectionRect.x, top: selectionRect.y, width: selectionRect.width, height: selectionRect.height }} />}
@@ -1027,13 +1010,36 @@ export default function MainApp() {
       <SpecModal isOpen={isSpecModalOpen} onClose={() => setIsSpecModalOpen(false)} spec={generatedSpec} isLoading={isSpecLoading} />
       <ExportDialog nodes={nodes} connectors={connectors} open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen} />
       <TemplateMarketplace open={isTemplateMarketplaceOpen} onOpenChange={setIsTemplateMarketplaceOpen} onSelectTemplate={handleApplyTemplate} />
+      {/* Share Dialog */}
+      <Dialog open={isShareOpen} onOpenChange={setIsShareOpen}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Partager le pipeline</DialogTitle>
+            <DialogDescription>Copiez le lien pour partager cette vue.</DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-2 pt-2">
+            <Input readOnly value={shareUrl} className="text-xs bg-muted" />
+            <Button
+              size="sm"
+              onClick={() => {
+                navigator.clipboard.writeText(shareUrl);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+            >
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Account Settings */}
       <AccountSettingsDialog
         open={isAccountOpen}
         onOpenChange={setIsAccountOpen}
         currentUser={user}
         onSignOut={() => { signOut(getAuth()); setIsAccountOpen(false); }}
       />
-      <DataPreviewPanel preview={previewResult} open={isPreviewPanelOpen} onOpenChange={setIsPreviewPanelOpen} nodeName={previewNodeName} />
     </div>
   );
 }
