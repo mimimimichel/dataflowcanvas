@@ -16,6 +16,7 @@ export type { NodeType };
 export interface Field {
   name: string;
   type: string;
+  nullable?: boolean;
 }
 
 export type DesignStatus = 'draft' | 'review' | 'ready';

@@ -11,8 +11,10 @@ import {
   GroupByOperation, SortOperation, SelectColumnsOperation, UnionOperation, 
   DeduplicationOperation, MissingValuesOperation, getJoinOutputFields, DesignStatus, DataQualityMetrics 
 } from '@/lib/pipeline-data';
-import { Trash2, PlusCircle, Activity, ShieldCheck, Clock3 } from 'lucide-react';
+import { Trash2, PlusCircle, Activity, ShieldCheck, Clock3, ArrowRightLeft } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from "@/components/ui/badge";
 import { Table as UiTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -36,63 +38,154 @@ import MissingValuesOperationEditor from '@/components/operations/missing-values
 import GenericOperationEditor from '@/components/operations/generic-operation-editor';
 
 
+
+const AddConnectorRow: React.FC<{ nodeId?: string; nodes: {id: string; name: string}[]; connectors: ConnectorType[]; setConnectors: React.Dispatch<React.SetStateAction<ConnectorType[]>> }> = ({ nodeId, nodes, connectors, setConnectors }) => {
+  const [direction, setDirection] = useState<'from' | 'to'>('to');
+  const [targetId, setTargetId] = useState('');
+  
+  if (!nodeId) return null;
+  
+  const handleAdd = () => {
+    if (!targetId) return;
+    const newConn = direction === 'to' 
+      ? { from: nodeId, to: targetId }
+      : { from: targetId, to: nodeId };
+    const exists = connectors.some(c => c.from === newConn.from && c.to === newConn.to);
+    if (exists) return;
+    setConnectors(prev => [...prev, newConn]);
+    setTargetId('');
+  };
+
+  const availableTargets = nodes.filter(n => 
+    !connectors.some(c => direction === 'to' ? (c.from === nodeId && c.to === n.id) : (c.from === n.id && c.to === nodeId))
+  );
+
+  if (availableTargets.length === 0) return null;
+
+  return (
+    <div className="flex items-center gap-2 p-2 bg-green-500/5 rounded border border-green-500/20">
+      <Badge variant="outline" className="text-[9px] text-green-400">+</Badge>
+      <Select value={direction} onValueChange={(v: 'from' | 'to') => { setDirection(v); setTargetId(''); }}>
+        <SelectTrigger className="h-7 text-xs w-20 bg-background">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="to" className="text-xs">→ To</SelectItem>
+          <SelectItem value="from" className="text-xs">← From</SelectItem>
+        </SelectContent>
+      </Select>
+      <Select value={targetId} onValueChange={setTargetId}>
+        <SelectTrigger className="h-7 text-xs flex-1 bg-background">
+          <SelectValue placeholder="Select node..." />
+        </SelectTrigger>
+        <SelectContent>
+          {availableTargets.map(n => (
+            <SelectItem key={n.id} value={n.id} className="text-xs">{n.name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Button size="sm" className="h-7 text-xs" disabled={!targetId} onClick={handleAdd}>Add</Button>
+    </div>
+  );
+};
+
+import type { Connector as ConnectorType } from '@/lib/pipeline-data';
+
 interface NodeConfigurationPanelProps {
   node: PipelineNode | undefined;
   nodes: PipelineNode[];
+  connectors: ConnectorType[];
+  setConnectors: React.Dispatch<React.SetStateAction<ConnectorType[]>>;
   isOpen: boolean;
   onClose: () => void;
   onSave: (nodeId: string, newConfig: Partial<PipelineNode>) => void;
   onDelete: (nodeId: string) => void;
 }
 
+const typeBadgeColor = (t: string) => {
+  const m: Record<string, string> = { string: 'text-blue-400', int: 'text-emerald-400', long: 'text-emerald-400', double: 'text-amber-400', float: 'text-amber-400', boolean: 'text-pink-400', date: 'text-violet-400', timestamp: 'text-violet-400' };
+  return m[t] || 'text-muted-foreground';
+};
+
+const DATA_TYPES = ['string', 'int', 'long', 'double', 'float', 'boolean', 'date', 'timestamp', 'array', 'object'] as const;
+
 const SchemaEditor: React.FC<{ fields: Field[], onFieldsChange: (fields: Field[]) => void, isEditable: boolean }> = ({ fields, onFieldsChange, isEditable }) => {
-  const handleFieldChange = (index: number, field: keyof Field, value: string) => {
-    const newFields = [...fields];
+  const handleFieldChange = (index: number, field: keyof Field, value: string | boolean) => {
+    const newFields = [...(fields || [])];
     newFields[index] = { ...newFields[index], [field]: value };
     onFieldsChange(newFields);
   };
 
   const addField = () => {
-    onFieldsChange([...fields, { name: 'new_field', type: 'string' }]);
+    onFieldsChange([...(fields || []), { name: 'new_field', type: 'string' }]);
   };
 
   const removeField = (index: number) => {
-    onFieldsChange(fields.filter((_, i) => i !== index));
+    onFieldsChange((fields || []).filter((_, i) => i !== index));
   };
+  
+  const toggleNullable = (index: number) => {
+    const newFields = [...(fields || [])];
+    newFields[index] = { ...newFields[index], nullable: !newFields[index].nullable };
+    onFieldsChange(newFields);
+  };
+  
+  if (!fields || fields.length === 0) {
+    return (
+      <div className="p-3 text-center text-xs text-muted-foreground bg-muted/20 rounded border border-dashed">
+        No fields defined{isEditable && ' — Add one below'}
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-2">
       <UiTable>
         <TableHeader>
           <TableRow>
-            <TableHead>Field Name</TableHead>
-            <TableHead>Type</TableHead>
-            {isEditable && <TableHead className="w-10"></TableHead>}
+            <TableHead className="text-xs">Name</TableHead>
+            <TableHead className="text-xs">Type</TableHead>
+            <TableHead className="text-xs w-12">Null</TableHead>
+            {isEditable && <TableHead className="w-8"></TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {(fields || []).map((field, index) => (
+          {fields.map((field, index) => (
             <TableRow key={index}>
               <TableCell>
-                <Input 
-                  value={field.name} 
-                  onChange={e => handleFieldChange(index, 'name', e.target.value)} 
-                  disabled={!isEditable}
-                  className="h-8 bg-muted/30"
-                />
+                {isEditable ? (
+                  <Input value={field.name} onChange={e => handleFieldChange(index, 'name', e.target.value)} className="h-7 text-xs bg-muted/30 font-mono" />
+                ) : (
+                  <span className="text-xs font-mono">{field.name}</span>
+                )}
               </TableCell>
               <TableCell>
-                 <Input 
-                  value={field.type} 
-                  onChange={e => handleFieldChange(index, 'type', e.target.value)} 
-                  disabled={!isEditable}
-                  className="h-8 bg-muted/30"
-                />
+                {isEditable ? (
+                  <Select value={field.type} onValueChange={(v) => handleFieldChange(index, 'type', v)}>
+                    <SelectTrigger className="h-7 text-xs bg-muted/30 font-mono">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="font-mono">
+                      {DATA_TYPES.map(t => <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <span className={cn("text-xs font-mono px-1.5 py-0.5 rounded", typeBadgeColor(field.type))}>{field.type}</span>
+                )}
+              </TableCell>
+              <TableCell>
+                {isEditable ? (
+                  <Button variant="ghost" size="icon" onClick={() => toggleNullable(index)} className={cn("h-7 w-7", field.nullable ? "text-amber-500" : "text-muted-foreground/40")}>
+                    <span className="text-[9px] font-bold">{field.nullable ? 'N' : '—'}</span>
+                  </Button>
+                ) : (
+                  <span className={cn("text-[9px] px-1", field.nullable ? "text-amber-500" : "text-muted-foreground/40")}>{field.nullable ? 'nullable' : ''}</span>
+                )}
               </TableCell>
               {isEditable && (
                 <TableCell>
-                  <Button variant="ghost" size="icon" onClick={() => removeField(index)} className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                    <Trash2 className="w-4 h-4" />
+                  <Button variant="ghost" size="icon" onClick={() => removeField(index)} className="h-7 w-6 text-muted-foreground hover:text-destructive">
+                    <Trash2 className="w-3 h-3" />
                   </Button>
                 </TableCell>
               )}
@@ -101,8 +194,8 @@ const SchemaEditor: React.FC<{ fields: Field[], onFieldsChange: (fields: Field[]
         </TableBody>
       </UiTable>
       {isEditable && (
-        <Button variant="outline" size="sm" onClick={addField} className="w-full">
-          <PlusCircle className="mr-2" />
+        <Button variant="outline" size="sm" onClick={addField} className="w-full h-7 text-xs">
+          <PlusCircle className="mr-1 w-3 h-3" />
           Add Field
         </Button>
       )}
@@ -110,7 +203,7 @@ const SchemaEditor: React.FC<{ fields: Field[], onFieldsChange: (fields: Field[]
   );
 };
 
-const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, nodes, isOpen, onClose, onSave, onDelete }) => {
+const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, nodes, connectors, setConnectors, isOpen, onClose, onSave, onDelete }) => {
   const { toast } = useToast();
   const [draftNode, setDraftNode] = useState<Partial<PipelineNode>>({});
 
@@ -235,6 +328,81 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
           default:
               return <GenericOperationEditor operation={operation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
       }
+  };
+
+  // Connector editing
+  const nodeConnectors = useMemo(() => {
+    if (!node) return { incoming: [], outgoing: [] };
+    return {
+      incoming: connectors.filter(c => c.to === node.id),
+      outgoing: connectors.filter(c => c.from === node.id),
+    };
+  }, [node, connectors]);
+
+  const handleReconnectConnector = (oldFrom: string, oldTo: string, newFrom: string, newTo: string) => {
+    // Remove old connector, add new one
+    setConnectors(prev => prev.filter(c => !(c.from === oldFrom && c.to === oldTo)));
+    setConnectors(prev => [...prev, { from: newFrom, to: newTo }]);
+    toast({ title: "Connector updated", description: `Reconnected from "${nodes.find(n => n.id === newFrom)?.name || newFrom}" to "${nodes.find(n => n.id === newTo)?.name || newTo}"` });
+  };
+
+  const renderConnectorsSection = () => {
+    const allNodeIds = nodes.filter(n => n.id !== node?.id).map(n => ({ id: n.id, name: n.name }));
+    if (allNodeIds.length === 0) return null;
+
+    return (
+      <>
+        <Separator className="my-4"/>
+        <h3 className="text-md font-medium mb-2 flex items-center gap-2">
+          <ArrowRightLeft className="h-4 w-4 text-primary" /> Connections
+        </h3>
+        
+        {nodeConnectors.incoming.length === 0 && nodeConnectors.outgoing.length === 0 && (
+          <p className="text-xs text-muted-foreground mb-3">No connections yet.</p>
+        )}
+
+        {/* Incoming connections */}
+        {nodeConnectors.incoming.map((conn, i) => (
+          <div key={`in-${i}`} className="flex items-center gap-2 p-2 bg-muted/20 rounded border border-border mb-2">
+            <Badge variant="outline" className="text-[9px]">IN</Badge>
+            <Select value={conn.from} onValueChange={(newFrom) => handleReconnectConnector(conn.from, conn.to, newFrom, conn.to)}>
+              <SelectTrigger className="h-7 text-xs bg-background">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {nodes.filter(n => n.id !== node?.id).map(n => (
+                  <SelectItem key={n.id} value={n.id} className="text-xs">{n.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-[10px] text-muted-foreground">→</span>
+            <span className="text-xs font-mono truncate">{node?.name}</span>
+          </div>
+        ))}
+
+        {/* Outgoing connections */}
+        {nodeConnectors.outgoing.map((conn, i) => (
+          <div key={`out-${i}`} className="flex items-center gap-2 p-2 bg-muted/20 rounded border border-border mb-2">
+            <Badge variant="outline" className="text-[9px]">OUT</Badge>
+            <span className="text-xs font-mono truncate">{node?.name}</span>
+            <span className="text-[10px] text-muted-foreground">→</span>
+            <Select value={conn.to} onValueChange={(newTo) => handleReconnectConnector(conn.from, conn.to, conn.from, newTo)}>
+              <SelectTrigger className="h-7 text-xs bg-background">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {nodes.filter(n => n.id !== node?.id).map(n => (
+                  <SelectItem key={n.id} value={n.id} className="text-xs">{n.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ))}
+
+        {/* Add new connector section */}
+        <AddConnectorRow nodeId={node?.id} nodes={allNodeIds} connectors={connectors} setConnectors={setConnectors} />
+      </>
+    );
   };
 
   const renderConfigContent = () => {
@@ -380,6 +548,10 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
             {renderConfigContent()}
           </div>
         </div>
+
+            {/* Connections Section - shown for all node types */}
+            {renderConnectorsSection()}
+          
         <DialogFooter className="mt-6 border-t border-border pt-4">
             <div className="flex justify-between w-full">
                 <AlertDialog>
