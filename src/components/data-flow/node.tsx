@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Database, Cog, DatabaseZap, Layers, SlidersHorizontal, GitCompare, Group as GroupIcon, ChevronDown, ArrowRightLeft, Filter, SortAsc, Table, Combine, Server, Pin, Copy, Activity, ShieldCheck, Clock3 } from 'lucide-react';
+import { Database, Cog, DatabaseZap, Layers, SlidersHorizontal, GitCompare, Group as GroupIcon, ChevronDown, ArrowRightLeft, Filter, SortAsc, Table, Combine, Server, Pin, Copy, Activity, ShieldCheck, Clock3, Eye } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import Port from './port';
 import { TransformationItem, PipelineNode, Field, Operation, transformations, advancedTransformations, SelectColumnsOperation as SelectColumnsType, UnionOperation as UnionType, DesignStatus } from '@/lib/pipeline-data';
@@ -28,6 +28,7 @@ interface NodeProps extends PipelineNode {
   onAddNode: (item: TransformationItem, position: { x: number; y: number }) => void;
   isSelected: boolean;
   onUpdateOperation: (nodeId: string, operation: Operation) => void;
+  onPreview?: (nodeId: string) => void;
 }
 
 const typeConfig: Record<NodeType, { icon: LucideIcon; color: string; border: string; glow: string; }> = {
@@ -84,7 +85,7 @@ const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
     );
 };
 
-const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputFields, outputFields, system, location, status = 'draft', qualityMetrics, onSelect, onConfigOpen, onMouseDown, onMouseUp, onPortMouseDown, isSelected, onUpdateOperation, nodes, onAddNode }) => {
+const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputFields, outputFields, system, location, status = 'draft', qualityMetrics, onSelect, onConfigOpen, onMouseDown, onMouseUp, onPortMouseDown, isSelected, onUpdateOperation, nodes, onAddNode, onPreview }) => {
   
   const getIconForOperation = (op?: Operation) => {
     if(!op || type !== 'transformation') return typeConfig[type].icon || Cog;
@@ -125,6 +126,11 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
         operationType: operation?.type
     };
     onAddNode(item, { x: position.x + 40, y: position.y + 40 });
+  }
+
+  const handlePreview = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onPreview?.(id);
   }
   
   const renderOverview = () => {
@@ -251,6 +257,15 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
         )}
         
         <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 glass-panel hover:bg-muted text-foreground rounded-md border border-border"
+                onClick={handlePreview}
+                title="Preview Data"
+            >
+                <Eye className="w-3.5 h-3.5" />
+            </Button>
             <Button 
                 variant="ghost" 
                 size="icon" 

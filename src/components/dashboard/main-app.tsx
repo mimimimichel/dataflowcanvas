@@ -25,8 +25,11 @@ import PythonCodeModal from '@/components/modals/python-code-modal';
 import SpecModal from '@/components/modals/spec-modal';
 import ExportDialog from '@/components/modals/export-dialog';
 import DataProfilePanel from '@/components/panels/data-profile-panel';
+import DataPreviewPanel from '@/components/panels/data-preview-panel';
 import TemplateMarketplace from '@/components/modals/template-marketplace';
 import { type PipelineTemplate } from '@/lib/pipeline-templates';
+import { executePipelinePreview } from '@/lib/pipeline-executor';
+import type { PipelinePreviewResult } from '@/lib/pipeline-executor';
 import { generatePythonCode } from '@/lib/python-generator';
 import { profileDataset, type DatasetProfile } from '@/lib/data-profiler';
 import { generatePipelineSpec } from '@/ai/flows/generate-spec-flow';
@@ -193,6 +196,22 @@ export default function MainApp() {
   const [selectedNodeIdForProfile, setSelectedNodeIdForProfile] = useState<string | null>(null);
   const [generatedSpec, setGeneratedSpec] = useState('');
   const [isSpecLoading, setIsSpecLoading] = useState(false);
+
+  // Data Sample Preview state
+  const [isPreviewPanelOpen, setIsPreviewPanelOpen] = useState(false);
+  const [previewNodeId, setPreviewNodeId] = useState<string | null>(null);
+  const [previewResult, setPreviewResult] = useState<PipelinePreviewResult | null>(null);
+  const [previewNodeName, setPreviewNodeName] = useState<string>('');
+
+  const handlePreviewNode = useCallback((nodeId: string) => {
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) return;
+    const result = executePipelinePreview(nodeId, nodes, connectors);
+    setPreviewResult(result);
+    setPreviewNodeId(nodeId);
+    setPreviewNodeName(node.name);
+    setIsPreviewPanelOpen(true);
+  }, [nodes, connectors]);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const isPanningRef = useRef(false);
@@ -926,7 +945,7 @@ export default function MainApp() {
 
               {nodes.map((node) => {
                 if (isAncestorCollapsed(node.groupId)) return null;
-                return <Node key={node.id} {...node} nodes={nodes} onSelect={isShift => handleNodeSelect(node.id, isShift)} onConfigOpen={() => handleOpenConfig(node.id)} onMouseDown={e => handleNodeMouseDown(e, node.id)} onMouseUp={e => handleNodeMouseUp(e, node.id)} onPortMouseDown={e => handlePortMouseDown(e, node.id)} onAddNode={handleAddNode} isSelected={selectedNodeIds.includes(node.id)} onUpdateOperation={handleUpdateOperation} />;
+                return <Node key={node.id} {...node} nodes={nodes} onSelect={isShift => handleNodeSelect(node.id, isShift)} onConfigOpen={() => handleOpenConfig(node.id)} onMouseDown={e => handleNodeMouseDown(e, node.id)} onMouseUp={e => handleNodeMouseUp(e, node.id)} onPortMouseDown={e => handlePortMouseDown(e, node.id)} onAddNode={handleAddNode} isSelected={selectedNodeIds.includes(node.id)} onUpdateOperation={handleUpdateOperation} onPreview={handlePreviewNode} />;
               })}
 
               {selectionRect && <div className="absolute border border-primary bg-primary/10 pointer-events-none z-[100]" style={{ left: selectionRect.x, top: selectionRect.y, width: selectionRect.width, height: selectionRect.height }} />}
@@ -962,6 +981,7 @@ export default function MainApp() {
       <ExportDialog nodes={nodes} connectors={connectors} open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen} />
       <TemplateMarketplace open={isTemplateMarketplaceOpen} onOpenChange={setIsTemplateMarketplaceOpen} onSelectTemplate={handleApplyTemplate} />
       <DataProfilePanel profile={profileData} open={isProfilePanelOpen} onOpenChange={setIsProfilePanelOpen} />
+      <DataPreviewPanel preview={previewResult} open={isPreviewPanelOpen} onOpenChange={setIsPreviewPanelOpen} nodeName={previewNodeName} />
     </div>
   );
 }
