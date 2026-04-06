@@ -25,6 +25,8 @@ import PythonCodeModal from '@/components/modals/python-code-modal';
 import SpecModal from '@/components/modals/spec-modal';
 import ExportDialog from '@/components/modals/export-dialog';
 import DataProfilePanel from '@/components/panels/data-profile-panel';
+import TemplateMarketplace from '@/components/modals/template-marketplace';
+import { type PipelineTemplate } from '@/lib/pipeline-templates';
 import { generatePythonCode } from '@/lib/python-generator';
 import { profileDataset, type DatasetProfile } from '@/lib/data-profiler';
 import { generatePipelineSpec } from '@/ai/flows/generate-spec-flow';
@@ -173,7 +175,20 @@ export default function MainApp() {
   
   const [isSpecModalOpen, setIsSpecModalOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [isTemplateMarketplaceOpen, setIsTemplateMarketplaceOpen] = useState(false);
   const [profileData, setProfileData] = useState<DatasetProfile | null>(null);
+
+  const handleApplyTemplate = (template: PipelineTemplate) => {
+    const { nodes, connectors } = template;
+    setLineages(prev => prev.map(l =>
+      l.id === activeLineageId
+        ? { ...l, versions: l.versions.map(v =>
+            v.id === activeVersionId ? { ...v, nodes, connectors, groups: [] } : v
+          )}
+        : l
+    ));
+    setIsTemplateMarketplaceOpen(false);
+  };
   const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(false);
   const [selectedNodeIdForProfile, setSelectedNodeIdForProfile] = useState<string | null>(null);
   const [generatedSpec, setGeneratedSpec] = useState('');
@@ -860,7 +875,7 @@ export default function MainApp() {
       <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage.versions} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onGeneratePython={handleGeneratePython} onGenerateSpec={handleGenerateSpec} onImportPipeline={() => {}} onApplyScaffold={() => {}} onExport={() => setIsExportDialogOpen(true)} onProfile={() => {
         const srcNode = nodes.find(n => n.type === 'source');
         if (srcNode) handleProfileNode(srcNode.id);
-      }} activeView={activeView} onViewChange={setActiveView} />
+      }} onTemplates={() => setIsTemplateMarketplaceOpen(true)} activeView={activeView} onViewChange={setActiveView} />
       
       {activeView === 'dashboard' ? (
         <LineageDashboard lineages={lineages} onSelectLineage={(id) => { setActiveLineageId(id); setActiveView('editor'); }} onCreateLineage={(name, description) => { const id = `lineage-${Date.now()}`; setLineages(prev => [{ id, name, description, owner: 'Me', lastEdited: 'Just now', versions: [{ id: 'v1', name: 'Initial Design', nodes: [], connectors: [], groups: [] }] }, ...prev]); setActiveLineageId(id); setActiveVersionId('v1'); setActiveView('editor'); }} />
@@ -945,6 +960,7 @@ export default function MainApp() {
       <PythonCodeModal isOpen={isPythonModalOpen} onClose={() => setIsPythonModalOpen(false)} code={generatedPythonCode} />
       <SpecModal isOpen={isSpecModalOpen} onClose={() => setIsSpecModalOpen(false)} spec={generatedSpec} isLoading={isSpecLoading} />
       <ExportDialog nodes={nodes} connectors={connectors} open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen} />
+      <TemplateMarketplace open={isTemplateMarketplaceOpen} onOpenChange={setIsTemplateMarketplaceOpen} onSelectTemplate={handleApplyTemplate} />
       <DataProfilePanel profile={profileData} onClose={() => setIsProfilePanelOpen(false)} />
     </div>
   );

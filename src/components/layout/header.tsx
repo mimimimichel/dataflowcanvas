@@ -3,10 +3,10 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  Download, Share2, GitBranch, PlusCircle, 
+import {
+  Download, Share2, GitBranch, PlusCircle,
   Terminal, Sparkles, Library, Settings2, Wand2,
-  Menu, Sun, Moon, Laptop, BarChart3
+  Menu, Sun, Moon, Laptop, BarChart3, Layers
 } from 'lucide-react';
 import { PipelineVersion, LineageInfo } from '@/lib/pipeline-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -35,6 +35,7 @@ interface HeaderProps {
   onGenerateSpec: () => void;
   onExport: () => void;
   onProfile: () => void;
+  onTemplates: () => void;
   onImportPipeline: (data: any) => void;
   onApplyScaffold: (scaffold: any) => void;
   activeView: 'dashboard' | 'editor';
@@ -88,17 +89,18 @@ const CreateVersionDialog: React.FC<{
 };
 
 
-const Header: React.FC<HeaderProps> = ({ 
+const Header: React.FC<HeaderProps> = ({
   activeLineage,
   activeVersion,
-  versions, 
-  activeVersionId, 
-  onVersionChange, 
-  onCreateVersion, 
-  onGeneratePython, 
+  versions,
+  activeVersionId,
+  onVersionChange,
+  onCreateVersion,
+  onGeneratePython,
   onGenerateSpec,
   onExport,
   onProfile,
+  onTemplates,
   onApplyScaffold,
   activeView,
   onViewChange,
@@ -106,17 +108,6 @@ const Header: React.FC<HeaderProps> = ({
   const [isCreateVersionOpen, setIsCreateVersionOpen] = useState(false);
   const [isArchitectOpen, setIsArchitectOpen] = useState(false);
   const { theme, setTheme } = useTheme();
-
-  const handleExport = () => {
-    if (!activeVersion) return;
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(activeVersion));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", `pipeline_${activeLineage?.name || 'design'}.json`);
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-  };
 
   return (
     <header className={cn(
@@ -162,38 +153,24 @@ const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-2 md:gap-4">
         {activeView === 'editor' && (
           <div className="hidden lg:flex items-center gap-2 border-r border-border pr-4">
-              <Button variant="outline" size="sm" onClick={() => setIsArchitectOpen(true)} className="group h-9 bg-primary/10 border-primary/20 hover:bg-primary/20 text-primary">
-                  <Wand2 className="mr-2 h-4 w-4" /> Architect
-              </Button>
-              <Button variant="outline" size="sm" onClick={onGenerateSpec} className="group h-9 bg-background/40 border-border hover:bg-background/60">
-                  <Sparkles className="mr-2 h-4 w-4 text-amber-500" /> Spec
-              </Button>
-              <Button variant="outline" size="sm" onClick={onGeneratePython} className="h-9 bg-background/40 border-border hover:bg-background/60">
-              <Button variant="outline" size="sm" onClick={onExport} className="h-9 bg-background/40 border-border hover:bg-background/60 ml-1">
-              <Button variant="outline" size="sm" onClick={onProfile} className="h-9 bg-background/40 border-border hover:bg-background/60 ml-1">
-                <BarChart3 className="h-4 w-4 mr-1" />
-                Profile
-              </Button>
-                <Download className="h-4 w-4 mr-1" />
-              <Button variant="outline" size="sm" onClick={onProfile} className="h-9 bg-background/40 border-border hover:bg-background/60 ml-1">
-                <BarChart3 className="h-4 w-4 mr-1" />
-                Profile
-              </Button>
-                Export
-              <Button variant="outline" size="sm" onClick={onProfile} className="h-9 bg-background/40 border-border hover:bg-background/60 ml-1">
-                <BarChart3 className="h-4 w-4 mr-1" />
-                Profile
-              </Button>
-              </Button>
-              <Button variant="outline" size="sm" onClick={onProfile} className="h-9 bg-background/40 border-border hover:bg-background/60 ml-1">
-                <BarChart3 className="h-4 w-4 mr-1" />
-                Profile
-              </Button>
-                  <Terminal className="mr-2 h-4 w-4" /> PySpark Code
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleExport} className="h-9 bg-background/40 border-border hover:bg-background/60">
-                <Download className="mr-2 h-4 w-4" /> Export
-              </Button>
+            <Button variant="outline" size="sm" onClick={() => setIsArchitectOpen(true)} className="group h-9 bg-primary/10 border-primary/20 hover:bg-primary/20 text-primary">
+              <Wand2 className="mr-2 h-4 w-4" /> Architect
+            </Button>
+            <Button variant="outline" size="sm" onClick={onGenerateSpec} className="group h-9 bg-background/40 border-border hover:bg-background/60">
+              <Sparkles className="mr-2 h-4 w-4 text-amber-500" /> Spec
+            </Button>
+            <Button variant="outline" size="sm" onClick={onGeneratePython} className="h-9 bg-background/40 border-border hover:bg-background/60">
+              <Terminal className="mr-2 h-4 w-4" /> PySpark Code
+            </Button>
+            <Button variant="outline" size="sm" onClick={onExport} className="h-9 bg-background/40 border-border hover:bg-background/60">
+              <Download className="mr-2 h-4 w-4" /> Export
+            </Button>
+            <Button variant="outline" size="sm" onClick={onProfile} className="h-9 bg-background/40 border-border hover:bg-background/60">
+              <BarChart3 className="mr-2 h-4 w-4" /> Profile
+            </Button>
+            <Button variant="outline" size="sm" onClick={onTemplates} className="h-9 bg-background/40 border-border hover:bg-background/60">
+              <Layers className="mr-2 h-4 w-4" /> Templates
+            </Button>
           </div>
         )}
 
@@ -223,7 +200,7 @@ const Header: React.FC<HeaderProps> = ({
                 <Menu className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52 glass-panel border-border">
+            <DropdownMenuContent align="end" className="w-64 glass-panel border-border">
               <DropdownMenuItem onClick={() => setIsArchitectOpen(true)} className="gap-2 text-primary font-bold">
                 <Wand2 className="h-4 w-4" /> AI Architect
               </DropdownMenuItem>
@@ -234,9 +211,26 @@ const Header: React.FC<HeaderProps> = ({
               <DropdownMenuItem onClick={onGeneratePython} className="gap-2">
                 <Terminal className="h-4 w-4" /> PySpark Code
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={onExport} className="gap-2">
+                <Download className="h-4 w-4" /> Export Palantir
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onProfile} className="gap-2">
+                <BarChart3 className="h-4 w-4" /> Data Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onTemplates} className="gap-2">
+                <Layers className="h-4 w-4" /> Template Marketplace
+              </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-border" />
-              <DropdownMenuItem onClick={handleExport} className="gap-2">
-                <Download className="h-4 w-4" /> Export JSON
+              <DropdownMenuItem onClick={() => {
+                const inp = document.createElement('input');
+                inp.type = 'file'; inp.accept = '.json';
+                inp.onchange = (e: any) => {
+                  const file = e.target.files[0];
+                  if (file) { const r = new FileReader(); r.onload = () => { try {JSON.parse(r.result as string)} catch(_){} } ; r.readAsText(file); }
+                };
+                inp.click();
+              }} className="gap-2">
+                <Download className="h-4 w-4" /> Import JSON
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -249,7 +243,7 @@ const Header: React.FC<HeaderProps> = ({
       </div>
 
       {activeVersion && (
-         <CreateVersionDialog 
+         <CreateVersionDialog
           isOpen={isCreateVersionOpen}
           onOpenChange={setIsCreateVersionOpen}
           onCreate={onCreateVersion}
@@ -257,7 +251,7 @@ const Header: React.FC<HeaderProps> = ({
         />
       )}
 
-      <AIArchitectModal 
+      <AIArchitectModal
         isOpen={isArchitectOpen}
         onClose={() => setIsArchitectOpen(false)}
         onApplyScaffold={onApplyScaffold}
