@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -51,7 +51,7 @@ const CreateVersionDialog: React.FC<{
   const [name, setName] = useState(`Copy of ${activeVersionName}`);
 
   const handleCreate = () => {
-    if(name.trim()) {
+    if (name.trim()) {
       onCreate(name.trim());
       onOpenChange(false);
     }
@@ -63,14 +63,12 @@ const CreateVersionDialog: React.FC<{
         <DialogHeader>
           <DialogTitle>Create New Version</DialogTitle>
           <DialogDescription>
-            This will create a copy of the current version "{activeVersionName}".
+            This will create a copy of the current version &quot;{activeVersionName}&quot;.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              Name
-            </Label>
+            <Label htmlFor="name" className="text-right">Name</Label>
             <Input
               id="name"
               value={name}
@@ -101,6 +99,7 @@ const Header: React.FC<HeaderProps> = ({
   onExport,
   onProfile,
   onTemplates,
+  onImportPipeline,
   onApplyScaffold,
   activeView,
   onViewChange,
@@ -108,6 +107,28 @@ const Header: React.FC<HeaderProps> = ({
   const [isCreateVersionOpen, setIsCreateVersionOpen] = useState(false);
   const [isArchitectOpen, setIsArchitectOpen] = useState(false);
   const { theme, setTheme } = useTheme();
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleImportClick = () => {
+    fileRef.current?.click();
+  };
+
+  const handleImportChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result as string);
+          onImportPipeline(data);
+        } catch {
+          console.error('Invalid JSON file');
+        }
+      };
+      reader.readAsText(file);
+    }
+    e.target.value = '';
+  };
 
   return (
     <header className={cn(
@@ -120,7 +141,7 @@ const Header: React.FC<HeaderProps> = ({
           <h1 className="text-lg font-bold tracking-tight hidden xl:block">DataFlow</h1>
         </div>
 
-        <Tabs value={activeView} onValueChange={(v) => onViewChange(v as any)} className="w-[200px] md:w-[300px]">
+        <Tabs value={activeView} onValueChange={(v) => onViewChange(v as 'dashboard' | 'editor')} className="w-[200px] md:w-[300px]">
           <TabsList className="grid w-full grid-cols-2 bg-muted/50">
             <TabsTrigger value="dashboard" className="flex items-center gap-2 text-xs md:text-sm">
               <Library className="h-4 w-4 hidden sm:block" /> Library
@@ -152,31 +173,57 @@ const Header: React.FC<HeaderProps> = ({
 
       <div className="flex items-center gap-2 md:gap-4">
         {activeView === 'editor' && (
-          <div className="hidden lg:flex items-center gap-2 border-r border-border pr-4">
-            <Button variant="outline" size="sm" onClick={() => setIsArchitectOpen(true)} className="group h-9 bg-primary/10 border-primary/20 hover:bg-primary/20 text-primary">
-              <Wand2 className="mr-2 h-4 w-4" /> Architect
-            </Button>
-            <Button variant="outline" size="sm" onClick={onGenerateSpec} className="group h-9 bg-background/40 border-border hover:bg-background/60">
-              <Sparkles className="mr-2 h-4 w-4 text-amber-500" /> Spec
-            </Button>
-            <Button variant="outline" size="sm" onClick={onGeneratePython} className="h-9 bg-background/40 border-border hover:bg-background/60">
-              <Terminal className="mr-2 h-4 w-4" /> PySpark Code
-            </Button>
-            <Button variant="outline" size="sm" onClick={onExport} className="h-9 bg-background/40 border-border hover:bg-background/60">
-              <Download className="mr-2 h-4 w-4" /> Export
-            </Button>
-            <Button variant="outline" size="sm" onClick={onProfile} className="h-9 bg-background/40 border-border hover:bg-background/60">
-              <BarChart3 className="mr-2 h-4 w-4" /> Profile
-            </Button>
-            <Button variant="outline" size="sm" onClick={onTemplates} className="h-9 bg-background/40 border-border hover:bg-background/60">
-              <Layers className="mr-2 h-4 w-4" /> Templates
-            </Button>
-          </div>
+          <>
+            {/* Desktop toolbar - full labels */}
+            <div className="hidden xl:flex items-center gap-2 border-r border-border pr-4">
+              <Button variant="outline" size="sm" onClick={() => setIsArchitectOpen(true)} className="group h-8 bg-primary/10 border-primary/20 hover:bg-primary/20 text-primary">
+                <Wand2 className="mr-1.5 h-3.5 w-3.5" /> Architect
+              </Button>
+              <Button variant="outline" size="sm" onClick={onGenerateSpec} className="group h-8 bg-background/40 border-border hover:bg-background/60">
+                <Sparkles className="mr-1.5 h-3.5 w-3.5 text-amber-500" /> Spec
+              </Button>
+              <Button variant="outline" size="sm" onClick={onGeneratePython} className="h-8 bg-background/40 border-border hover:bg-background/60">
+                <Terminal className="mr-1.5 h-3.5 w-3.5" /> PySpark
+              </Button>
+              <Button variant="outline" size="sm" onClick={onExport} className="h-8 bg-background/40 border-border hover:bg-background/60">
+                <Download className="mr-1.5 h-3.5 w-3.5" /> Export
+              </Button>
+              <Button variant="outline" size="sm" onClick={onProfile} className="h-8 bg-background/40 border-border hover:bg-background/60">
+                <BarChart3 className="mr-1.5 h-3.5 w-3.5" /> Profile
+              </Button>
+              <Button variant="outline" size="sm" onClick={onTemplates} className="h-8 bg-background/40 border-border hover:bg-background/60">
+                <Layers className="mr-1.5 h-3.5 w-3.5" /> Templates
+              </Button>
+            </div>
+
+            {/* Medium screens - icons only */}
+            <div className="hidden lg:flex xl:hidden items-center gap-1 border-r border-border pr-3">
+              <Button variant="outline" size="icon" className="h-8 w-8 bg-primary/10 border-primary/20 hover:bg-primary/20 text-primary" onClick={() => setIsArchitectOpen(true)}>
+                <Wand2 className="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="outline" size="icon" className="h-8 w-8 bg-background/40 border-border hover:bg-background/60" onClick={onGenerateSpec}>
+                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+              </Button>
+              <Button variant="outline" size="icon" className="h-8 w-8 bg-background/40 border-border hover:bg-background/60" onClick={onGeneratePython}>
+                <Terminal className="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="outline" size="icon" className="h-8 w-8 bg-background/40 border-border hover:bg-background/60" onClick={onExport}>
+                <Download className="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="outline" size="icon" className="h-8 w-8 bg-background/40 border-border hover:bg-background/60" onClick={onProfile}>
+                <BarChart3 className="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="outline" size="icon" className="h-8 w-8 bg-background/40 border-border hover:bg-background/60" onClick={onTemplates}>
+                <Layers className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </>
         )}
 
+        {/* Theme dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9">
+            <Button variant="ghost" size="icon" className="h-8 w-8">
               {theme === 'light' ? <Sun className="h-4 w-4" /> : theme === 'dark' ? <Moon className="h-4 w-4" /> : <Laptop className="h-4 w-4" />}
             </Button>
           </DropdownMenuTrigger>
@@ -193,6 +240,7 @@ const Header: React.FC<HeaderProps> = ({
           </DropdownMenuContent>
         </DropdownMenu>
 
+        {/* Mobile menu */}
         <div className="lg:hidden flex items-center gap-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -200,36 +248,33 @@ const Header: React.FC<HeaderProps> = ({
                 <Menu className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64 glass-panel border-border">
-              <DropdownMenuItem onClick={() => setIsArchitectOpen(true)} className="gap-2 text-primary font-bold">
-                <Wand2 className="h-4 w-4" /> AI Architect
-              </DropdownMenuItem>
+            <DropdownMenuContent align="end" className="w-56 glass-panel border-border">
+              {activeView === 'editor' && (
+                <>
+                  <DropdownMenuItem onClick={() => setIsArchitectOpen(true)} className="gap-2 text-primary font-bold">
+                    <Wand2 className="h-4 w-4" /> AI Architect
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-border" />
+                  <DropdownMenuItem onClick={onGenerateSpec} className="gap-2">
+                    <Sparkles className="h-4 w-4 text-amber-500" /> AI Spec Writer
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onGeneratePython} className="gap-2">
+                    <Terminal className="h-4 w-4" /> PySpark Code
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-border" />
+                  <DropdownMenuItem onClick={onExport} className="gap-2">
+                    <Download className="h-4 w-4" /> Export JSON
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onProfile} className="gap-2">
+                    <BarChart3 className="h-4 w-4" /> Data Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onTemplates} className="gap-2">
+                    <Layers className="h-4 w-4" /> Template Marketplace
+                  </DropdownMenuItem>
+                </>
+              )}
               <DropdownMenuSeparator className="bg-border" />
-              <DropdownMenuItem onClick={onGenerateSpec} className="gap-2">
-                <Sparkles className="h-4 w-4 text-amber-500" /> AI Spec Writer
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onGeneratePython} className="gap-2">
-                <Terminal className="h-4 w-4" /> PySpark Code
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onExport} className="gap-2">
-                <Download className="h-4 w-4" /> Export Palantir
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onProfile} className="gap-2">
-                <BarChart3 className="h-4 w-4" /> Data Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onTemplates} className="gap-2">
-                <Layers className="h-4 w-4" /> Template Marketplace
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-border" />
-              <DropdownMenuItem onClick={() => {
-                const inp = document.createElement('input');
-                inp.type = 'file'; inp.accept = '.json';
-                inp.onchange = (e: any) => {
-                  const file = e.target.files[0];
-                  if (file) { const r = new FileReader(); r.onload = () => { try {JSON.parse(r.result as string)} catch(_){} } ; r.readAsText(file); }
-                };
-                inp.click();
-              }} className="gap-2">
+              <DropdownMenuItem onClick={handleImportClick} className="gap-2">
                 <Download className="h-4 w-4" /> Import JSON
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -242,8 +287,17 @@ const Header: React.FC<HeaderProps> = ({
         </Button>
       </div>
 
+      {/* Hidden file input for import */}
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".json"
+        className="hidden"
+        onChange={handleImportChange}
+      />
+
       {activeVersion && (
-         <CreateVersionDialog
+        <CreateVersionDialog
           isOpen={isCreateVersionOpen}
           onOpenChange={setIsCreateVersionOpen}
           onCreate={onCreateVersion}
