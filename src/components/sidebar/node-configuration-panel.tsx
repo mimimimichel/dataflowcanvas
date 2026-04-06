@@ -9,12 +9,12 @@ import { Separator } from '@/components/ui/separator';
 import { 
   PipelineNode, Field, Operation, FilterOperation, JoinOperation, 
   GroupByOperation, SortOperation, SelectColumnsOperation, UnionOperation, 
-  DeduplicationOperation, MissingValuesOperation, getJoinOutputFields, DesignStatus, DataQualityMetrics 
+  DeduplicationOperation, MissingValuesOperation, getJoinOutputFields, DesignStatus, DataQualityMetrics, Connector as ConnectorType 
 } from '@/lib/pipeline-data';
 import { Trash2, PlusCircle, Activity, ShieldCheck, Clock3, ArrowRightLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { Badge } from "@/components/ui/badge";
+import { Badge } from '@/components/ui/badge';
 import { Table as UiTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -89,7 +89,6 @@ const AddConnectorRow: React.FC<{ nodeId?: string; nodes: {id: string; name: str
   );
 };
 
-import type { Connector as ConnectorType } from '@/lib/pipeline-data';
 
 interface NodeConfigurationPanelProps {
   node: PipelineNode | undefined;

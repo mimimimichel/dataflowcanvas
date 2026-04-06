@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Database, Cog, DatabaseZap, Layers, SlidersHorizontal, GitCompare, Group as GroupIcon, ChevronDown, ArrowRightLeft, Filter, SortAsc, Table, Combine, Server, Pin, Copy, Activity, ShieldCheck, Clock3 } from 'lucide-react';
+import { Database, Cog, DatabaseZap, Layers, SlidersHorizontal, GitCompare, ChevronDown, Server, Pin, Copy } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import Port from './port';
 import { TransformationItem, PipelineNode, Field, Operation, transformations, advancedTransformations, SelectColumnsOperation as SelectColumnsType, UnionOperation as UnionType, DesignStatus } from '@/lib/pipeline-data';
