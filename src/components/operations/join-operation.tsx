@@ -34,7 +34,7 @@ const JoinOperation: React.FC<JoinOperationProps> = ({ operation, nodes }) => {
             </div>
         </div>
          <div className="text-center font-mono pt-1 text-muted-foreground">
-            ON {operation.settings.condition.leftField || '?'} = {operation.settings.condition.rightField || '?'}
+            ON {operation.settings.condition?.leftField || '?'} = {operation.settings.condition?.rightField || '?'}
         </div>
     </div>
   );

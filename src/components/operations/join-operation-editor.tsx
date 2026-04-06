@@ -73,7 +73,7 @@ const JoinOperationEditor: React.FC<JoinOperationEditorProps> = ({ operationSett
       <div className="flex items-center gap-2">
         <div className="flex-1 grid w-full items-center gap-1.5">
           <Select
-            value={operationSettings.settings.condition.leftField}
+            value={operationSettings.settings.condition?.leftField || ''}
             onValueChange={(value) => handleConditionChange('leftField', value)}
           >
             <SelectTrigger className="flex-1 h-9">
@@ -94,7 +94,7 @@ const JoinOperationEditor: React.FC<JoinOperationEditorProps> = ({ operationSett
         <span className="font-mono">=</span>
         <div className="flex-1 grid w-full items-center gap-1.5">
           <Select
-            value={operationSettings.settings.condition.rightField}
+            value={operationSettings.settings.condition?.rightField || ''}
             onValueChange={(value) => handleConditionChange('rightField', value)}
           >
             <SelectTrigger className="flex-1 h-9">
