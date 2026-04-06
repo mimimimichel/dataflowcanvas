@@ -41,31 +41,32 @@ export default function ExportDialog({ nodes, connectors, open, onOpenChange }: 
   const pipelineConfig = generatePipelineConfig(nodes, connectors);
 
   const tabData = [
-    { id: 'ontology', label: 'Ontology', icon: FileJson, code: ontologyCode, filename: 'foundry-ontology.json' },
-    { id: 'transforms', label: 'Transforms', icon: FileCode, code: transformsCode, filename: 'foundry-transforms.py' },
-    { id: 'pipeline', label: 'Pipeline Config', icon: Workflow, code: pipelineConfig, filename: 'foundry-pipeline-config.json' },
+    { id: 'ontology', label: 'Ontology', short: 'Ont.', icon: FileJson, code: ontologyCode, filename: 'foundry-ontology.json' },
+    { id: 'transforms', label: 'Transforms', short: 'Py', icon: FileCode, code: transformsCode, filename: 'foundry-transforms.py' },
+    { id: 'pipeline', label: 'Pipeline Config', short: 'Cfg', icon: Workflow, code: pipelineConfig, filename: 'foundry-pipeline-config.json' },
   ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[85vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            Export to Palantir Foundry
-            <Badge variant="secondary">v1.0</Badge>
+      <DialogContent className="max-w-4xl w-[95vw] sm:w-[90vw] h-[90vh] sm:h-[85vh] flex flex-col p-3 sm:p-6 gap-3">
+        <DialogHeader className="pb-1">
+          <DialogTitle className="flex items-center gap-2 text-sm sm:text-lg">
+            Export to Foundry
+            <Badge variant="secondary" className="text-[9px] sm:text-[10px]">v1.0</Badge>
           </DialogTitle>
-          <DialogDescription>
-            Auto-generate Foundry ontology, transform code, and pipeline config from your visual pipeline.
+          <DialogDescription className="text-[11px] sm:text-sm">
+            Generate Foundry ontology, transforms &amp; pipeline config.
           </DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="ontology" className="flex-1 flex flex-col min-h-0">
-          <div className="flex items-center justify-between mb-2">
-            <TabsList className="grid w-full max-w-md grid-cols-3">
+          <div className="flex items-center justify-between mb-1.5 flex-shrink-0">
+            <TabsList className="grid w-full max-w-[280px] sm:max-w-md grid-cols-3 h-7 sm:h-10">
               {tabData.map(tab => (
-                <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-1.5 text-xs">
-                  <tab.icon className="h-3.5 w-3.5" />
-                  {tab.label}
+                <TabsTrigger key={tab.id} value={tab.id} className="flex items-center justify-center gap-1 text-[10px] sm:text-xs px-0.5 sm:px-2">
+                  <tab.icon className="h-3 w-3 flex-shrink-0" />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                  <span className="sm:hidden">{tab.short}</span>
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -73,21 +74,21 @@ export default function ExportDialog({ nodes, connectors, open, onOpenChange }: 
 
           {tabData.map(tab => (
             <TabsContent key={tab.id} value={tab.id} className="flex-1 mt-0 flex flex-col min-h-0">
-              <div className="flex items-center justify-between mb-2 flex-shrink-0">
-                <span className="text-xs font-mono text-muted-foreground">
-                  {tab.filename} — {tab.code.split('\n').length} lines
+              <div className="flex items-center justify-between mb-1 sm:mb-2 flex-shrink-0 gap-1">
+                <span className="text-[10px] sm:text-xs font-mono text-muted-foreground truncate">
+                  {tab.filename}
                 </span>
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground" onClick={() => handleCopy(tab.code, tab.id)}>
-                    {copiedTab === tab.id ? <><Check className="h-3.5 w-3.5 mr-1 text-green-500" />Copié!</> : <><Copy className="h-3.5 w-3.5 mr-1" />Copy</>}
+                <div className="flex items-center gap-0.5 sm:gap-2 flex-shrink-0">
+                  <Button variant="ghost" size="sm" className="h-6 sm:h-7 px-1.5 text-[10px] sm:text-xs text-muted-foreground" onClick={() => handleCopy(tab.code, tab.id)}>
+                    {copiedTab === tab.id ? <><Check className="h-3 w-3 mr-1 text-green-500" />Copié</> : <><Copy className="h-3 w-3 mr-1" />Copy</>}
                   </Button>
-                  <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground" onClick={() => handleDownload(tab.code, tab.filename)}>
-                    <Download className="h-3.5 w-3.5 mr-1" />Download
+                  <Button variant="ghost" size="sm" className="h-6 sm:h-7 px-1.5 text-[10px] sm:text-xs text-muted-foreground" onClick={() => handleDownload(tab.code, tab.filename)}>
+                    <Download className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-0.5 sm:mr-1" /><span className="hidden sm:inline">Download</span>
                   </Button>
                 </div>
               </div>
-              <ScrollArea className="flex-1 border border-border rounded-md bg-muted/30 p-4">
-                <pre className="text-xs font-mono whitespace-pre-wrap leading-relaxed">{tab.code}</pre>
+              <ScrollArea className="flex-1 border border-border rounded-md bg-muted/30 p-1.5 sm:p-4">
+                <pre className="text-[9px] sm:text-xs font-mono whitespace-pre-wrap leading-relaxed">{tab.code}</pre>
               </ScrollArea>
             </TabsContent>
           ))}
