@@ -28,6 +28,9 @@ import DataPreviewPanel from '@/components/panels/data-preview-panel';
 import TemplateMarketplace from '@/components/modals/template-marketplace';
 import { type PipelineTemplate } from '@/lib/pipeline-templates';
 import { executePipelinePreview } from '@/lib/pipeline-executor';
+import { useUser } from '@/firebase';
+import { signOut, getAuth } from 'firebase/auth';
+import AccountSettingsDialog from '@/components/modals/account-settings-dialog';
 import type { PipelinePreviewResult } from '@/lib/pipeline-executor';
 import { generatePythonCode } from '@/lib/python-generator';
 import { generatePipelineSpec } from '@/ai/flows/generate-spec-flow';
@@ -177,6 +180,8 @@ export default function MainApp() {
   const [isSpecModalOpen, setIsSpecModalOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isTemplateMarketplaceOpen, setIsTemplateMarketplaceOpen] = useState(false);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const { user } = useUser();
 
   const handleApplyTemplate = (template: PipelineTemplate) => {
     const { nodes, connectors } = template;
@@ -922,7 +927,7 @@ export default function MainApp() {
 
   return (
     <div className="flex h-screen w-full flex-col bg-background font-body overflow-hidden">
-      <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage.versions} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onGeneratePython={handleGeneratePython} onGenerateSpec={handleGenerateSpec} onImportPipeline={handleImportPipeline} onApplyScaffold={handleApplyScaffold} onExport={() => setIsExportDialogOpen(true)} onTemplates={() => setIsTemplateMarketplaceOpen(true)} activeView={activeView} onViewChange={setActiveView} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onZoomFit={handleResetCanvas} zoom={zoom} />
+      <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage.versions} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onGeneratePython={handleGeneratePython} onGenerateSpec={handleGenerateSpec} onImportPipeline={handleImportPipeline} onApplyScaffold={handleApplyScaffold} onAccountSettings={() => setIsAccountOpen(true)} onExport={() => setIsExportDialogOpen(true)} onTemplates={() => setIsTemplateMarketplaceOpen(true)} activeView={activeView} onViewChange={setActiveView} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onZoomFit={handleResetCanvas} zoom={zoom} />
       
       {activeView === 'dashboard' ? (
         <LineageDashboard lineages={lineages} onSelectLineage={(id) => { setActiveLineageId(id); setActiveView('editor'); }} onCreateLineage={(name, description) => { const id = `lineage-${Date.now()}`; setLineages(prev => [{ id, name, description, owner: 'Me', lastEdited: 'Just now', versions: [{ id: 'v1', name: 'Initial Design', nodes: [], connectors: [], groups: [] }] }, ...prev]); setActiveLineageId(id); setActiveVersionId('v1'); setActiveView('editor'); }} />
@@ -1008,6 +1013,12 @@ export default function MainApp() {
       <SpecModal isOpen={isSpecModalOpen} onClose={() => setIsSpecModalOpen(false)} spec={generatedSpec} isLoading={isSpecLoading} />
       <ExportDialog nodes={nodes} connectors={connectors} open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen} />
       <TemplateMarketplace open={isTemplateMarketplaceOpen} onOpenChange={setIsTemplateMarketplaceOpen} onSelectTemplate={handleApplyTemplate} />
+      <AccountSettingsDialog
+        open={isAccountOpen}
+        onOpenChange={setIsAccountOpen}
+        currentUser={user}
+        onSignOut={() => { signOut(getAuth()); setIsAccountOpen(false); }}
+      />
       <DataPreviewPanel preview={previewResult} open={isPreviewPanelOpen} onOpenChange={setIsPreviewPanelOpen} nodeName={previewNodeName} />
     </div>
   );

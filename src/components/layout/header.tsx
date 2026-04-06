@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Download, Share2, GitBranch, PlusCircle,
   Terminal, Sparkles, Library, Settings2, Wand2,
-  Menu, Sun, Moon, Laptop, Layers, ZoomIn, ZoomOut, Scan
+  Menu, Sun, Moon, Laptop, Layers, ZoomIn, ZoomOut, Scan, User
 } from 'lucide-react';
 import { PipelineVersion, LineageInfo } from '@/lib/pipeline-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -43,6 +43,7 @@ interface HeaderProps {
   onZoomOut?: () => void;
   onZoomFit?: () => void;
   zoom?: number;
+  onAccountSettings?: () => void;
 }
 
 const CreateVersionDialog: React.FC<{
@@ -109,6 +110,7 @@ const Header: React.FC<HeaderProps> = ({
   onZoomOut,
   onZoomFit,
   zoom,
+  onAccountSettings,
 }) => {
   const [isCreateVersionOpen, setIsCreateVersionOpen] = useState(false);
   const [isArchitectOpen, setIsArchitectOpen] = useState(false);
@@ -288,6 +290,13 @@ const Header: React.FC<HeaderProps> = ({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+
+          {/* Account button */}
+          {onAccountSettings && (
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onAccountSettings}>
+              <User className="h-4 w-4" />
+            </Button>
+          )}
 
           {/* Share button */}
           <Button size="sm" className="h-8 px-3 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm text-xs">
