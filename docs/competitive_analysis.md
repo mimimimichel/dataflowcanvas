@@ -156,3 +156,17 @@ Montrer comment un analyste peut commencer par explorer des données visuellemen
 **Solution :** Implémenter un système d'environnements (dev/staging/prod) avec gestion des variables de configuration, permettant de tester le même pipeline avec différents jeux de données ou paramètres, et de promouvoir facilement les versions validées d'environnement en environnement tout en gardant la trace des changements.
 
 Ce positionnement et ces améliorations permettront à DataFlow Canvas de dominer le marché des outils de conception de pipelines de données pour les équipes mixtes (techniques et non-techniques) en offrant le meilleur des mondes : l'accessibilité du no-code, la puissance du code exportable, et la confiance grâce à la prévisualisation réelle.
+## Notre Edge vs Chaque Concurrent
+
+| Concurrent | Notre avantage |
+|---|---|
+| **Fivetran** | Visualisation interactive du pipeline (eux = config statique). Export Python/SQL (eux = fermé). Preview des données en temps réel (eux = rien). 10x cheaper. |
+| **Airbyte** | On voit le pipeline avant qu'il tourne (eux = formulaires de config). Export code exécutable (eux = YAML/JSON config). Non-techs peuvent designer (eux = besoin d'ingénieurs). |
+| **dbt** | Drag-and-drop pour non-techs (eux = SQL pur obligatoire). Preview données avant run (eux = run puis voir). Collaboration PM/data (eux = code-only). |
+| **Airflow** | Design visuel sans toucher au Python (eux = tout en code). Preview à chaque étape (eux = exécuter puis debugger). PO peut comprendre (eux = incompréhensible sans Python). |
+| **Prefect** | Même chose qu'Airflow : on voit le pipeline, on joue avec, on exporte. Eux = Python obligatoire, rien de visuel pour le design. |
+| **Dagster** | UI de monitoring oui, mais design du pipeline = code. On a le design VISUEL en plus. Preview des données avant exécution. |
+| **Dataform** | SQL-only + BigQuery lock-in. On = Python OU SQL, n'importe quelle source. Non-techs peuvent drag-and-drop. |
+| **Matillion** | Le plus proche (ils ont du drag-and-drop) mais : pas de preview des données réelles, pas d'export code, licence enterprise chère. On a les 3. |
+
+**Résumé :** Le SEUL outil qui combine Visual + Preview + Export Code. Matillion a le visuel mais pas le reste. dbt/Airflow ont le code mais pas le visuel. Fivetran a les connecteurs mais rien d'autre.
