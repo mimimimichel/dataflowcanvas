@@ -213,16 +213,16 @@ const Header: React.FC<HeaderProps> = ({
 
               {/* Tablet: icons only */}
               <div className="hidden md:flex lg:hidden items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onGenerateSpec}>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onGenerateSpec} aria-label="AI Spec">
                   <Sparkles className="h-4 w-4 text-amber-500" />
                 </Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onGeneratePython}>
                   <Terminal className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onExport}>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onExport} aria-label="Export">
                   <Download className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onTemplates}>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onTemplates} aria-label="Templates">
                   <Layers className="h-4 w-4" />
                 </Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => setIsArchitectOpen(true)}>
@@ -289,7 +289,7 @@ const Header: React.FC<HeaderProps> = ({
 
           {/* Account button */}
           {onAccountSettings && (
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onAccountSettings}>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onAccountSettings} aria-label="Account">
               <User className="h-4 w-4" />
             </Button>
           )}

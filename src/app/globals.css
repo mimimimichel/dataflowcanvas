@@ -93,3 +93,35 @@
     opacity: 0.1;
   }
 }
+
+/* ====== Accessibility: Keyboard focus indicators ====== */
+:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+  border-radius: var(--radius);
+}
+
+/* Remove outline for mouse users (they use hover instead) */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ====== Accessibility: Reduced motion ====== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .canvas-grid {
+    animation: none !important;
+  }
+
+  .group {
+    transition: none !important;
+  }
+}

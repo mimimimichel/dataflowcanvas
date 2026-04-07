@@ -160,6 +160,11 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
     >
       <Card
         onClick={handleNodeClick}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { handleNodeClick(e as unknown as React.MouseEvent); e.preventDefault(); } }}
+        role="treeitem"
+        aria-label={`${name} - ${type} node - status: ${status}`}
+        aria-selected={isSelected}
+        tabIndex={0}
         className={cn(
           'w-64 border-2 relative flex flex-col justify-between cursor-pointer backdrop-blur-md bg-card/90 shadow-2xl',
           'bg-gradient-to-br from-foreground/[0.03] to-transparent',
@@ -194,21 +199,21 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
                     <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-5 w-5 hover:bg-muted/50 transition-colors rounded p-0 min-h-0 min-w-0"
+                        className="h-6 w-6 hover:bg-muted/50 transition-colors rounded p-0 min-h-0 min-w-0"
                         onClick={(e) => { e.stopPropagation(); onUploadData?.(id); }}
                         title="Upload Data"
                     >
-                        <Upload className="w-3.5 h-3.5" />
+                        <Upload className="w-4 h-4" />
                     </Button>
                 )}
                 <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="h-5 w-5 hover:bg-muted/50 transition-colors rounded p-0 min-h-0 min-w-0"
+                    className="h-6 w-6 hover:bg-muted/50 transition-colors rounded p-0 min-h-0 min-w-0"
                     onClick={(e) => { e.stopPropagation(); onPreview?.(id); }}
                     title="Preview Data"
                 >
-                    <Eye className="w-3.5 h-3.5" />
+                    <Eye className="w-4 h-4" />
                 </Button>
             </div>
         </div>
@@ -269,11 +274,11 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
             <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-5 w-5 hover:bg-muted/50 rounded-sm p-0 min-h-0 min-w-0"
+                className="h-6 w-6 hover:bg-muted/50 rounded-sm p-0 min-h-0 min-w-0"
                 onClick={handleConfigClick}
                 title="Configure"
             >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <SlidersHorizontal className="w-4 h-4" />
             </Button>
         </div>
       </Card>
