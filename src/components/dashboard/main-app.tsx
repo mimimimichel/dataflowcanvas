@@ -1067,7 +1067,7 @@ export default function MainApp() {
                 return <Node key={node.id} {...node} nodes={nodes} onSelect={isShift => handleNodeSelect(node.id, isShift)} onConfigOpen={() => handleOpenConfig(node.id)} onMouseDown={e => handleNodeMouseDown(e, node.id)} onMouseUp={e => handleNodeMouseUp(e, node.id)} onPortMouseDown={e => handlePortMouseDown(e, node.id)} onAddNode={handleAddNode} isSelected={selectedNodeIds.includes(node.id)} onUpdateOperation={handleUpdateOperation} onUploadData={handleUploadNode} onPreview={handleNodePreview} />;
               })}
 
-              {selectionRect && <div className="absolute border border-primary bg-primary/10 pointer-events-none z-[100]" style={{ left: selectionRect.x, top: selectionRect.y, width: selectionRect.width, height: selectionRect.height }} />}
+              {selectionRect && <div className="absolute border-2 border-primary/70 bg-primary/[0.06] pointer-events-none z-[100]" style={{ left: selectionRect.x, top: selectionRect.y, width: selectionRect.width, height: selectionRect.height }} />}
               {drawingZoneRect && <div className="absolute border-2 border-dashed border-primary bg-primary/5 pointer-events-none z-[100] rounded-xl" style={{ left: drawingZoneRect.x, top: drawingZoneRect.y, width: drawingZoneRect.width, height: drawingZoneRect.height }} />}
             </div>
 

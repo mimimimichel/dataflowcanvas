@@ -21,7 +21,7 @@ const Port: React.FC<PortProps> = ({ type, ...props }) => {
         'absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-primary/50 border-2 border-primary/80 cursor-crosshair',
         'hover:bg-primary hover:scale-125 transition-all',
         type === 'in' ? '-left-2' : '-right-2',
-        'opacity-0 group-hover:opacity-100'
+        'opacity-50 group-hover:opacity-100 hover:scale-125'
       )}
     />
   );

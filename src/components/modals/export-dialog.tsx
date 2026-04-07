@@ -59,7 +59,7 @@ export default function ExportDialog({ nodes, connectors, open, onOpenChange }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px] w-[95vw] max-h-[85vh] p-0 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="shrink-0 px-5 pt-5 pb-4 border-b bg-gradient-to-br from-primary/5 to-transparent">
+        <div className="shrink-0 px-5 pt-6 pb-4 border-b bg-gradient-to-br from-primary/5 to-transparent">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10 ring-1 ring-primary/20">
               <Code2 className="h-4 w-4 text-primary" />

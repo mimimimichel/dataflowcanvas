@@ -88,9 +88,41 @@
   }
 
   .canvas-grid {
+    background-image:
+      linear-gradient(to right, currentColor 1px, transparent 1px),
+      linear-gradient(to bottom, currentColor 1px, transparent 1px);
+    background-size: 24px 24px;
+    opacity: 0.04;
+  }
+
+  .dot-grid {
     background-image: radial-gradient(circle, currentColor 1px, transparent 1px);
-    background-size: 30px 30px;
-    opacity: 0.1;
+    background-size: 24px 24px;
+    opacity: 0.06;
+  }
+
+  .glass-panel {
+    @apply backdrop-blur-xl border border-border/50 shadow-2xl;
+    background-color: hsl(var(--card) / 0.8);
+  }
+
+  .glass-panel-elevated {
+    @apply backdrop-blur-2xl border border-border/40 shadow-2xl shadow-black/20;
+    background-color: hsl(var(--card) / 0.85);
+  }
+
+  .glass-panel-elevated::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(180deg, hsl(var(--foreground) / 0.06) 0%, transparent 50%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
   }
 }
 
@@ -124,4 +156,19 @@
   .group {
     transition: none !important;
   }
+}
+
+/* Subtle glow pulse for selected elements */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px 2px rgba(59, 130, 246, 0.15); }
+  50% { box-shadow: 0 0 16px 4px rgba(59, 130, 246, 0.25); }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Smooth connector flow animation */
+@keyframes flow-dash {
+  to { stroke-dashoffset: -16; }
 }

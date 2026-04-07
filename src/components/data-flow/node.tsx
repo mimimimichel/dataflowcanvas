@@ -80,7 +80,7 @@ const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
                     </div>
                 ))}
                 {fields.length > 8 && (
-                    <p className="text-[9px] text-muted-foreground italic text-center pt-1">+{fields.length - 8} more fields</p>
+                    <p className="text-[10px] text-muted-foreground italic text-center pt-1">+{fields.length - 8} more fields</p>
                 )}
             </div>
         </div>
@@ -175,31 +175,31 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
         )}
       >
         {/* Header row: icon + name + actions */}
-        <div className="flex items-start gap-2 p-3 pb-1">
-            <div className={cn('p-1.5 rounded-lg shadow-inner border border-white/10 flex-shrink-0', typeConfig[type].color)}>
-              <TypeIcon className="w-5 h-5 text-white" />
+        <div className="flex items-start gap-2.5 p-3.5">
+            <div className={cn('p-2 rounded-lg shadow-sm border border-white/10 flex-shrink-0 bg-gradient-to-br', typeConfig[type].color)}>
+              <TypeIcon className="w-4 h-4 text-white" />
             </div>
             <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold leading-tight truncate text-foreground">{name}</p>
                 <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                  <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-bold opacity-70">{type}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold opacity-70">{type}</p>
                   {type === 'source' && (sampleData?.length ?? 0) > 0 && (
-                    <span className="text-[9px] bg-green-500/20 text-green-600 px-1.5 py-px rounded leading-none">
+                    <span className="text-[10px] bg-emerald-500/15 text-emerald-600 px-2 py-0.5 rounded-md leading-none font-medium">
                       {sampleData?.length ?? 0} rows
                     </span>
                   )}
-                  <Badge variant="outline" className={cn("text-[8px] h-3.5 px-1 py-0 border leading-none capitalize", statusColors[status])}>
+                  <Badge variant="outline" className={cn("text-[10px] h-3.5 px-1 py-0 border leading-none capitalize", statusColors[status])}>
                     {status}
                   </Badge>
                 </div>
             </div>
             {/* Action buttons stacked vertically */}
-            <div className="flex flex-col gap-0.5 flex-shrink-0">
+            <div className="flex flex-col gap-1 flex-shrink-0 ml-1">
                 {type === 'source' && (
                     <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-6 w-6 hover:bg-muted/50 transition-colors rounded p-0 min-h-0 min-w-0"
+                        className="h-6 w-6 hover:bg-primary/10 hover:text-primary transition-all duration-150 rounded-md p-0 min-h-0 min-w-0"
                         onClick={(e) => { e.stopPropagation(); onUploadData?.(id); }}
                         title="Upload Data"
                     >
@@ -209,7 +209,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
                 <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="h-6 w-6 hover:bg-muted/50 transition-colors rounded p-0 min-h-0 min-w-0"
+                    className="h-6 w-6 hover:bg-primary/10 hover:text-primary transition-all duration-150 rounded-md p-0 min-h-0 min-w-0"
                     onClick={(e) => { e.stopPropagation(); onPreview?.(id); }}
                     title="Preview Data"
                 >
@@ -221,13 +221,13 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
         {(system || location) && (type === 'source' || type === 'dataset' || type === 'destination') && (
             <div className="px-3 pb-3 space-y-1">
                 {system && (
-                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/80 bg-muted/50 px-2 py-0.5 rounded border border-border">
+                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/70 bg-muted/30 px-2 py-1 rounded-md border border-border/50">
                         <Server className="w-3 h-3 flex-shrink-0 text-primary"/>
                         <span className="truncate font-medium" title={system}>{system}</span>
                     </div>
                 )}
                 {location && (
-                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/80 bg-muted/50 px-2 py-0.5 rounded border border-border">
+                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/70 bg-muted/30 px-2 py-1 rounded-md border border-border/50">
                         <Pin className="w-3 h-3 flex-shrink-0 text-primary"/>
                         <span className="truncate font-medium" title={location}>{location}</span>
                     </div>
@@ -237,16 +237,16 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
 
         {qualityMetrics && (
           <div className="px-3 pb-3">
-             <div className="flex items-center gap-3 p-1.5 bg-blue-500/5 border border-blue-500/10 rounded-md">
+             <div className="flex items-center gap-3 px-2.5 py-1.5 bg-blue-500/[0.06] border border-blue-500/10 rounded-lg">
                 {qualityMetrics.completeness && (
                   <div className="flex flex-col">
-                    <span className="text-[8px] text-muted-foreground/60 uppercase">Completeness</span>
+                    <span className="text-[10px] text-muted-foreground/60 uppercase">Completeness</span>
                     <span className="text-[10px] font-mono text-emerald-500 font-bold">{qualityMetrics.completeness}%</span>
                   </div>
                 )}
                 {qualityMetrics.freshness && (
                   <div className="flex flex-col">
-                    <span className="text-[8px] text-muted-foreground/60 uppercase">Freshness</span>
+                    <span className="text-[10px] text-muted-foreground/60 uppercase">Freshness</span>
                     <span className="text-[10px] font-mono text-blue-500 font-bold">{qualityMetrics.freshness}</span>
                   </div>
                 )}

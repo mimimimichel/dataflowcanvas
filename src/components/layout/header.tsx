@@ -204,7 +204,7 @@ const Header: React.FC<HeaderProps> = ({
                   <Layers className="h-3.5 w-3.5" />
                   <span className="ml-1.5 text-xs">Templates</span>
                 </Button>
-                <div className="w-px h-5 bg-border mx-1" />
+                <div className="w-px h-5 bg-border/50 mx-2" />
                 <Button variant="ghost" size="sm" onClick={() => setIsArchitectOpen(true)} className="h-8 px-2.5 text-primary bg-primary/10 hover:bg-primary/20">
                   <Wand2 className="h-3.5 w-3.5 mr-1.5" />
                   <span className="text-xs">Architect</span>
@@ -317,7 +317,7 @@ const Header: React.FC<HeaderProps> = ({
           </Button>
           {onZoomFit && (
             <>
-              <div className="w-px h-4 bg-border" />
+              <div className="w-px h-4 bg-border/50" />
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onZoomFit}>
                 <Scan className="h-3.5 w-3.5" />
               </Button>

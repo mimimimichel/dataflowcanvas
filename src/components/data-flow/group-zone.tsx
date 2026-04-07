@@ -72,7 +72,7 @@ const GroupZone: React.FC<GroupZoneProps> = ({
   return (
     <div
       className={cn(
-        "absolute rounded-3xl border-2 border-dashed group/zone z-0 transition-[width,height] duration-0",
+        "absolute rounded-2xl border border-solid group/zone z-0 transition-[width,height] duration-0",
         colorClass,
         isSelected && "border-primary/50 border-solid bg-primary/5",
         isCollapsed && "border-solid bg-card/40 backdrop-blur-sm"
@@ -112,7 +112,7 @@ const GroupZone: React.FC<GroupZoneProps> = ({
           />
         ) : (
           <h3 
-            className="font-bold text-sm md:text-lg uppercase tracking-widest opacity-60 truncate cursor-text pointer-events-auto"
+            className="font-bold text-xs font-semibold uppercase tracking-wide opacity-60 truncate cursor-text pointer-events-auto"
             onDoubleClick={(e) => {
               e.stopPropagation();
               setIsEditing(true);
