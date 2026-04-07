@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Copy, Download, FileJson, FileCode, Workflow, Check, Code2 } from 'lucide-react';
-import { generateOntologyJSON, generateTransformsCode, generatePipelineConfig } from '@/lib/code-generators';
+import { generateOntologyJSON, generatePipelineConfig } from '@/lib/code-generators';
+import { generatePythonCode } from '@/lib/python-generator';
 import type { PipelineNode, Connector } from '@/lib/pipeline-data';
 
 interface ExportDialogProps {
@@ -43,12 +44,12 @@ export default function ExportDialog({ nodes, connectors, open, onOpenChange }: 
   };
 
   const ontologyCode = generateOntologyJSON(nodes, connectors);
-  const transformsCode = generateTransformsCode(nodes);
+  const transformsCode = generatePythonCode(nodes, connectors);
   const pipelineConfig = generatePipelineConfig(nodes, connectors);
 
   const tabData = [
     { id: 'ontology', label: 'Ontology', icon: FileJson, color: 'text-sky-500', code: ontologyCode, filename: 'foundry-ontology.json', lang: 'JSON' },
-    { id: 'transforms', label: 'Transforms', icon: FileCode, color: 'text-amber-500', code: transformsCode, filename: 'foundry-transforms.py', lang: 'Python' },
+    { id: 'transforms', label: 'PySpark', icon: FileCode, color: 'text-amber-500', code: transformsCode, filename: 'foundry-pipeline.py', lang: 'Python' },
     { id: 'pipeline', label: 'Pipeline', icon: Workflow, color: 'text-emerald-500', code: pipelineConfig, filename: 'foundry-pipeline-config.json', lang: 'JSON' },
   ];
 
@@ -66,7 +67,7 @@ export default function ExportDialog({ nodes, connectors, open, onOpenChange }: 
             <div className="flex-1">
               <DialogTitle className="text-lg font-semibold">Export to Foundry</DialogTitle>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Generate ontology, transforms &amp; pipeline config
+                Generate PySpark code, ontology &amp; pipeline config from your canvas
               </p>
             </div>
             <Badge variant="secondary" className="text-[10px] px-2 py-0.5">v1.0</Badge>

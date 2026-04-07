@@ -31,7 +31,6 @@ interface HeaderProps {
   activeVersionId: string;
   onVersionChange: (id: string) => void;
   onCreateVersion: (name: string) => void;
-  onGeneratePython: () => void;
   onGenerateSpec: () => void;
   onExport: () => void;
   onTemplates: () => void;
@@ -98,9 +97,7 @@ const Header: React.FC<HeaderProps> = ({
   versions,
   activeVersionId,
   onVersionChange,
-  onCreateVersion,
-  onGeneratePython,
-  onGenerateSpec,
+  onCreateVersion,  onGenerateSpec,
   onExport,
   onTemplates,
   onImportPipeline,
@@ -272,9 +269,6 @@ const Header: React.FC<HeaderProps> = ({
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={onGenerateSpec} className="gap-2">
                       <Sparkles className="h-4 w-4 text-amber-500" /> AI Spec
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={onGeneratePython} className="gap-2">
-                      <Terminal className="h-4 w-4" /> PySpark
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={onExport} className="gap-2">

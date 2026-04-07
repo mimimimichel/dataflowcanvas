@@ -37,7 +37,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Copy, Check } from 'lucide-react';
 import DataPreviewPanel from '@/components/panels/data-preview-panel';
-import { generatePythonCode } from '@/lib/python-generator';
 import { generatePipelineSpec } from '@/ai/flows/generate-spec-flow';
 import LineageDashboard from '@/components/dashboard/lineage-dashboard';
 import { useToast } from '@/hooks/use-toast';
@@ -178,9 +177,7 @@ export default function MainApp() {
   const [selectionRect, setSelectionRect] = useState<{ startX: number, startY: number, x: number, y: number, width: number, height: number } | null>(null);
   const [drawingZoneRect, setDrawingZoneRect] = useState<{ startX: number, startY: number, x: number, y: number, width: number, height: number } | null>(null);
   
-  const [isPythonModalOpen, setIsPythonModalOpen] = useState(false);
-  const [generatedPythonCode, setGeneratedPythonCode] = useState('');
-  
+      
   const [isSpecModalOpen, setIsSpecModalOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isTemplateMarketplaceOpen, setIsTemplateMarketplaceOpen] = useState(false);
@@ -925,7 +922,7 @@ export default function MainApp() {
     }
   }, [selectedConnector, selectedNodeIds, selectedGroupIds, setNodes, setConnectors, setGroups]);
 
-  const handleGeneratePython = useCallback(() => { setGeneratedPythonCode(generatePythonCode(nodes, connectors)); setIsPythonModalOpen(true); }, [nodes, connectors]);
+  
 
   const handleGenerateSpec = async () => {
     setIsSpecModalOpen(true); setIsSpecLoading(true);
