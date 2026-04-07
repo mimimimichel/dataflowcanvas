@@ -125,21 +125,27 @@ export default function AccountSettingsDialog({ open, onOpenChange, currentUser,
   };
 
   const handleDeleteAccount = async () => {
+    if (!currentUser) {
+      setError('No user found');
+      return;
+    }
+    
     try {
       setLoading(true);
       setError('');
       
       // Re-authenticate required for delete
-      if (currentPassword && currentUser?.email) {
+      if (currentPassword && currentUser.email) {
         const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
         await reauthenticateWithCredential(currentUser, credential);
       }
       
-      await deleteUser(currentUser!);
+      await deleteUser(currentUser);
       onSignOut();
       onOpenChange(false);
     } catch (err: any) {
       setError(err.message || 'Failed to delete account');
+    } finally {
       setLoading(false);
     }
   };

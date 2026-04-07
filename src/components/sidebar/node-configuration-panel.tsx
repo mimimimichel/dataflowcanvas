@@ -349,24 +349,28 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
     const allNodeIds = nodes.filter(n => n.id !== node?.id).map(n => ({ id: n.id, name: n.name }));
     if (allNodeIds.length === 0) return null;
 
+    const handleRemoveConnector = (from: string, to: string) => {
+      setConnectors(prev => prev.filter(c => !(c.from === from && c.to === to)));
+      toast({ title: "Connection removed", description: `Removed link` });
+    };
+
     return (
-      <>
-        <Separator className="my-4"/>
+      <div className="mt-6 pt-4 border-t border-border/50">
         <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
           <ArrowRightLeft className="h-3.5 w-3.5 text-primary" /> Connections
         </h3>
         
-        <div className="max-h-[160px] overflow-y-auto space-y-1.5 pr-1 mb-2">
-          {nodeConnectors.incoming.length === 0 && nodeConnectors.outgoing.length === 0 && (
-            <p className="text-xs text-muted-foreground">No connections yet.</p>
-          )}
+        {nodeConnectors.incoming.length === 0 && nodeConnectors.outgoing.length === 0 && (
+          <p className="text-xs text-muted-foreground mb-2">No connections.</p>
+        )}
 
+        <div className="space-y-1.5">
           {/* Incoming connections */}
           {nodeConnectors.incoming.map((conn, i) => (
-            <div key={`in-${i}`} className="flex items-center gap-2 p-1.5 bg-muted/20 rounded border border-border">
-              <Badge variant="outline" className="text-[8px] h-4 px-1">IN</Badge>
+            <div key={`in-${i}`} className="flex items-center gap-1.5 text-xs">
+              <Badge variant="outline" className="text-[8px] h-4 px-1 flex-shrink-0">IN</Badge>
               <Select value={conn.from} onValueChange={(newFrom) => handleReconnectConnector(conn.from, conn.to, newFrom, conn.to)}>
-                <SelectTrigger className="h-6 text-xs bg-background">
+                <SelectTrigger className="h-7 text-xs bg-muted/30 flex-shrink-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -375,19 +379,22 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                   ))}
                 </SelectContent>
               </Select>
-              <span className="text-[10px] text-muted-foreground">→</span>
-              <span className="text-[10px] font-mono truncate">{node?.name}</span>
+              <span className="text-muted-foreground/60 flex-shrink-0">→</span>
+              <span className="text-xs font-mono truncate">{node?.name}</span>
+              <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0 text-muted-foreground/40 hover:text-destructive p-0" onClick={() => handleRemoveConnector(conn.from, conn.to)}>
+                <Trash2 className="w-3 h-3" />
+              </Button>
             </div>
           ))}
 
           {/* Outgoing connections */}
           {nodeConnectors.outgoing.map((conn, i) => (
-            <div key={`out-${i}`} className="flex items-center gap-2 p-1.5 bg-muted/20 rounded border border-border">
-              <Badge variant="outline" className="text-[8px] h-4 px-1">OUT</Badge>
-              <span className="text-[10px] font-mono truncate">{node?.name}</span>
-              <span className="text-[10px] text-muted-foreground">→</span>
+            <div key={`out-${i}`} className="flex items-center gap-1.5 text-xs">
+              <Badge variant="outline" className="text-[8px] h-4 px-1 flex-shrink-0">OUT</Badge>
+              <span className="text-xs font-mono truncate flex-shrink-0">{node?.name}</span>
+              <span className="text-muted-foreground/60 flex-shrink-0">→</span>
               <Select value={conn.to} onValueChange={(newTo) => handleReconnectConnector(conn.from, conn.to, conn.from, newTo)}>
-                <SelectTrigger className="h-6 text-xs bg-background">
+                <SelectTrigger className="h-7 text-xs bg-muted/30 flex-shrink-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -396,13 +403,18 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                   ))}
                 </SelectContent>
               </Select>
+              <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0 text-muted-foreground/40 hover:text-destructive p-0" onClick={() => handleRemoveConnector(conn.from, conn.to)}>
+                <Trash2 className="w-3 h-3" />
+              </Button>
             </div>
           ))}
         </div>
 
         {/* Add new connector */}
-        <AddConnectorRow nodeId={node?.id} nodes={allNodeIds} connectors={connectors} setConnectors={setConnectors} />
-      </>
+        <div className="mt-3 pt-3 border-t border-border/30">
+          <AddConnectorRow nodeId={node?.id} nodes={allNodeIds} connectors={connectors} setConnectors={setConnectors} />
+        </div>
+      </div>
     );
   };
 
@@ -488,15 +500,19 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[600px] w-[95vw] max-h-[85vh] flex flex-col glass-panel">
-        <DialogHeader className="mb-4">
+        {/* Fixed header */}
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-xl">Configure: {displayNode.name}</DialogTitle>
           <DialogDescription>
             Modify configurations, rules, and design specifications.
           </DialogDescription>
         </DialogHeader>
-        <Separator className="bg-border/50" />
-        <div className="flex-1 overflow-y-auto pr-6 -mr-6 py-4">
-          <div className="space-y-6">
+        <Separator className="bg-border/50 flex-shrink-0" />
+
+        {/* Scrollable content area */}
+        <div className="flex-1 overflow-y-auto px-1 py-4 min-h-0">
+          <div className="space-y-6 pb-4">
+            {/* Name & Status */}
             <div className="grid grid-cols-2 gap-4">
                <div className="space-y-1.5">
                   <Label htmlFor="node-name">Node Name</Label>
@@ -517,6 +533,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                </div>
             </div>
 
+            {/* Quality Targets */}
             <div className="space-y-3 p-4 bg-primary/5 border border-primary/10 rounded-xl">
                <h4 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
                   <ShieldCheck className="h-3 w-3" /> Quality Targets (SLAs)
@@ -546,14 +563,17 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
             </div>
 
             <Separator className="bg-border/50"/>
+
+            {/* Type-specific config */}
             {renderConfigContent()}
+
+            {/* Connections */}
+            {renderConnectorsSection()}
           </div>
         </div>
 
-            {/* Connections Section - shown for all node types */}
-            {renderConnectorsSection()}
-          
-        <DialogFooter className="mt-6 border-t border-border pt-4">
+        {/* Fixed footer */}
+        <DialogFooter className="flex-shrink-0 mt-0 border-t border-border pt-4">
             <div className="flex justify-between w-full">
                 <AlertDialog>
                     <AlertDialogTrigger asChild>

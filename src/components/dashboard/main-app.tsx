@@ -21,6 +21,7 @@ import {
   NodeGroup,
   getDefaultOperation
 } from '@/lib/pipeline-data';
+import { executePipelinePreview, PipelinePreviewResult } from '@/lib/pipeline-executor';
 import { cn } from '@/lib/utils';
 import ConnectionFieldsModal from '@/components/data-flow/connection-fields-modal';
 import PythonCodeModal from '@/components/modals/python-code-modal';
@@ -35,6 +36,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Copy, Check } from 'lucide-react';
+import DataPreviewPanel from '@/components/panels/data-preview-panel';
 import { generatePythonCode } from '@/lib/python-generator';
 import { generatePipelineSpec } from '@/ai/flows/generate-spec-flow';
 import LineageDashboard from '@/components/dashboard/lineage-dashboard';
@@ -187,7 +189,28 @@ export default function MainApp() {
   const [copied, setCopied] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [uploadTargetNodeIds, setUploadTargetNodeIds] = useState<string[]>([]);
-  const [sampleDataPreview, setSampleDataPreview] = useState<Record<string, { sourceRows: number; outputRows: number; fields: string[] }>>({});
+  const [previewData, setPreviewData] = useState<Record<string, PipelinePreviewResult | null>>({});
+  const [uploadSampleData, setUploadSampleData] = useState<Record<string, { sourceRows: number; outputRows: number; fields: string[] }>>({});
+  const [previewOpen, setPreviewOpen] = useState<{ nodeId: string; open: boolean } | null>(null);
+
+  const handlePreviewOpen = (nodeId: string) => {
+    // Generate preview data using the pipeline executor
+    const preview = executePipelinePreview(nodeId, nodes, connectors);
+    setPreviewOpen({ nodeId, open: true });
+    // Update previewData with the generated preview
+    setPreviewData(prev => ({
+      ...prev,
+      [nodeId]: preview
+    }));
+  };
+
+  const handleNodePreview = (nodeId: string) => {
+    handlePreviewOpen(nodeId);
+  };
+
+  const handlePreviewClose = () => {
+    setPreviewOpen(null);
+  };
   const shareUrl = typeof window !== 'undefined' ? window.location.href : 'https://dataflowcanvas-deploy.vercel.app';
   const { user } = useUser();
 
@@ -370,6 +393,7 @@ export default function MainApp() {
     const draggingId = draggingGroupIdRef.current;
     if (!draggingId) return;
 
+    // Check if groupId is descendant of parentGroupId (cycle-safe)
     const isDescendantOf = (childId: string, parentId: string, visited = new Set<string>()): boolean => {
       if (!childId || visited.has(childId)) return false;
       visited.add(childId);
@@ -379,14 +403,27 @@ export default function MainApp() {
       return isDescendantOf(childGroup.parentGroupId, parentId, visited);
     };
 
-    setGroups(currentGroups => {
-      return currentGroups.map(group => {
+    setGroups(prevGroups => {
+      return prevGroups.map(group => {
         if (group.id === draggingId || selectedGroupIds.includes(group.id)) {
           const centerX = group.position.x + (group.width / 2);
           const centerY = group.position.y + 32;
 
-          const containingGroups = currentGroups.filter(g => {
-            if (g.id === group.id || selectedGroupIds.includes(g.id) || isDescendantOf(g.id, group.id)) return false;
+          const containingGroups = prevGroups.filter(g => {
+            // Exclude the group(s) being dragged and their descendants
+            if (selectedGroupIds.includes(g.id)) return false;
+            
+            // Check if g is a descendant of ANY selected group
+            let isDescendantOfSelected = false;
+            for (const selectedId of selectedGroupIds) {
+              const visited = new Set<string>();
+              if (isDescendantOf(g.id, selectedId, visited)) {
+                isDescendantOfSelected = true;
+                break;
+              }
+            }
+            if (isDescendantOfSelected) return false;
+            
             const currentWidth = g.isCollapsed ? Math.max(250, g.width * 0.4) : g.width;
             const currentHeight = g.isCollapsed ? 64 : g.height;
             return centerX >= g.position.x && centerX <= g.position.x + currentWidth &&
@@ -394,10 +431,10 @@ export default function MainApp() {
           });
 
           containingGroups.sort((a, b) => {
-              const aLevel = (g: NodeGroup) => { let l = 0, p = g.parentGroupId; while(p){ l++; p = currentGroups.find(x => x.id === p)?.parentGroupId; } return l; };
+              const aLevel = (g: NodeGroup) => { let l = 0, p = g.parentGroupId; while(p){ l++; p = prevGroups.find(x => x.id === p)?.parentGroupId; } return l; };
               return aLevel(b) - aLevel(a);
           });
-
+          
           return { ...group, parentGroupId: containingGroups[0]?.id || undefined };
         }
         return group;
@@ -410,7 +447,7 @@ export default function MainApp() {
     const resizingId = resizingGroupIdRef.current;
     if (!resizingId) return;
 
-    const group = groups.find(g => g.id === resizingId);
+    const group = currentGroups.find(g => g.id === resizingId);
     if (!group) return;
 
     setNodes(currentNodes => {
@@ -429,7 +466,7 @@ export default function MainApp() {
     });
 
     resizingGroupIdRef.current = null;
-  }, [groups, setNodes]);
+  }, [currentGroups, setNodes]);
 
   const handleCreateGroup = useCallback(() => {
     if (selectedNodeIds.length === 0 && selectedGroupIds.length === 0) {
@@ -492,8 +529,8 @@ export default function MainApp() {
       isCollapsed: false
     };
 
-    setNodes(currentNodes => {
-      return currentNodes.map(node => {
+    setNodes(nodes => {
+      return nodes.map(node => {
         const centerX = node.position.x + (NODE_WIDTH / 2);
         const centerY = node.position.y + 60;
         const isInside = centerX >= drawingZoneRect.x && centerX <= drawingZoneRect.x + drawingZoneRect.width &&
@@ -502,8 +539,8 @@ export default function MainApp() {
       });
     });
 
-    setGroups(currentGroups => {
-        const updated = currentGroups.map(g => {
+    setGroups(groups => {
+        const updated = groups.map(g => {
             const centerX = g.position.x + (g.width / 2);
             const centerY = g.position.y + (g.height / 2);
             const isInside = centerX >= drawingZoneRect.x && centerX <= drawingZoneRect.x + drawingZoneRect.width &&
@@ -517,7 +554,7 @@ export default function MainApp() {
     setDrawingZoneRect(null);
     setIsDrawMode(false); 
     toast({ title: "Zone de travail créée", description: "Éléments rattachés avec succès." });
-  }, [drawingZoneRect, setGroups, setNodes, toast]);
+  }, [drawingZoneRect, groups, setNodes, toast]);
 
   const handleDeleteGroup = (groupId: string) => {
     setGroups(prev => prev.filter(g => g.id !== groupId).map(g => g.parentGroupId === groupId ? { ...g, parentGroupId: undefined } : g));
@@ -943,7 +980,7 @@ export default function MainApp() {
         results[nodeId] = { sourceRows: parsedData.rowCount, outputRows: currentData.length, fields };
       }
       
-      setSampleDataPreview(results);
+      setUploadSampleData(results);
     });
   }
 
@@ -1030,7 +1067,7 @@ export default function MainApp() {
 
               {nodes.map((node) => {
                 if (isAncestorCollapsed(node.groupId)) return null;
-                return <Node key={node.id} {...node} nodes={nodes} onSelect={isShift => handleNodeSelect(node.id, isShift)} onConfigOpen={() => handleOpenConfig(node.id)} onMouseDown={e => handleNodeMouseDown(e, node.id)} onMouseUp={e => handleNodeMouseUp(e, node.id)} onPortMouseDown={e => handlePortMouseDown(e, node.id)} onAddNode={handleAddNode} isSelected={selectedNodeIds.includes(node.id)} onUpdateOperation={handleUpdateOperation} onUploadData={handleUploadNode} />;
+                return <Node key={node.id} {...node} nodes={nodes} onSelect={isShift => handleNodeSelect(node.id, isShift)} onConfigOpen={() => handleOpenConfig(node.id)} onMouseDown={e => handleNodeMouseDown(e, node.id)} onMouseUp={e => handleNodeMouseUp(e, node.id)} onPortMouseDown={e => handlePortMouseDown(e, node.id)} onAddNode={handleAddNode} isSelected={selectedNodeIds.includes(node.id)} onUpdateOperation={handleUpdateOperation} onUploadData={handleUploadNode} onPreview={handleNodePreview} />;
               })}
 
               {selectionRect && <div className="absolute border border-primary bg-primary/10 pointer-events-none z-[100]" style={{ left: selectionRect.x, top: selectionRect.y, width: selectionRect.width, height: selectionRect.height }} />}
@@ -1101,6 +1138,18 @@ export default function MainApp() {
         currentUser={user}
         onSignOut={() => { signOut(getAuth()); setIsAccountOpen(false); }}
       />
+      {/* Data Preview Panel */}
+      {previewOpen && (
+        <DataPreviewPanel
+          preview={previewData[previewOpen.nodeId] || null}
+          open={previewOpen.open}
+          onOpenChange={(open) => {
+            if (!open) setPreviewOpen(null);
+            else setPreviewOpen({ ...previewOpen, open });
+          }}
+          nodeName={nodes.find(n => n.id === previewOpen.nodeId)?.name || 'Unknown Node'}
+        />
+      )}
     </div>
   );
 }

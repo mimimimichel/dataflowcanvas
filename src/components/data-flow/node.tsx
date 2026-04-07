@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Database, Cog, DatabaseZap, Layers, SlidersHorizontal, GitCompare, Server, Pin, Upload } from 'lucide-react';
+import { Database, Cog, DatabaseZap, Layers, SlidersHorizontal, GitCompare, Server, Pin, Upload, Eye } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import Port from './port';
 import { TransformationItem, PipelineNode, Field, Operation, transformations, advancedTransformations, SelectColumnsOperation as SelectColumnsType, UnionOperation as UnionType, DesignStatus } from '@/lib/pipeline-data';
@@ -29,6 +29,7 @@ interface NodeProps extends PipelineNode {
   isSelected: boolean;
   onUpdateOperation: (nodeId: string, operation: Operation) => void;
   onUploadData?: (nodeId: string) => void;
+  onPreview?: (nodeId: string) => void;
   sampleData?: Record<string, unknown>[];
 }
 
@@ -86,7 +87,7 @@ const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
     );
 };
 
-const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputFields, outputFields, system, location, status = 'draft', qualityMetrics, sampleData, onSelect, onConfigOpen, onMouseDown, onMouseUp, onPortMouseDown, isSelected, onUpdateOperation, nodes, onAddNode, onUploadData }) => {
+const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputFields, outputFields, system, location, status = 'draft', qualityMetrics, sampleData, onSelect, onConfigOpen, onMouseDown, onMouseUp, onPortMouseDown, isSelected, onUpdateOperation, nodes, onAddNode, onUploadData, onPreview }) => {
   
   const getIconForOperation = (op?: Operation) => {
     if(!op || type !== 'transformation') return typeConfig[type].icon || Cog;
@@ -187,20 +188,34 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
                     <Upload className="w-4 h-4 text-muted-foreground hover:text-foreground" />
                 </Button>
             )}
-            <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold leading-tight text-left truncate text-foreground">{name}</p>
-                <div className="flex items-center gap-2">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold opacity-70">{type}</p>
-                  {/* Sample data badge for source nodes */}
-                  {type === 'source' && (sampleData?.length ?? 0) > 0 && (
-                    <span className="flex items-center gap-1 text-xs bg-green-500/20 text-green-600 px-2 py-0.5 rounded">
-                      📊 {sampleData?.length ?? 0} rows
-                    </span>
-                  )}
-                  <Badge variant="outline" className={cn("text-[8px] h-3.5 px-1 py-0 border leading-none capitalize", statusColors[status])}>
-                    {status}
-                  </Badge>
+            <div className="flex-1 min-w-0 flex items-center justify-between">
+                <div>
+                    <p className="text-sm font-bold leading-tight text-left truncate text-foreground">{name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold opacity-70">{type}</p>
+                      {/* Sample data badge for source nodes */}
+                      {type === 'source' && (sampleData?.length ?? 0) > 0 && (
+                        <span className="flex items-center gap-1 text-xs bg-green-500/20 text-green-600 px-2 py-0.5 rounded">
+                          📊 {sampleData?.length ?? 0} rows
+                        </span>
+                      )}
+                      <Badge variant="outline" className={cn("text-[8px] h-3.5 px-1 py-0 border leading-none capitalize", statusColors[status])}>
+                        {status}
+                      </Badge>
+                    </div>
                 </div>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6 hover:bg-muted/50 transition-colors rounded-md border border-border/50 ml-2"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onPreview?.(id);
+                    }}
+                    title="Preview Data"
+                >
+                    <Eye className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+                </Button>
             </div>
         </div>
 
