@@ -7,6 +7,8 @@ import NodeConfigurationPanel from '@/components/sidebar/node-configuration-pane
 import Node from '@/components/data-flow/node';
 import Connector from '@/components/data-flow/connector';
 import GroupZone from '@/components/data-flow/group-zone';
+import DataUploadDialog from '@/components/modals/data-upload-dialog';
+import type { ParsedData } from '@/lib/data-uploader';
 import { 
   PipelineNode, 
   TransformationItem, 
@@ -183,6 +185,9 @@ export default function MainApp() {
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [uploadTargetNodeIds, setUploadTargetNodeIds] = useState<string[]>([]);
+  const [sampleDataPreview, setSampleDataPreview] = useState<Record<string, { sourceRows: number; outputRows: number; fields: string[] }>>({});
   const shareUrl = typeof window !== 'undefined' ? window.location.href : 'https://dataflowcanvas-deploy.vercel.app';
   const { user } = useUser();
 
@@ -892,6 +897,56 @@ export default function MainApp() {
     finally { setIsSpecLoading(false); }
   };
 
+  // Find all source nodes (category === 'source') and their downstream nodes via connectors
+  function handleUploadNode(sourceNodeId: string) {
+    // BFS: find all downstream nodes from sourceNodeId using connectors
+    const allDownstreamIds: string[] = [sourceNodeId];
+    const visited = new Set<string>();
+    const queue: string[] = [sourceNodeId];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      if (visited.has(current)) continue;
+      visited.add(current);
+      const downstream = connectors.filter(c => c.from === current).map(c => c.to);
+      for (const d of downstream) {
+        if (!visited.has(d)) { queue.push(d); allDownstreamIds.push(d); }
+      }
+    }
+    setUploadTargetNodeIds(allDownstreamIds);
+    setUploadDialogOpen(true);
+  }
+
+  function handleDataLoaded(parsedData: ParsedData) {
+    // Inject sampleData into ALL target nodes' corresponding source node first
+    setNodes(prev => {
+      const sourceNodeId = uploadTargetNodeIds[0];
+      return prev.map(n => n.id === sourceNodeId ? { ...n, sampleData: parsedData.rows, inputFields: parsedData.fields, outputFields: parsedData.fields } : n);
+    });
+
+    // Run pipeline transforms
+    import('@/lib/data-uploader').then(({ applyTransforms, applySingleTransform }) => {
+      const results: Record<string, { sourceRows: number; outputRows: number; fields: string[] }> = {};
+      
+      // For each target node, compute its output data by applying transforms from source
+      const sourceNodeId = uploadTargetNodeIds[0];
+      // Simple approach: for each target node in pipeline order, apply its operation to input data
+      let currentData = parsedData.rows;
+      results[sourceNodeId] = { sourceRows: parsedData.rowCount, outputRows: parsedData.rowCount, fields: parsedData.fields.map(f => f.name) };
+      
+      for (let i = 1; i < uploadTargetNodeIds.length; i++) {
+        const nodeId = uploadTargetNodeIds[i];
+        const node = nodes.find(n => n.id === nodeId);
+        if (node?.operation) {
+          currentData = applySingleTransform(currentData, node.operation.type, node.operation.settings);
+        }
+        const fields = currentData.length > 0 ? Object.keys(currentData[0]) : [];
+        results[nodeId] = { sourceRows: parsedData.rowCount, outputRows: currentData.length, fields };
+      }
+      
+      setSampleDataPreview(results);
+    });
+  }
+
   const handleCreateVersion = (name: string) => {
     const newVersion: PipelineVersion = { id: `v${activeLineage.versions.length + 1}`, name, nodes: [...nodes], connectors: [...connectors], groups: [...groups] };
     setLineages(prev => prev.map(l => l.id === activeLineageId ? { ...l, versions: [...l.versions, newVersion] } : l));
@@ -975,7 +1030,7 @@ export default function MainApp() {
 
               {nodes.map((node) => {
                 if (isAncestorCollapsed(node.groupId)) return null;
-                return <Node key={node.id} {...node} nodes={nodes} onSelect={isShift => handleNodeSelect(node.id, isShift)} onConfigOpen={() => handleOpenConfig(node.id)} onMouseDown={e => handleNodeMouseDown(e, node.id)} onMouseUp={e => handleNodeMouseUp(e, node.id)} onPortMouseDown={e => handlePortMouseDown(e, node.id)} onAddNode={handleAddNode} isSelected={selectedNodeIds.includes(node.id)} onUpdateOperation={handleUpdateOperation} />;
+                return <Node key={node.id} {...node} nodes={nodes} onSelect={isShift => handleNodeSelect(node.id, isShift)} onConfigOpen={() => handleOpenConfig(node.id)} onMouseDown={e => handleNodeMouseDown(e, node.id)} onMouseUp={e => handleNodeMouseUp(e, node.id)} onPortMouseDown={e => handlePortMouseDown(e, node.id)} onAddNode={handleAddNode} isSelected={selectedNodeIds.includes(node.id)} onUpdateOperation={handleUpdateOperation} onUploadData={handleUploadNode} />;
               })}
 
               {selectionRect && <div className="absolute border border-primary bg-primary/10 pointer-events-none z-[100]" style={{ left: selectionRect.x, top: selectionRect.y, width: selectionRect.width, height: selectionRect.height }} />}
@@ -1033,6 +1088,12 @@ export default function MainApp() {
         </DialogContent>
       </Dialog>
 
+      <DataUploadDialog
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        targetNodeIds={uploadTargetNodeIds}
+        onDataLoaded={handleDataLoaded}
+      />
       {/* Account Settings */}
       <AccountSettingsDialog
         open={isAccountOpen}

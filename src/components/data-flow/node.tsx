@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Database, Cog, DatabaseZap, Layers, SlidersHorizontal, GitCompare, ChevronDown, Server, Pin, Copy } from 'lucide-react';
+import { Database, Cog, DatabaseZap, Layers, SlidersHorizontal, GitCompare, ChevronDown, Server, Pin, Copy, Upload } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import Port from './port';
 import { TransformationItem, PipelineNode, Field, Operation, transformations, advancedTransformations, SelectColumnsOperation as SelectColumnsType, UnionOperation as UnionType, DesignStatus } from '@/lib/pipeline-data';
@@ -28,6 +28,8 @@ interface NodeProps extends PipelineNode {
   onAddNode: (item: TransformationItem, position: { x: number; y: number }) => void;
   isSelected: boolean;
   onUpdateOperation: (nodeId: string, operation: Operation) => void;
+  onUploadData?: (nodeId: string) => void;
+  sampleData?: Record<string, unknown>[];
 }
 
 const typeConfig: Record<NodeType, { icon: LucideIcon; color: string; border: string; glow: string; }> = {
@@ -84,7 +86,7 @@ const SchemaOverview: React.FC<{fields: Field[]}> = ({ fields }) => {
     );
 };
 
-const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputFields, outputFields, system, location, status = 'draft', qualityMetrics, onSelect, onConfigOpen, onMouseDown, onMouseUp, onPortMouseDown, isSelected, onUpdateOperation, nodes, onAddNode }) => {
+const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputFields, outputFields, system, location, status = 'draft', qualityMetrics, sampleData, onSelect, onConfigOpen, onMouseDown, onMouseUp, onPortMouseDown, isSelected, onUpdateOperation, nodes, onAddNode, onUploadData }) => {
   
   const getIconForOperation = (op?: Operation) => {
     if(!op || type !== 'transformation') return typeConfig[type].icon || Cog;
@@ -184,10 +186,31 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
             <div className={cn('p-1.5 rounded-lg self-start shadow-inner border border-white/10', typeConfig[type].color)}>
               <TypeIcon className="w-5 h-5 text-white" />
             </div>
+            {/* Upload button for source nodes */}
+            {type === 'source' && (
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6 hover:bg-muted/50 transition-colors rounded-md border border-border/50"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onUploadData?.(id);
+                    }}
+                    title="Upload Data"
+                >
+                    <Upload className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+                </Button>
+            )}
             <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold leading-tight text-left truncate text-foreground">{name}</p>
                 <div className="flex items-center gap-2">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold opacity-70">{type}</p>
+                  {/* Sample data badge for source nodes */}
+                  {type === 'source' && (sampleData?.length ?? 0) > 0 && (
+                    <span className="flex items-center gap-1 text-xs bg-green-500/20 text-green-600 px-2 py-0.5 rounded">
+                      📊 {sampleData?.length ?? 0} rows
+                    </span>
+                  )}
                   <Badge variant="outline" className={cn("text-[8px] h-3.5 px-1 py-0 border leading-none capitalize", statusColors[status])}>
                     {status}
                   </Badge>
