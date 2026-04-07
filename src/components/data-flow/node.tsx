@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Database, Cog, DatabaseZap, Layers, SlidersHorizontal, GitCompare, ChevronDown, Server, Pin, Copy, Upload } from 'lucide-react';
+import { Database, Cog, DatabaseZap, Layers, SlidersHorizontal, GitCompare, Server, Pin, Upload } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import Port from './port';
 import { TransformationItem, PipelineNode, Field, Operation, transformations, advancedTransformations, SelectColumnsOperation as SelectColumnsType, UnionOperation as UnionType, DesignStatus } from '@/lib/pipeline-data';
@@ -113,21 +113,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
     onConfigOpen();
   }
 
-  const handleToggleExpand = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsExpanded(prev => !prev);
-  }
 
-  const handleDuplicate = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const item: TransformationItem = {
-        name: `${name} (Copy)`,
-        icon: TypeIcon,
-        type: type,
-        operationType: operation?.type
-    };
-    onAddNode(item, { x: position.x + 40, y: position.y + 40 });
-  }
 
 
   const renderOverview = () => {
@@ -254,11 +240,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
           </div>
         )}
 
-        {isExpanded && (
-            <CardContent className="p-3 pt-0">
-                {renderOverview()}
-            </CardContent>
-        )}
+        {renderOverview()}
         
         {type !== 'source' && (
           <Port 
@@ -274,33 +256,15 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
           />
         )}
         
-        <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-7 w-7 glass-panel hover:bg-muted text-foreground rounded-md border border-border"
-                onClick={handleDuplicate}
-                title="Duplicate Node"
-            >
-                <Copy className="w-3.5 h-3.5" />
-            </Button>
-            <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-7 w-7 glass-panel hover:bg-muted text-foreground rounded-md border border-border"
+                className="h-6 w-6 hover:bg-muted/50 rounded-md"
                 onClick={handleConfigClick}
-                title="Configuration"
+                title="Configure"
             >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
-            </Button>
-            <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-7 w-7 glass-panel hover:bg-muted text-foreground rounded-md border border-border"
-                onClick={handleToggleExpand}
-                title={isExpanded ? "Collapse" : "Expand Details"}
-            >
-                <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-200", isExpanded && "rotate-180")} />
             </Button>
         </div>
       </Card>

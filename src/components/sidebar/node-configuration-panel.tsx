@@ -352,53 +352,55 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
     return (
       <>
         <Separator className="my-4"/>
-        <h3 className="text-md font-medium mb-2 flex items-center gap-2">
-          <ArrowRightLeft className="h-4 w-4 text-primary" /> Connections
+        <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
+          <ArrowRightLeft className="h-3.5 w-3.5 text-primary" /> Connections
         </h3>
         
-        {nodeConnectors.incoming.length === 0 && nodeConnectors.outgoing.length === 0 && (
-          <p className="text-xs text-muted-foreground mb-3">No connections yet.</p>
-        )}
+        <div className="max-h-[160px] overflow-y-auto space-y-1.5 pr-1 mb-2">
+          {nodeConnectors.incoming.length === 0 && nodeConnectors.outgoing.length === 0 && (
+            <p className="text-xs text-muted-foreground">No connections yet.</p>
+          )}
 
-        {/* Incoming connections */}
-        {nodeConnectors.incoming.map((conn, i) => (
-          <div key={`in-${i}`} className="flex items-center gap-2 p-2 bg-muted/20 rounded border border-border mb-2">
-            <Badge variant="outline" className="text-[9px]">IN</Badge>
-            <Select value={conn.from} onValueChange={(newFrom) => handleReconnectConnector(conn.from, conn.to, newFrom, conn.to)}>
-              <SelectTrigger className="h-7 text-xs bg-background">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {nodes.filter(n => n.id !== node?.id).map(n => (
-                  <SelectItem key={n.id} value={n.id} className="text-xs">{n.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <span className="text-[10px] text-muted-foreground">→</span>
-            <span className="text-xs font-mono truncate">{node?.name}</span>
-          </div>
-        ))}
+          {/* Incoming connections */}
+          {nodeConnectors.incoming.map((conn, i) => (
+            <div key={`in-${i}`} className="flex items-center gap-2 p-1.5 bg-muted/20 rounded border border-border">
+              <Badge variant="outline" className="text-[8px] h-4 px-1">IN</Badge>
+              <Select value={conn.from} onValueChange={(newFrom) => handleReconnectConnector(conn.from, conn.to, newFrom, conn.to)}>
+                <SelectTrigger className="h-6 text-xs bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {nodes.filter(n => n.id !== node?.id).map(n => (
+                    <SelectItem key={n.id} value={n.id} className="text-xs">{n.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-[10px] text-muted-foreground">→</span>
+              <span className="text-[10px] font-mono truncate">{node?.name}</span>
+            </div>
+          ))}
 
-        {/* Outgoing connections */}
-        {nodeConnectors.outgoing.map((conn, i) => (
-          <div key={`out-${i}`} className="flex items-center gap-2 p-2 bg-muted/20 rounded border border-border mb-2">
-            <Badge variant="outline" className="text-[9px]">OUT</Badge>
-            <span className="text-xs font-mono truncate">{node?.name}</span>
-            <span className="text-[10px] text-muted-foreground">→</span>
-            <Select value={conn.to} onValueChange={(newTo) => handleReconnectConnector(conn.from, conn.to, conn.from, newTo)}>
-              <SelectTrigger className="h-7 text-xs bg-background">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {nodes.filter(n => n.id !== node?.id).map(n => (
-                  <SelectItem key={n.id} value={n.id} className="text-xs">{n.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        ))}
+          {/* Outgoing connections */}
+          {nodeConnectors.outgoing.map((conn, i) => (
+            <div key={`out-${i}`} className="flex items-center gap-2 p-1.5 bg-muted/20 rounded border border-border">
+              <Badge variant="outline" className="text-[8px] h-4 px-1">OUT</Badge>
+              <span className="text-[10px] font-mono truncate">{node?.name}</span>
+              <span className="text-[10px] text-muted-foreground">→</span>
+              <Select value={conn.to} onValueChange={(newTo) => handleReconnectConnector(conn.from, conn.to, conn.from, newTo)}>
+                <SelectTrigger className="h-6 text-xs bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {nodes.filter(n => n.id !== node?.id).map(n => (
+                    <SelectItem key={n.id} value={n.id} className="text-xs">{n.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ))}
+        </div>
 
-        {/* Add new connector section */}
+        {/* Add new connector */}
         <AddConnectorRow nodeId={node?.id} nodes={allNodeIds} connectors={connectors} setConnectors={setConnectors} />
       </>
     );
