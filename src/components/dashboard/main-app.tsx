@@ -447,7 +447,7 @@ export default function MainApp() {
     const resizingId = resizingGroupIdRef.current;
     if (!resizingId) return;
 
-    const group = currentGroups.find(g => g.id === resizingId);
+    const group = groups.find(g => g.id === resizingId);
     if (!group) return;
 
     setNodes(currentNodes => {
@@ -466,7 +466,7 @@ export default function MainApp() {
     });
 
     resizingGroupIdRef.current = null;
-  }, [currentGroups, setNodes]);
+  }, [groups, setNodes]);
 
   const handleCreateGroup = useCallback(() => {
     if (selectedNodeIds.length === 0 && selectedGroupIds.length === 0) {
