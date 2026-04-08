@@ -1,57 +1,29 @@
-'use server';
 /**
  * @fileOverview A flow to generate a functional specification for a data pipeline.
  */
 
-import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+export interface GenerateSpecInput {
+  nodes: any[];
+  connectors: any[];
+}
 
-const GenerateSpecInputSchema = z.object({
-  nodes: z.array(z.any()),
-  connectors: z.array(z.any()),
-});
-export type GenerateSpecInput = z.infer<typeof GenerateSpecInputSchema>;
-
-const GenerateSpecOutputSchema = z.object({
-  specification: z.string().describe('The generated functional specification in Markdown format.'),
-});
-export type GenerateSpecOutput = z.infer<typeof GenerateSpecOutputSchema>;
-
-const prompt = ai.definePrompt({
-  name: 'generateSpecPrompt',
-  input: { schema: GenerateSpecInputSchema },
-  output: { schema: GenerateSpecOutputSchema },
-  prompt: `You are an expert Data Architect and Technical Writer. 
-Your task is to write a professional Functional Specification for a data pipeline designed in a visual tool.
-
-Below is the JSON representation of the pipeline:
-Nodes: {{{nodes}}}
-Connectors: {{{connectors}}}
-
-Please structure the specification as follows:
-1. **Executive Summary**: A brief overview of what this pipeline accomplishes.
-2. **Data Sources**: List all source nodes, their systems, and locations.
-3. **Logic \u0026 Transformations**: Detailed step-by-step description of the transformations (filters, joins, aggregations, etc.). Explain the business logic clearly.
-4. **Data Destinations**: Where the data ends up.
-5. **Schema Evolution**: Note how the fields change through the pipeline.
-
-Use professional, clear, and concise technical English. Return the result in clean Markdown.`,
-});
+export interface GenerateSpecOutput {
+  specification: string;
+}
 
 export async function generatePipelineSpec(input: GenerateSpecInput): Promise<GenerateSpecOutput> {
-  const flow = ai.defineFlow(
-    {
-      name: 'generateSpecFlow',
-      inputSchema: GenerateSpecInputSchema,
-      outputSchema: GenerateSpecOutputSchema,
+  const response = await fetch('/api/generate-spec', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
     },
-    async (input) => {
-      const { output } = await prompt({
-        nodes: input.nodes as any[],
-        connectors: input.connectors as any[],
-      });
-      return output!;
-    }
-  );
-  return flow(input);
+    body: JSON.stringify({ nodes: input.nodes, connectors: input.connectors }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `API error: ${response.status}`);
+  }
+
+  return response.json();
 }
