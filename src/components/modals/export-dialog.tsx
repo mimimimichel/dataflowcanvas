@@ -11,9 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Download, FileJson, FileCode, Workflow, Check, Code2 } from 'lucide-react';
+import { Copy, Download, FileJson, FileCode, Workflow, Check, Code2, Database } from 'lucide-react';
 import { generateOntologyJSON, generatePipelineConfig } from '@/lib/code-generators';
 import { generatePythonCode } from '@/lib/python-generator';
+import { generateDbtProject } from '@/lib/dbt-generator';
 import type { PipelineNode, Connector } from '@/lib/pipeline-data';
 
 interface ExportDialogProps {
@@ -46,10 +47,12 @@ export default function ExportDialog({ nodes, connectors, open, onOpenChange }: 
   const ontologyCode = generateOntologyJSON(nodes, connectors);
   const transformsCode = generatePythonCode(nodes, connectors);
   const pipelineConfig = generatePipelineConfig(nodes, connectors);
+  const dbtProject = generateDbtProject(nodes, connectors);
 
   const tabData = [
     { id: 'ontology', label: 'Ontology', icon: FileJson, color: 'text-sky-500', code: ontologyCode, filename: 'foundry-ontology.json', lang: 'JSON' },
     { id: 'transforms', label: 'PySpark', icon: FileCode, color: 'text-amber-500', code: transformsCode, filename: 'foundry-pipeline.py', lang: 'Python' },
+    { id: 'dbt', label: 'dbt', icon: Database, color: 'text-orange-500', code: dbtProject, filename: 'dbt_project.sql', lang: 'SQL' },
     { id: 'pipeline', label: 'Pipeline', icon: Workflow, color: 'text-emerald-500', code: pipelineConfig, filename: 'foundry-pipeline-config.json', lang: 'JSON' },
   ];
 

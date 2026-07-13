@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { 
   PipelineNode, Field, Operation, FilterOperation, JoinOperation, 
   GroupByOperation, SortOperation, SelectColumnsOperation, UnionOperation, 
-  DeduplicationOperation, MissingValuesOperation, getJoinOutputFields, DesignStatus, DataQualityMetrics, Connector as ConnectorType 
+  DeduplicationOperation, MissingValuesOperation, SqlPatternOperation, getJoinOutputFields, DesignStatus, DataQualityMetrics, Connector as ConnectorType
 } from '@/lib/pipeline-data';
 import { Trash2, PlusCircle, Activity, ShieldCheck, Clock3, ArrowRightLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -36,6 +36,7 @@ import SelectColumnsOperationEditor from '@/components/operations/select-columns
 import DeduplicationOperationEditor from '@/components/operations/deduplication-operation-editor';
 import MissingValuesOperationEditor from '@/components/operations/missing-values-operation-editor';
 import GenericOperationEditor from '@/components/operations/generic-operation-editor';
+import SqlPatternOperationEditor from '@/components/operations/sql-pattern-operation-editor';
 
 
 
@@ -324,6 +325,8 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
               return <MissingValuesOperationEditor operation={operation as MissingValuesOperation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
           case 'union':
               return <div className="p-4 bg-muted/30 rounded-lg border border-dashed border-border text-center"><p className="text-sm text-muted-foreground italic">Stacking rows from multiple input sources. No additional configuration needed.</p></div>;
+          case 'sql_pattern':
+              return <SqlPatternOperationEditor operation={operation as SqlPatternOperation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
           default:
               return <GenericOperationEditor operation={operation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
       }

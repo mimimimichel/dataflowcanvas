@@ -13,10 +13,13 @@ import {
 import type { NodeType } from '@/components/data-flow/node';
 export type { NodeType };
 
+export type DataClassification = 'public' | 'internal' | 'confidential' | 'pii';
+
 export interface Field {
   name: string;
   type: string;
   nullable?: boolean;
+  classification?: DataClassification;
 }
 
 export type DesignStatus = 'draft' | 'review' | 'ready';
@@ -136,20 +139,30 @@ export interface MissingValuesOperation extends BaseOperation {
     }
 }
 
-export type Operation = 
-    | FilterOperation 
-    | JoinOperation 
-    | GroupByOperation 
-    | SortOperation 
-    | SelectColumnsOperation 
-    | UnionOperation 
+export interface SqlPatternOperation extends BaseOperation {
+    type: 'sql_pattern';
+    settings: {
+        patternId: string;
+        params: Record<string, string>;
+    }
+}
+
+export type Operation =
+    | FilterOperation
+    | JoinOperation
+    | GroupByOperation
+    | SortOperation
+    | SelectColumnsOperation
+    | UnionOperation
     | DeduplicationOperation
     | MissingValuesOperation
+    | SqlPatternOperation
     | BaseOperation;
 
 export interface PipelineNode {
   id: string;
   name: string;
+  description?: string;
   type: NodeType;
   position: { x: number; y: number };
   system?: string;
@@ -213,6 +226,8 @@ export function getDefaultOperation(type: OperationType): Operation {
       return { type: 'handle_missing_values', settings: { strategy: 'drop', columns: [] } };
     case 'union':
       return { type: 'union', settings: {} };
+    case 'sql_pattern':
+      return { type: 'sql_pattern', settings: { patternId: '', params: {} } };
     default:
       return { type, settings: {} };
   }
@@ -419,6 +434,7 @@ export interface TransformationItem {
     type: NodeType;
     operationType?: OperationType;
     description?: string;
+    defaultSettings?: Record<string, any>;
 }
 
 export interface TransformationCategory {
@@ -443,6 +459,59 @@ export const transformations = {
         { name: 'Pass-through (No-op)', icon: ArrowRightLeft,  type: 'transformation' as NodeType, operationType: 'no_op' as const, description: "A pass-through transformation that doesn't modify the data." },
     ],
 };
+
+// --- Compliance Audit ---
+
+export type ComplianceDimensionKey = 'completeness' | 'coherence' | 'quality' | 'maintainability' | 'security';
+
+export const COMPLIANCE_DIMENSION_WEIGHTS: Record<ComplianceDimensionKey, number> = {
+  completeness: 0.5,
+  coherence: 0.125,
+  quality: 0.125,
+  maintainability: 0.125,
+  security: 0.125,
+};
+
+export const COMPLIANCE_DIMENSION_LABELS: Record<ComplianceDimensionKey, string> = {
+  completeness: 'Completeness',
+  coherence: 'Coherence',
+  quality: 'Data Quality',
+  maintainability: 'Maintainability',
+  security: 'Security & PII',
+};
+
+export type ComplianceGrade = 'A' | 'B' | 'C' | 'D' | 'E';
+
+export type ComplianceSeverity = 'info' | 'warning' | 'critical';
+
+export interface ComplianceIssue {
+  dimension: ComplianceDimensionKey;
+  severity: ComplianceSeverity;
+  message: string;
+  nodeId?: string;
+}
+
+export interface ComplianceDimensionResult {
+  key: ComplianceDimensionKey;
+  label: string;
+  weight: number;
+  score: number;
+}
+
+export interface ComplianceAuditResult {
+  score: number;
+  grade: ComplianceGrade;
+  dimensions: ComplianceDimensionResult[];
+  issues: ComplianceIssue[];
+}
+
+export function scoreToGrade(score: number): ComplianceGrade {
+  if (score >= 90) return 'A';
+  if (score >= 75) return 'B';
+  if (score >= 60) return 'C';
+  if (score >= 40) return 'D';
+  return 'E';
+}
 
 export const advancedTransformations: TransformationCategory[] = [
     {

@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { transformations, TransformationItem, advancedTransformations , NodeType } from '@/lib/pipeline-data';
+import { patternCatalogueCategories } from '@/lib/transformation-patterns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -62,7 +63,7 @@ const CatalogueSection: React.FC<{title: string, items: TransformationItem[], it
           {!isMini && <h3 className="px-2.5 text-[10px] uppercase font-bold text-muted-foreground tracking-widest">{title}</h3>}
           <div className="space-y-0.5">
             {items.map((item) => (
-                <DraggableItem key={item.operationType || item.name} item={{...item, type: itemType}} isMini={isMini} />
+                <DraggableItem key={item.name || item.operationType} item={{...item, type: itemType}} isMini={isMini} />
             ))}
           </div>
       </div>
@@ -73,6 +74,8 @@ const CatalogueSection: React.FC<{title: string, items: TransformationItem[], it
 const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ isCollapsed = false, onToggleCollapse }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
+  const allAdvanced = useMemo(() => [...advancedTransformations, ...patternCatalogueCategories], []);
+
   const filteredTransformations = useMemo(() => {
     if (!searchTerm) {
       return {
@@ -80,18 +83,18 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ isC
         dataset: transformations.dataset,
         destination: transformations.destination,
         common: transformations.common,
-        advanced: advancedTransformations,
+        advanced: allAdvanced,
       };
     }
 
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
 
-    const filterItems = (items: TransformationItem[]) => items.filter(item => 
-        item.name.toLowerCase().includes(lowerCaseSearchTerm) || 
+    const filterItems = (items: TransformationItem[]) => items.filter(item =>
+        item.name.toLowerCase().includes(lowerCaseSearchTerm) ||
         item.description?.toLowerCase().includes(lowerCaseSearchTerm)
     );
 
-    const filteredAdvanced = (advancedTransformations || [])
+    const filteredAdvanced = allAdvanced
       .map(category => ({
         ...category,
         items: filterItems(category.items)
@@ -105,7 +108,7 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ isC
       common: filterItems(transformations.common as TransformationItem[]) as TransformationItem[],
       advanced: filteredAdvanced,
     };
-  }, [searchTerm]);
+  }, [searchTerm, allAdvanced]);
 
   return (
     <aside className={cn(
@@ -156,7 +159,7 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ isC
                                         <h4 className="px-2.5 text-[9px] uppercase font-semibold text-muted-foreground/60 tracking-wider">{category.category}</h4>
                                         <div className="space-y-0.5">
                                           {category.items.map(item => (
-                                            <DraggableItem key={item.operationType || item.name} item={{...item, type: 'transformation' as NodeType}} isMini={isCollapsed} />
+                                            <DraggableItem key={item.name || item.operationType} item={{...item, type: 'transformation' as NodeType}} isMini={isCollapsed} />
                                           ))}
                                         </div>
                                       </div>

@@ -19,14 +19,18 @@ import {
   mockLineages,
   LineageInfo,
   NodeGroup,
-  getDefaultOperation
+  getDefaultOperation,
+  ComplianceAuditResult
 } from '@/lib/pipeline-data';
+import { computeComplianceAudit } from '@/lib/compliance-audit';
 import { executePipelinePreview, PipelinePreviewResult } from '@/lib/pipeline-executor';
 import { cn } from '@/lib/utils';
 import ConnectionFieldsModal from '@/components/data-flow/connection-fields-modal';
 import PythonCodeModal from '@/components/modals/python-code-modal';
 import SpecModal from '@/components/modals/spec-modal';
+import DataProductSpecModal from '@/components/modals/data-product-spec-modal';
 import ExportDialog from '@/components/modals/export-dialog';
+import ComplianceAuditPanel from '@/components/panels/compliance-audit-panel';
 import TemplateMarketplace from '@/components/modals/template-marketplace';
 import { type PipelineTemplate } from '@/lib/pipeline-templates';
 import { useUser } from '@/firebase';
@@ -37,7 +41,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Copy, Check } from 'lucide-react';
 import DataPreviewPanel from '@/components/panels/data-preview-panel';
-import { generatePipelineSpec } from '@/ai/flows/generate-spec-flow';
+import { generatePipelineSpec, generateDataProductSpec } from '@/ai/flows/generate-spec-flow';
 import LineageDashboard from '@/components/dashboard/lineage-dashboard';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -180,6 +184,8 @@ export default function MainApp() {
       
   const [isSpecModalOpen, setIsSpecModalOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [isAuditPanelOpen, setIsAuditPanelOpen] = useState(false);
+  const [auditResult, setAuditResult] = useState<ComplianceAuditResult | null>(null);
   const [isTemplateMarketplaceOpen, setIsTemplateMarketplaceOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
@@ -269,6 +275,9 @@ export default function MainApp() {
   }, [activeLineageId, activeVersionId]);
   const [generatedSpec, setGeneratedSpec] = useState('');
   const [isSpecLoading, setIsSpecLoading] = useState(false);
+  const [isProductSpecModalOpen, setIsProductSpecModalOpen] = useState(false);
+  const [generatedProductSpec, setGeneratedProductSpec] = useState('');
+  const [isProductSpecLoading, setIsProductSpecLoading] = useState(false);
 
   // Preview removed — fake data was not useful
 
@@ -725,6 +734,11 @@ export default function MainApp() {
              y >= g.position.y && y <= g.position.y + currentHeight;
     });
     
+    const operation = item.operationType ? getDefaultOperation(item.operationType) : undefined;
+    if (operation && item.defaultSettings) {
+      operation.settings = { ...operation.settings, ...item.defaultSettings };
+    }
+
     const newNode: PipelineNode = {
       id: `${item.type}-${Date.now()}`,
       name: item.name,
@@ -734,7 +748,7 @@ export default function MainApp() {
       groupId: groupUnder?.id,
       inputFields: [],
       outputFields: [],
-      operation: item.operationType ? getDefaultOperation(item.operationType) : undefined,
+      operation,
     };
     setNodes((prev) => [...prev, newNode]);
   }, [pan.x, pan.y, zoom, groups, setNodes]);
@@ -926,10 +940,22 @@ export default function MainApp() {
 
   const handleGenerateSpec = async () => {
     setIsSpecModalOpen(true); setIsSpecLoading(true);
-    try { const res = await generatePipelineSpec({ nodes, connectors }); setGeneratedSpec(res.specification); } 
-    catch (error) { setGeneratedSpec("Failed to generate specification."); } 
+    try { const res = await generatePipelineSpec({ nodes, connectors }); setGeneratedSpec(res.specification); }
+    catch (error) { setGeneratedSpec("Failed to generate specification."); }
     finally { setIsSpecLoading(false); }
   };
+
+  const handleGenerateProductSpec = async () => {
+    setIsProductSpecModalOpen(true); setIsProductSpecLoading(true);
+    try { const res = await generateDataProductSpec({ nodes, connectors }); setGeneratedProductSpec(res.specification); }
+    catch (error) { setGeneratedProductSpec("Failed to generate data product specification."); }
+    finally { setIsProductSpecLoading(false); }
+  };
+
+  const handleAudit = useCallback(() => {
+    setAuditResult(computeComplianceAudit(nodes, connectors));
+    setIsAuditPanelOpen(true);
+  }, [nodes, connectors]);
 
   // Find all source nodes (category === 'source') and their downstream nodes via connectors
   function handleUploadNode(sourceNodeId: string) {
@@ -1013,7 +1039,7 @@ export default function MainApp() {
 
   return (
     <div className="flex h-screen w-full flex-col bg-background font-body overflow-hidden">
-      <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage.versions} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onGenerateSpec={handleGenerateSpec} onImportPipeline={handleImportPipeline} onApplyScaffold={handleApplyScaffold} onAccountSettings={() => setIsAccountOpen(true)} onShare={() => setIsShareOpen(true)} onExport={() => setIsExportDialogOpen(true)} onTemplates={() => setIsTemplateMarketplaceOpen(true)} activeView={activeView} onViewChange={setActiveView} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onZoomFit={handleResetCanvas} zoom={zoom} />
+      <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage.versions} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onGenerateSpec={handleGenerateSpec} onGenerateProductSpec={handleGenerateProductSpec} onAudit={handleAudit} onImportPipeline={handleImportPipeline} onApplyScaffold={handleApplyScaffold} onAccountSettings={() => setIsAccountOpen(true)} onShare={() => setIsShareOpen(true)} onExport={() => setIsExportDialogOpen(true)} onTemplates={() => setIsTemplateMarketplaceOpen(true)} activeView={activeView} onViewChange={setActiveView} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onZoomFit={handleResetCanvas} zoom={zoom} />
       
       {activeView === 'dashboard' ? (
         <LineageDashboard lineages={lineages} onSelectLineage={(id) => { setActiveLineageId(id); setActiveView('editor'); }} onCreateLineage={(name, description) => { const id = `lineage-${Date.now()}`; setLineages(prev => [{ id, name, description, owner: 'Me', lastEdited: 'Just now', versions: [{ id: 'v1', name: 'Initial Design', nodes: [], connectors: [], groups: [] }] }, ...prev]); setActiveLineageId(id); setActiveVersionId('v1'); setActiveView('editor'); }} />
@@ -1096,7 +1122,9 @@ export default function MainApp() {
       <NodeConfigurationPanel connectors={connectors} setConnectors={setConnectors} key={selectedNodeIds.join(',')} node={nodes.find(n => n.id === selectedNodeIds[0])} nodes={nodes} isOpen={isConfigPanelOpen} onClose={() => setIsConfigPanelOpen(false)} onSave={handleNodeConfigChange} onDelete={handleDeleteNode} />
       {connectionForFields && nodes.find(n => n.id === connectionForFields.fromNodeId) && <ConnectionFieldsModal isOpen={!!connectionForFields} fromNode={nodes.find(n => n.id === connectionForFields.fromNodeId)!} toNode={nodes.find(n => n.id === connectionForFields.toNodeId)!} onClose={() => setConnectionForFields(null)} onSave={handleSaveConnectionFields} />}
       <SpecModal isOpen={isSpecModalOpen} onClose={() => setIsSpecModalOpen(false)} spec={generatedSpec} isLoading={isSpecLoading} />
+      <DataProductSpecModal isOpen={isProductSpecModalOpen} onClose={() => setIsProductSpecModalOpen(false)} spec={generatedProductSpec} isLoading={isProductSpecLoading} />
       <ExportDialog nodes={nodes} connectors={connectors} open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen} />
+      <ComplianceAuditPanel open={isAuditPanelOpen} onOpenChange={setIsAuditPanelOpen} result={auditResult} />
       <TemplateMarketplace open={isTemplateMarketplaceOpen} onOpenChange={setIsTemplateMarketplaceOpen} onSelectTemplate={handleApplyTemplate} />
       {/* Share Dialog */}
       <Dialog open={isShareOpen} onOpenChange={setIsShareOpen}>

@@ -11,13 +11,13 @@ export interface GenerateSpecOutput {
   specification: string;
 }
 
-export async function generatePipelineSpec(input: GenerateSpecInput): Promise<GenerateSpecOutput> {
+async function callGenerateSpec(input: GenerateSpecInput, mode?: 'functional' | 'product-spec'): Promise<GenerateSpecOutput> {
   const response = await fetch('/api/generate-spec', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ nodes: input.nodes, connectors: input.connectors }),
+    body: JSON.stringify({ nodes: input.nodes, connectors: input.connectors, mode }),
   });
 
   if (!response.ok) {
@@ -26,4 +26,14 @@ export async function generatePipelineSpec(input: GenerateSpecInput): Promise<Ge
   }
 
   return response.json();
+}
+
+/** Human-readable Markdown functional specification. */
+export async function generatePipelineSpec(input: GenerateSpecInput): Promise<GenerateSpecOutput> {
+  return callGenerateSpec(input, 'functional');
+}
+
+/** Unified ODPS/DPDS/BITOL data product spec, in YAML, derived from the canvas. */
+export async function generateDataProductSpec(input: GenerateSpecInput): Promise<GenerateSpecOutput> {
+  return callGenerateSpec(input, 'product-spec');
 }

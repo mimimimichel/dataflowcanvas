@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Download, Share2, GitBranch, PlusCircle,
   Sparkles, Library, Settings2, Wand2,
-  Menu, Sun, Moon, Laptop, Layers, ZoomIn, ZoomOut, Scan, User
+  Menu, Sun, Moon, Laptop, Layers, ZoomIn, ZoomOut, Scan, User, ShieldCheck, FileJson, ChevronDown
 } from 'lucide-react';
 import { PipelineVersion, LineageInfo } from '@/lib/pipeline-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -32,6 +32,8 @@ interface HeaderProps {
   onVersionChange: (id: string) => void;
   onCreateVersion: (name: string) => void;
   onGenerateSpec: () => void;
+  onGenerateProductSpec: () => void;
+  onAudit: () => void;
   onExport: () => void;
   onTemplates: () => void;
   onImportPipeline: (data: any) => void;
@@ -98,6 +100,8 @@ const Header: React.FC<HeaderProps> = ({
   activeVersionId,
   onVersionChange,
   onCreateVersion,  onGenerateSpec,
+  onGenerateProductSpec,
+  onAudit,
   onExport,
   onTemplates,
   onImportPipeline,
@@ -188,9 +192,26 @@ const Header: React.FC<HeaderProps> = ({
             <>
               {/* Desktop: clean toolbar */}
               <div className="hidden lg:flex items-center gap-1.5">
-                <Button variant="ghost" size="sm" onClick={onGenerateSpec} className="h-8 px-2.5 hover:bg-amber-500/10">
-                  <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                  <span className="ml-1.5 text-xs">Spec</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 px-2.5 hover:bg-amber-500/10">
+                      <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                      <span className="ml-1.5 text-xs">Spec</span>
+                      <ChevronDown className="h-3 w-3 ml-1 opacity-60" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem onClick={onGenerateSpec} className="gap-2">
+                      <Sparkles className="h-4 w-4 text-amber-500" /> Functional Spec
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={onGenerateProductSpec} className="gap-2">
+                      <FileJson className="h-4 w-4 text-sky-500" /> Data Product Spec (ODPS/DPDS/BITOL)
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button variant="ghost" size="sm" onClick={onAudit} className="h-8 px-2.5 hover:bg-emerald-500/10">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+                  <span className="ml-1.5 text-xs">Audit</span>
                 </Button>
                 <Button variant="ghost" size="sm" onClick={onExport} className="h-8 px-2.5">
                   <Download className="h-3.5 w-3.5" />
@@ -209,8 +230,23 @@ const Header: React.FC<HeaderProps> = ({
 
               {/* Tablet: icons only */}
               <div className="hidden md:flex lg:hidden items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onGenerateSpec} aria-label="AI Spec">
-                  <Sparkles className="h-4 w-4 text-amber-500" />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="AI Spec">
+                      <Sparkles className="h-4 w-4 text-amber-500" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem onClick={onGenerateSpec} className="gap-2">
+                      <Sparkles className="h-4 w-4 text-amber-500" /> Functional Spec
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={onGenerateProductSpec} className="gap-2">
+                      <FileJson className="h-4 w-4 text-sky-500" /> Data Product Spec
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onAudit} aria-label="Compliance Audit">
+                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
                 </Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onExport} aria-label="Export">
                   <Download className="h-4 w-4" />
@@ -261,9 +297,15 @@ const Header: React.FC<HeaderProps> = ({
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={onGenerateSpec} className="gap-2">
-                      <Sparkles className="h-4 w-4 text-amber-500" /> AI Spec
+                      <Sparkles className="h-4 w-4 text-amber-500" /> Functional Spec
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={onGenerateProductSpec} className="gap-2">
+                      <FileJson className="h-4 w-4 text-sky-500" /> Data Product Spec
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={onAudit} className="gap-2">
+                      <ShieldCheck className="h-4 w-4 text-emerald-500" /> Compliance Audit
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={onExport} className="gap-2">
                       <Download className="h-4 w-4" /> Export
                     </DropdownMenuItem>

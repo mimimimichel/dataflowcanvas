@@ -12,9 +12,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { nodes, connectors } = await req.json();
+    const { nodes, connectors, mode } = await req.json();
 
-    const prompt = `You are an expert Data Architect and Technical Writer. 
+    const prompt = mode === 'product-spec'
+      ? `You are an expert Data Product Architect. Your task is to derive a unified Data Product specification, in YAML, from a data pipeline designed in a visual tool.
+
+Below is the JSON representation of the pipeline (the canvas is the source of truth — do not invent nodes or fields that aren't there):
+Nodes: ${JSON.stringify(nodes, null, 2)}
+Connectors: ${JSON.stringify(connectors, null, 2)}
+
+Produce a single YAML document unifying three standards into one schema:
+- \`odps\` (Open Data Product Specification — business layer): name, description, version, owner, valuePropositions, SLAs.
+- \`dpds\` (Data Product Development Specification — technical layer): derive \`sources\` from source nodes (system, location), \`transformations\` from transformation nodes (name, operation type, business logic in plain English), \`destinations\` from destination nodes, and \`tests\` from any quality-oriented transformations present (deduplication, missing-value handling, quality control...).
+- \`bitol\` (contracts layer): consumer access, data classification per field (flag anything that looks like PII — email, phone, name, address... — as \`pii\`), GDPR notes, and a basic security/change-management policy.
+
+Return ONLY the YAML document, no surrounding prose, no markdown code fences.`
+      : `You are an expert Data Architect and Technical Writer.
 Your task is to write a professional Functional Specification for a data pipeline designed in a visual tool.
 
 Below is the JSON representation of the pipeline:

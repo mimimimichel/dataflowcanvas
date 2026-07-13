@@ -302,10 +302,10 @@ export function generatePythonCode(nodes: PipelineNode[] = [], connectors: Conne
             Object.entries(mapping).forEach(([col, replacements]) => {
               let expr: string;
               if (typeof replacements === 'object') {
-                const cases = (replacements as Record<string, string>).map(([k, v]: [string, string]) => 
-                  `(F.col("${col}") == "${k}", "${v}")`
-                ).join(', ');
-                expr = `F.when(${cases}).otherwise(F.col("${col}"))`;
+                const whenChain = Object.entries(replacements as Record<string, string>)
+                  .map(([k, v]) => `.when(F.col("${col}") == "${k}", "${v}")`)
+                  .join('');
+                expr = `F${whenChain}.otherwise(F.col("${col}"))`;
               } else {
                 expr = `F.lit("${replacements}")`;
               }
