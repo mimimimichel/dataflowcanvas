@@ -206,6 +206,7 @@ export interface LineageInfo {
   lastEdited: string;
   description: string;
   versions: PipelineVersion[];
+  missionSpec?: MissionSpecMetadata;
 }
 
 export function getDefaultOperation(type: OperationType): Operation {
@@ -459,6 +460,73 @@ export const transformations = {
         { name: 'Pass-through (No-op)', icon: ArrowRightLeft,  type: 'transformation' as NodeType, operationType: 'no_op' as const, description: "A pass-through transformation that doesn't modify the data." },
     ],
 };
+
+// --- Mission Spec (Foundry pipeline spec template, filled during client engagements) ---
+
+export type PipelineCriticality = 'Vitale' | 'Haute' | 'Moyenne' | 'Basse';
+export type PipelineSensitivity = 'Aucune' | 'Interne' | 'Confidentiel' | 'Données personnelles (RGPD)';
+export type QualityControlType = 'Complétude' | 'Unicité' | 'Cohérence référentielle' | 'Fraîcheur' | 'Plage de validité' | 'Volumétrie' | 'Autre';
+
+export interface MissionSpecLinks {
+  repo?: string;
+  lineage?: string;
+  schedule?: string;
+  healthChecks?: string;
+}
+
+export interface PipelineIdentityCard {
+  purpose?: string;
+  owner?: string;
+  backupContact?: string;
+  criticality?: PipelineCriticality;
+  downstreamConsumers?: string;
+  freshnessSla?: string;
+  availabilityWindow?: string;
+  foundryEnvironment?: string;
+  links?: MissionSpecLinks;
+  sensitivity?: PipelineSensitivity;
+  lastValidatedAt?: string;
+}
+
+export interface AdrEntry {
+  id: string;
+  date: string;
+  decision: string;
+  context: string;
+  alternatives: string;
+  deciders: string;
+  impact: string;
+}
+
+export interface RunbookEntry {
+  id: string;
+  scenario: string;
+  symptom: string;
+  diagnosis: string;
+  procedure: string;
+  backfill: string;
+  recoveryDuration: string;
+  escalation: string;
+}
+
+export interface DocVersionEntry {
+  version: string;
+  date: string;
+  author: string;
+  changes: string;
+  validatedBy: string;
+}
+
+export interface MissionSpecMetadata {
+  identityCard: PipelineIdentityCard;
+  adrs: AdrEntry[];
+  runbook: RunbookEntry[];
+  versions: DocVersionEntry[];
+}
+
+export function createEmptyMissionSpec(): MissionSpecMetadata {
+  return { identityCard: {}, adrs: [], runbook: [], versions: [] };
+}
 
 // --- Compliance Audit ---
 

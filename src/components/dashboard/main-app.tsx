@@ -20,7 +20,9 @@ import {
   LineageInfo,
   NodeGroup,
   getDefaultOperation,
-  ComplianceAuditResult
+  ComplianceAuditResult,
+  MissionSpecMetadata,
+  createEmptyMissionSpec
 } from '@/lib/pipeline-data';
 import { computeComplianceAudit } from '@/lib/compliance-audit';
 import { executePipelinePreview, PipelinePreviewResult } from '@/lib/pipeline-executor';
@@ -31,6 +33,7 @@ import SpecModal from '@/components/modals/spec-modal';
 import DataProductSpecModal from '@/components/modals/data-product-spec-modal';
 import ExportDialog from '@/components/modals/export-dialog';
 import ComplianceAuditPanel from '@/components/panels/compliance-audit-panel';
+import MissionSpecModal from '@/components/modals/mission-spec-modal';
 import TemplateMarketplace from '@/components/modals/template-marketplace';
 import { type PipelineTemplate } from '@/lib/pipeline-templates';
 import { useUser } from '@/firebase';
@@ -186,6 +189,7 @@ export default function MainApp() {
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isAuditPanelOpen, setIsAuditPanelOpen] = useState(false);
   const [auditResult, setAuditResult] = useState<ComplianceAuditResult | null>(null);
+  const [isMissionSpecModalOpen, setIsMissionSpecModalOpen] = useState(false);
   const [isTemplateMarketplaceOpen, setIsTemplateMarketplaceOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
@@ -957,6 +961,10 @@ export default function MainApp() {
     setIsAuditPanelOpen(true);
   }, [nodes, connectors]);
 
+  const handleMissionSpecChange = useCallback((metadata: MissionSpecMetadata) => {
+    setLineages(prev => prev.map(l => l.id === activeLineageId ? { ...l, missionSpec: metadata } : l));
+  }, [activeLineageId, setLineages]);
+
   // Find all source nodes (category === 'source') and their downstream nodes via connectors
   function handleUploadNode(sourceNodeId: string) {
     // BFS: find all downstream nodes from sourceNodeId using connectors
@@ -1039,7 +1047,7 @@ export default function MainApp() {
 
   return (
     <div className="flex h-screen w-full flex-col bg-background font-body overflow-hidden">
-      <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage.versions} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onGenerateSpec={handleGenerateSpec} onGenerateProductSpec={handleGenerateProductSpec} onAudit={handleAudit} onImportPipeline={handleImportPipeline} onApplyScaffold={handleApplyScaffold} onAccountSettings={() => setIsAccountOpen(true)} onShare={() => setIsShareOpen(true)} onExport={() => setIsExportDialogOpen(true)} onTemplates={() => setIsTemplateMarketplaceOpen(true)} activeView={activeView} onViewChange={setActiveView} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onZoomFit={handleResetCanvas} zoom={zoom} />
+      <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage.versions} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onGenerateSpec={handleGenerateSpec} onGenerateProductSpec={handleGenerateProductSpec} onAudit={handleAudit} onMissionSpec={() => setIsMissionSpecModalOpen(true)} onImportPipeline={handleImportPipeline} onApplyScaffold={handleApplyScaffold} onAccountSettings={() => setIsAccountOpen(true)} onShare={() => setIsShareOpen(true)} onExport={() => setIsExportDialogOpen(true)} onTemplates={() => setIsTemplateMarketplaceOpen(true)} activeView={activeView} onViewChange={setActiveView} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onZoomFit={handleResetCanvas} zoom={zoom} />
       
       {activeView === 'dashboard' ? (
         <LineageDashboard lineages={lineages} onSelectLineage={(id) => { setActiveLineageId(id); setActiveView('editor'); }} onCreateLineage={(name, description) => { const id = `lineage-${Date.now()}`; setLineages(prev => [{ id, name, description, owner: 'Me', lastEdited: 'Just now', versions: [{ id: 'v1', name: 'Initial Design', nodes: [], connectors: [], groups: [] }] }, ...prev]); setActiveLineageId(id); setActiveVersionId('v1'); setActiveView('editor'); }} />
@@ -1125,6 +1133,15 @@ export default function MainApp() {
       <DataProductSpecModal isOpen={isProductSpecModalOpen} onClose={() => setIsProductSpecModalOpen(false)} spec={generatedProductSpec} isLoading={isProductSpecLoading} />
       <ExportDialog nodes={nodes} connectors={connectors} open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen} />
       <ComplianceAuditPanel open={isAuditPanelOpen} onOpenChange={setIsAuditPanelOpen} result={auditResult} />
+      <MissionSpecModal
+        isOpen={isMissionSpecModalOpen}
+        onClose={() => setIsMissionSpecModalOpen(false)}
+        pipelineName={activeLineage.name}
+        nodes={nodes}
+        connectors={connectors}
+        metadata={activeLineage.missionSpec || createEmptyMissionSpec()}
+        onMetadataChange={handleMissionSpecChange}
+      />
       <TemplateMarketplace open={isTemplateMarketplaceOpen} onOpenChange={setIsTemplateMarketplaceOpen} onSelectTemplate={handleApplyTemplate} />
       {/* Share Dialog */}
       <Dialog open={isShareOpen} onOpenChange={setIsShareOpen}>

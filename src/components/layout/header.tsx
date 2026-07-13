@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Download, Share2, GitBranch, PlusCircle,
   Sparkles, Library, Settings2, Wand2,
-  Menu, Sun, Moon, Laptop, Layers, ZoomIn, ZoomOut, Scan, User, ShieldCheck, FileJson, ChevronDown
+  Menu, Sun, Moon, Laptop, Layers, ZoomIn, ZoomOut, Scan, User, ShieldCheck, FileJson, ChevronDown, FileSpreadsheet
 } from 'lucide-react';
 import { PipelineVersion, LineageInfo } from '@/lib/pipeline-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -34,6 +34,7 @@ interface HeaderProps {
   onGenerateSpec: () => void;
   onGenerateProductSpec: () => void;
   onAudit: () => void;
+  onMissionSpec: () => void;
   onExport: () => void;
   onTemplates: () => void;
   onImportPipeline: (data: any) => void;
@@ -102,6 +103,7 @@ const Header: React.FC<HeaderProps> = ({
   onCreateVersion,  onGenerateSpec,
   onGenerateProductSpec,
   onAudit,
+  onMissionSpec,
   onExport,
   onTemplates,
   onImportPipeline,
@@ -213,6 +215,10 @@ const Header: React.FC<HeaderProps> = ({
                   <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
                   <span className="ml-1.5 text-xs">Audit</span>
                 </Button>
+                <Button variant="ghost" size="sm" onClick={onMissionSpec} className="h-8 px-2.5 hover:bg-sky-500/10">
+                  <FileSpreadsheet className="h-3.5 w-3.5 text-sky-500" />
+                  <span className="ml-1.5 text-xs">Mission Spec</span>
+                </Button>
                 <Button variant="ghost" size="sm" onClick={onExport} className="h-8 px-2.5">
                   <Download className="h-3.5 w-3.5" />
                   <span className="ml-1.5 text-xs">Export</span>
@@ -247,6 +253,9 @@ const Header: React.FC<HeaderProps> = ({
                 </DropdownMenu>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onAudit} aria-label="Compliance Audit">
                   <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onMissionSpec} aria-label="Mission Spec">
+                  <FileSpreadsheet className="h-4 w-4 text-sky-500" />
                 </Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onExport} aria-label="Export">
                   <Download className="h-4 w-4" />
@@ -305,6 +314,9 @@ const Header: React.FC<HeaderProps> = ({
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={onAudit} className="gap-2">
                       <ShieldCheck className="h-4 w-4 text-emerald-500" /> Compliance Audit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={onMissionSpec} className="gap-2">
+                      <FileSpreadsheet className="h-4 w-4 text-sky-500" /> Mission Spec
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={onExport} className="gap-2">
                       <Download className="h-4 w-4" /> Export
