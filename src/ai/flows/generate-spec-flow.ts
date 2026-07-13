@@ -11,11 +11,14 @@ export interface GenerateSpecOutput {
   specification: string;
 }
 
+import { aiAuthHeaders } from './auth-header';
+
 async function callGenerateSpec(input: GenerateSpecInput, mode?: 'functional' | 'product-spec'): Promise<GenerateSpecOutput> {
   const response = await fetch('/api/generate-spec', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...(await aiAuthHeaders()),
     },
     body: JSON.stringify({ nodes: input.nodes, connectors: input.connectors, mode }),
   });

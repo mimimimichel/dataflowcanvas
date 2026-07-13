@@ -25,11 +25,14 @@ export interface ArchitectOutput {
   connectors: ArchitectConnector[];
 }
 
+import { aiAuthHeaders } from './auth-header';
+
 export async function architectPipeline(input: ArchitectInput): Promise<ArchitectOutput> {
   const response = await fetch('/api/generate-scaffold', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...(await aiAuthHeaders()),
     },
     body: JSON.stringify({ requirement: input.requirement }),
   });

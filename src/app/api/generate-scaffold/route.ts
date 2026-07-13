@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { verifyFirebaseToken } from '@/lib/server-auth';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await verifyFirebaseToken(req.headers.get('authorization'));
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Sign in to use AI features' },
+        { status: 401 }
+      );
+    }
+
     if (!OPENROUTER_API_KEY) {
       return NextResponse.json(
         { error: 'OPENROUTER_API_KEY is not configured' },

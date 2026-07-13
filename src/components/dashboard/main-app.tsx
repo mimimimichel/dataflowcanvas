@@ -954,14 +954,14 @@ export default function MainApp() {
   const handleGenerateSpec = async () => {
     setIsSpecModalOpen(true); setIsSpecLoading(true);
     try { const res = await generatePipelineSpec({ nodes, connectors }); setGeneratedSpec(res.specification); }
-    catch (error) { setGeneratedSpec("Failed to generate specification."); }
+    catch (error) { setGeneratedSpec(error instanceof Error ? error.message : "Failed to generate specification."); }
     finally { setIsSpecLoading(false); }
   };
 
   const handleGenerateProductSpec = async () => {
     setIsProductSpecModalOpen(true); setIsProductSpecLoading(true);
     try { const res = await generateDataProductSpec({ nodes, connectors }); setGeneratedProductSpec(res.specification); }
-    catch (error) { setGeneratedProductSpec("Failed to generate data product specification."); }
+    catch (error) { setGeneratedProductSpec(error instanceof Error ? error.message : "Failed to generate data product specification."); }
     finally { setIsProductSpecLoading(false); }
   };
 
