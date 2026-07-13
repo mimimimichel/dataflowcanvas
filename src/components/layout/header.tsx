@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Download, Share2, GitBranch, PlusCircle,
-  Sparkles, Library, Settings2, Wand2,
-  Menu, Sun, Moon, Laptop, Layers, ZoomIn, ZoomOut, Scan, User, ShieldCheck, FileJson, ChevronDown, FileSpreadsheet
+  Library, Settings2, Wand2,
+  Menu, Sun, Moon, Laptop, Layers, ZoomIn, ZoomOut, Scan, User, ShieldCheck, Package
 } from 'lucide-react';
 import { PipelineVersion, LineageInfo } from '@/lib/pipeline-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -31,11 +31,12 @@ interface HeaderProps {
   activeVersionId: string;
   onVersionChange: (id: string) => void;
   onCreateVersion: (name: string) => void;
-  onGenerateSpec: () => void;
-  onGenerateProductSpec: () => void;
+  onDeliverables: () => void;
   onAudit: () => void;
-  onMissionSpec: () => void;
-  onExport: () => void;
+  auditGrade?: string;
+  auditScore?: number;
+  isArchitectOpen: boolean;
+  onArchitectOpenChange: (open: boolean) => void;
   onTemplates: () => void;
   onImportPipeline: (data: any) => void;
   onApplyScaffold: (scaffold: any) => void;
@@ -94,17 +95,27 @@ const CreateVersionDialog: React.FC<{
 };
 
 
+const GRADE_COLORS: Record<string, string> = {
+  A: 'text-emerald-500',
+  B: 'text-lime-500',
+  C: 'text-amber-500',
+  D: 'text-orange-500',
+  E: 'text-red-500',
+};
+
 const Header: React.FC<HeaderProps> = ({
   activeLineage,
   activeVersion,
   versions,
   activeVersionId,
   onVersionChange,
-  onCreateVersion,  onGenerateSpec,
-  onGenerateProductSpec,
+  onCreateVersion,
+  onDeliverables,
   onAudit,
-  onMissionSpec,
-  onExport,
+  auditGrade,
+  auditScore,
+  isArchitectOpen,
+  onArchitectOpenChange,
   onTemplates,
   onImportPipeline,
   onApplyScaffold,
@@ -118,7 +129,6 @@ const Header: React.FC<HeaderProps> = ({
   onShare,
 }) => {
   const [isCreateVersionOpen, setIsCreateVersionOpen] = useState(false);
-  const [isArchitectOpen, setIsArchitectOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -192,79 +202,46 @@ const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
           {activeView === 'editor' && (
             <>
-              {/* Desktop: clean toolbar */}
+              {/* Desktop: Build -> Validate -> Deliver */}
               <div className="hidden xl:flex items-center gap-1.5">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 px-2.5 hover:bg-amber-500/10">
-                      <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                      <span className="ml-1.5 text-xs">Spec</span>
-                      <ChevronDown className="h-3 w-3 ml-1 opacity-60" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    <DropdownMenuItem onClick={onGenerateSpec} className="gap-2">
-                      <Sparkles className="h-4 w-4 text-amber-500" /> Functional Spec
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={onGenerateProductSpec} className="gap-2">
-                      <FileJson className="h-4 w-4 text-sky-500" /> Data Product Spec (ODPS/DPDS/BITOL)
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button variant="ghost" size="sm" onClick={onAudit} className="h-8 px-2.5 hover:bg-emerald-500/10">
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-                  <span className="ml-1.5 text-xs">Audit</span>
-                </Button>
-                <Button variant="ghost" size="sm" onClick={onMissionSpec} className="h-8 px-2.5 hover:bg-sky-500/10">
-                  <FileSpreadsheet className="h-3.5 w-3.5 text-sky-500" />
-                  <span className="ml-1.5 text-xs">Mission Spec</span>
-                </Button>
-                <Button variant="ghost" size="sm" onClick={onExport} className="h-8 px-2.5">
-                  <Download className="h-3.5 w-3.5" />
-                  <span className="ml-1.5 text-xs">Export</span>
-                </Button>
                 <Button variant="ghost" size="sm" onClick={onTemplates} className="h-8 px-2.5">
                   <Layers className="h-3.5 w-3.5" />
                   <span className="ml-1.5 text-xs">Templates</span>
                 </Button>
-                <div className="w-px h-5 bg-border/50 mx-2" />
-                <Button variant="ghost" size="sm" onClick={() => setIsArchitectOpen(true)} className="h-8 px-2.5 text-primary bg-primary/10 hover:bg-primary/20">
+                <Button variant="ghost" size="sm" onClick={() => onArchitectOpenChange(true)} className="h-8 px-2.5 text-primary bg-primary/10 hover:bg-primary/20">
                   <Wand2 className="h-3.5 w-3.5 mr-1.5" />
                   <span className="text-xs">Architect</span>
+                </Button>
+                <div className="w-px h-5 bg-border/50 mx-2" />
+                {auditGrade && (
+                  <Button variant="ghost" size="sm" onClick={onAudit} className="h-8 px-2.5 gap-1.5" aria-label={`Compliance score ${auditScore}/100`}>
+                    <ShieldCheck className={cn("h-3.5 w-3.5", GRADE_COLORS[auditGrade])} />
+                    <span className={cn("text-sm font-bold leading-none", GRADE_COLORS[auditGrade])}>{auditGrade}</span>
+                    <span className="text-[10px] text-muted-foreground">{auditScore}/100</span>
+                  </Button>
+                )}
+                <Button variant="default" size="sm" onClick={onDeliverables} className="h-8 px-3">
+                  <Package className="h-3.5 w-3.5 mr-1.5" />
+                  <span className="text-xs">Livrables</span>
                 </Button>
               </div>
 
               {/* Tablet: icons only */}
               <div className="hidden md:flex xl:hidden items-center gap-1">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="AI Spec">
-                      <Sparkles className="h-4 w-4 text-amber-500" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    <DropdownMenuItem onClick={onGenerateSpec} className="gap-2">
-                      <Sparkles className="h-4 w-4 text-amber-500" /> Functional Spec
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={onGenerateProductSpec} className="gap-2">
-                      <FileJson className="h-4 w-4 text-sky-500" /> Data Product Spec
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onAudit} aria-label="Compliance Audit">
-                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onMissionSpec} aria-label="Mission Spec">
-                  <FileSpreadsheet className="h-4 w-4 text-sky-500" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onExport} aria-label="Export">
-                  <Download className="h-4 w-4" />
-                </Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onTemplates} aria-label="Templates">
                   <Layers className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => setIsArchitectOpen(true)}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => onArchitectOpenChange(true)} aria-label="AI Architect">
                   <Wand2 className="h-4 w-4" />
+                </Button>
+                {auditGrade && (
+                  <Button variant="ghost" size="sm" className="h-8 px-1.5 gap-1" onClick={onAudit} aria-label={`Compliance score ${auditScore}/100`}>
+                    <ShieldCheck className={cn("h-4 w-4", GRADE_COLORS[auditGrade])} />
+                    <span className={cn("text-sm font-bold leading-none", GRADE_COLORS[auditGrade])}>{auditGrade}</span>
+                  </Button>
+                )}
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onDeliverables} aria-label="Livrables">
+                  <Package className="h-4 w-4" />
                 </Button>
               </div>
             </>
@@ -301,28 +278,19 @@ const Header: React.FC<HeaderProps> = ({
               <DropdownMenuContent align="end" className="w-52">
                 {activeView === 'editor' && (
                   <>
-                    <DropdownMenuItem onClick={() => setIsArchitectOpen(true)} className="gap-2 text-primary font-medium">
+                    <DropdownMenuItem onClick={() => onArchitectOpenChange(true)} className="gap-2 text-primary font-medium">
                       <Wand2 className="h-4 w-4" /> AI Architect
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={onGenerateSpec} className="gap-2">
-                      <Sparkles className="h-4 w-4 text-amber-500" /> Functional Spec
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={onGenerateProductSpec} className="gap-2">
-                      <FileJson className="h-4 w-4 text-sky-500" /> Data Product Spec
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={onAudit} className="gap-2">
-                      <ShieldCheck className="h-4 w-4 text-emerald-500" /> Compliance Audit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={onMissionSpec} className="gap-2">
-                      <FileSpreadsheet className="h-4 w-4 text-sky-500" /> Mission Spec
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={onExport} className="gap-2">
-                      <Download className="h-4 w-4" /> Export
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={onTemplates} className="gap-2">
                       <Layers className="h-4 w-4" /> Templates
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={onAudit} className="gap-2">
+                      <ShieldCheck className={cn("h-4 w-4", auditGrade ? GRADE_COLORS[auditGrade] : 'text-emerald-500')} />
+                      Audit {auditGrade ? `— ${auditGrade} (${auditScore}/100)` : ''}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={onDeliverables} className="gap-2">
+                      <Package className="h-4 w-4" /> Livrables
                     </DropdownMenuItem>
                   </>
                 )}
@@ -385,7 +353,7 @@ const Header: React.FC<HeaderProps> = ({
 
       <AIArchitectModal
         isOpen={isArchitectOpen}
-        onClose={() => setIsArchitectOpen(false)}
+        onClose={() => onArchitectOpenChange(false)}
         onApplyScaffold={onApplyScaffold}
       />
     </>

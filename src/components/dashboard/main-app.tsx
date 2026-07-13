@@ -34,6 +34,7 @@ import DataProductSpecModal from '@/components/modals/data-product-spec-modal';
 import ExportDialog from '@/components/modals/export-dialog';
 import ComplianceAuditPanel from '@/components/panels/compliance-audit-panel';
 import MissionSpecModal from '@/components/modals/mission-spec-modal';
+import DeliverablesHub, { type DeliverableId } from '@/components/modals/deliverables-hub';
 import TemplateMarketplace from '@/components/modals/template-marketplace';
 import { type PipelineTemplate } from '@/lib/pipeline-templates';
 import { useUser } from '@/firebase';
@@ -47,10 +48,10 @@ import DataPreviewPanel from '@/components/panels/data-preview-panel';
 import { generatePipelineSpec, generateDataProductSpec } from '@/ai/flows/generate-spec-flow';
 import LineageDashboard from '@/components/dashboard/lineage-dashboard';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  ZoomIn, ZoomOut, RotateCcw, Crosshair, Keyboard, 
-  MousePointer2, BoxSelect, Trash2, Group, Square, 
-  LayoutDashboard, Boxes
+import {
+  ZoomIn, ZoomOut, RotateCcw, Crosshair, Keyboard,
+  MousePointer2, BoxSelect, Trash2, Group, Square,
+  LayoutDashboard, Boxes, Workflow, Wand2, Layers
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -194,8 +195,10 @@ export default function MainApp() {
   const [isSpecModalOpen, setIsSpecModalOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isAuditPanelOpen, setIsAuditPanelOpen] = useState(false);
-  const [auditResult, setAuditResult] = useState<ComplianceAuditResult | null>(null);
   const [isMissionSpecModalOpen, setIsMissionSpecModalOpen] = useState(false);
+  const [isDeliverablesHubOpen, setIsDeliverablesHubOpen] = useState(false);
+  const [exportInitialTab, setExportInitialTab] = useState('ontology');
+  const [isArchitectOpen, setIsArchitectOpen] = useState(false);
   const [isTemplateMarketplaceOpen, setIsTemplateMarketplaceOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
@@ -962,10 +965,27 @@ export default function MainApp() {
     finally { setIsProductSpecLoading(false); }
   };
 
-  const handleAudit = useCallback(() => {
-    setAuditResult(computeComplianceAudit(nodes, connectors));
-    setIsAuditPanelOpen(true);
+  const liveAudit = useMemo<ComplianceAuditResult | null>(() => {
+    if (nodes.length === 0) return null;
+    return computeComplianceAudit(nodes, connectors);
   }, [nodes, connectors]);
+
+  const handleAudit = useCallback(() => {
+    setIsAuditPanelOpen(true);
+  }, []);
+
+  const handleDeliverableSelect = (id: DeliverableId) => {
+    setIsDeliverablesHubOpen(false);
+    switch (id) {
+      case 'functional-spec': handleGenerateSpec(); break;
+      case 'product-spec': handleGenerateProductSpec(); break;
+      case 'mission-spec': setIsMissionSpecModalOpen(true); break;
+      case 'pyspark': setExportInitialTab('transforms'); setIsExportDialogOpen(true); break;
+      case 'dbt': setExportInitialTab('dbt'); setIsExportDialogOpen(true); break;
+      case 'ontology': setExportInitialTab('ontology'); setIsExportDialogOpen(true); break;
+      case 'pipeline-config': setExportInitialTab('pipeline'); setIsExportDialogOpen(true); break;
+    }
+  };
 
   const handleMissionSpecChange = useCallback((metadata: MissionSpecMetadata) => {
     setLineages(prev => prev.map(l => l.id === activeLineageId ? { ...l, missionSpec: metadata } : l));
@@ -1053,7 +1073,7 @@ export default function MainApp() {
 
   return (
     <div className="flex h-screen w-full flex-col bg-background font-body overflow-hidden">
-      <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage.versions} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onGenerateSpec={handleGenerateSpec} onGenerateProductSpec={handleGenerateProductSpec} onAudit={handleAudit} onMissionSpec={() => setIsMissionSpecModalOpen(true)} onImportPipeline={handleImportPipeline} onApplyScaffold={handleApplyScaffold} onAccountSettings={() => setIsAccountOpen(true)} onShare={() => setIsShareOpen(true)} onExport={() => setIsExportDialogOpen(true)} onTemplates={() => setIsTemplateMarketplaceOpen(true)} activeView={activeView} onViewChange={setActiveView} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onZoomFit={handleResetCanvas} zoom={zoom} />
+      <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage.versions} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onDeliverables={() => setIsDeliverablesHubOpen(true)} onAudit={handleAudit} auditGrade={liveAudit?.grade} auditScore={liveAudit?.score} isArchitectOpen={isArchitectOpen} onArchitectOpenChange={setIsArchitectOpen} onImportPipeline={handleImportPipeline} onApplyScaffold={handleApplyScaffold} onAccountSettings={() => setIsAccountOpen(true)} onShare={() => setIsShareOpen(true)} onTemplates={() => setIsTemplateMarketplaceOpen(true)} activeView={activeView} onViewChange={setActiveView} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onZoomFit={handleResetCanvas} zoom={zoom} />
       
       {activeView === 'dashboard' ? (
         <LineageDashboard lineages={lineages} onSelectLineage={(id) => { setActiveLineageId(id); setActiveView('editor'); }} onCreateLineage={(name, description) => { const id = `lineage-${Date.now()}`; setLineages(prev => [{ id, name, description, owner: 'Me', lastEdited: 'Just now', versions: [{ id: 'v1', name: 'Initial Design', nodes: [], connectors: [], groups: [] }] }, ...prev]); setActiveLineageId(id); setActiveVersionId('v1'); setActiveView('editor'); }} />
@@ -1063,6 +1083,35 @@ export default function MainApp() {
           
           <main className={cn("flex-1 relative overflow-hidden bg-background/95", isDrawMode ? "cursor-crosshair" : "cursor-grab")} onDrop={handleDrop} onDragOver={handleDragOver} onWheel={handleWheel} ref={canvasRef} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} onContextMenu={e => e.preventDefault()}>
             <div className="absolute inset-0 canvas-grid pointer-events-none" />
+            {nodes.length === 0 && groups.length === 0 && (
+              <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none p-4">
+                <div
+                  className="pointer-events-auto bg-card/95 backdrop-blur-md border rounded-2xl p-6 sm:p-8 max-w-md w-full text-center space-y-5 shadow-xl"
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  <div className="mx-auto w-fit p-3 rounded-2xl bg-primary/10 ring-1 ring-primary/20">
+                    <Workflow className="h-6 w-6 text-primary" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <h2 className="text-lg font-bold tracking-tight">Commencez votre pipeline</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Trois façons de démarrer — le canvas fera le reste.
+                    </p>
+                  </div>
+                  <div className="grid gap-2">
+                    <Button onClick={() => setIsTemplateMarketplaceOpen(true)} className="justify-start gap-2.5 h-10">
+                      <Layers className="h-4 w-4" /> Partir d'un template
+                    </Button>
+                    <Button variant="outline" onClick={() => setIsArchitectOpen(true)} className="justify-start gap-2.5 h-10 text-primary border-primary/30 hover:bg-primary/10">
+                      <Wand2 className="h-4 w-4" /> Décrire mon besoin à l'IA
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    …ou glissez une <span className="font-medium text-foreground/80">source</span> depuis le catalogue à gauche.
+                  </p>
+                </div>
+              </div>
+            )}
             <div className="absolute top-0 left-0" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'top left' }}>
               {groups
                 .slice()
@@ -1137,8 +1186,9 @@ export default function MainApp() {
       {connectionForFields && nodes.find(n => n.id === connectionForFields.fromNodeId) && <ConnectionFieldsModal isOpen={!!connectionForFields} fromNode={nodes.find(n => n.id === connectionForFields.fromNodeId)!} toNode={nodes.find(n => n.id === connectionForFields.toNodeId)!} onClose={() => setConnectionForFields(null)} onSave={handleSaveConnectionFields} />}
       <SpecModal isOpen={isSpecModalOpen} onClose={() => setIsSpecModalOpen(false)} spec={generatedSpec} isLoading={isSpecLoading} />
       <DataProductSpecModal isOpen={isProductSpecModalOpen} onClose={() => setIsProductSpecModalOpen(false)} spec={generatedProductSpec} isLoading={isProductSpecLoading} />
-      <ExportDialog nodes={nodes} connectors={connectors} open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen} />
-      <ComplianceAuditPanel open={isAuditPanelOpen} onOpenChange={setIsAuditPanelOpen} result={auditResult} />
+      <ExportDialog nodes={nodes} connectors={connectors} open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen} initialTab={exportInitialTab} />
+      <ComplianceAuditPanel open={isAuditPanelOpen} onOpenChange={setIsAuditPanelOpen} result={liveAudit} />
+      <DeliverablesHub open={isDeliverablesHubOpen} onOpenChange={setIsDeliverablesHubOpen} onSelect={handleDeliverableSelect} />
       <MissionSpecModal
         isOpen={isMissionSpecModalOpen}
         onClose={() => setIsMissionSpecModalOpen(false)}

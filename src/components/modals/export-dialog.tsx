@@ -22,11 +22,16 @@ interface ExportDialogProps {
   connectors: Connector[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialTab?: string;
 }
 
-export default function ExportDialog({ nodes, connectors, open, onOpenChange }: ExportDialogProps) {
+export default function ExportDialog({ nodes, connectors, open, onOpenChange, initialTab = 'ontology' }: ExportDialogProps) {
   const [copiedTab, setCopiedTab] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('ontology');
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  React.useEffect(() => {
+    if (open) setActiveTab(initialTab);
+  }, [open, initialTab]);
 
   const handleCopy = async (content: string, tab: string) => {
     await navigator.clipboard.writeText(content);
