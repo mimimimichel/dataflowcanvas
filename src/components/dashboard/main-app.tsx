@@ -1179,10 +1179,10 @@ export default function MainApp() {
               </div>
             </div>
           </main>
+
+          <NodeConfigurationPanel connectors={connectors} setConnectors={setConnectors} key={selectedNodeIds.join(',')} node={nodes.find(n => n.id === selectedNodeIds[0])} nodes={nodes} isOpen={isConfigPanelOpen} onClose={() => setIsConfigPanelOpen(false)} onSave={handleNodeConfigChange} onDelete={handleDeleteNode} />
         </div>
       )}
-      
-      <NodeConfigurationPanel connectors={connectors} setConnectors={setConnectors} key={selectedNodeIds.join(',')} node={nodes.find(n => n.id === selectedNodeIds[0])} nodes={nodes} isOpen={isConfigPanelOpen} onClose={() => setIsConfigPanelOpen(false)} onSave={handleNodeConfigChange} onDelete={handleDeleteNode} />
       {connectionForFields && nodes.find(n => n.id === connectionForFields.fromNodeId) && <ConnectionFieldsModal isOpen={!!connectionForFields} fromNode={nodes.find(n => n.id === connectionForFields.fromNodeId)!} toNode={nodes.find(n => n.id === connectionForFields.toNodeId)!} onClose={() => setConnectionForFields(null)} onSave={handleSaveConnectionFields} />}
       <SpecModal isOpen={isSpecModalOpen} onClose={() => setIsSpecModalOpen(false)} spec={generatedSpec} isLoading={isSpecLoading} />
       <DataProductSpecModal isOpen={isProductSpecModalOpen} onClose={() => setIsProductSpecModalOpen(false)} spec={generatedProductSpec} isLoading={isProductSpecLoading} />

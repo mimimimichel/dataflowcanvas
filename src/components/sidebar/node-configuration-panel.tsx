@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -11,7 +10,7 @@ import {
   GroupByOperation, SortOperation, SelectColumnsOperation, UnionOperation, 
   DeduplicationOperation, MissingValuesOperation, SqlPatternOperation, getJoinOutputFields, DesignStatus, DataQualityMetrics, Connector as ConnectorType
 } from '@/lib/pipeline-data';
-import { Trash2, PlusCircle, Activity, ShieldCheck, Clock3, ArrowRightLeft } from 'lucide-react';
+import { Trash2, PlusCircle, Activity, ShieldCheck, Clock3, ArrowRightLeft, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -216,14 +215,22 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
   const sourceNodesForJoin = useMemo(() => {
     const operation = draftNode.operation || node?.operation;
     if (!node || !operation || operation.type !== 'join') return { left: undefined, right: undefined };
-    
+
     const joinOp = operation as JoinOperation;
     const left = nodes.find(n => n.id === joinOp.settings.leftNodeId);
     const right = nodes.find(n => n.id === joinOp.settings.rightNodeId);
     return { left, right };
   }, [node, nodes, draftNode.operation]);
 
-  if (!node) return null;
+  const nodeConnectors = useMemo(() => {
+    if (!node) return { incoming: [], outgoing: [] };
+    return {
+      incoming: connectors.filter(c => c.to === node.id),
+      outgoing: connectors.filter(c => c.from === node.id),
+    };
+  }, [node, connectors]);
+
+  if (!node || !isOpen) return null;
 
   const displayNode = { ...node, ...draftNode };
 
@@ -331,15 +338,6 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
               return <GenericOperationEditor operation={operation} inputFields={displayNode.inputFields || []} onUpdate={handleOperationUpdate} />;
       }
   };
-
-  // Connector editing
-  const nodeConnectors = useMemo(() => {
-    if (!node) return { incoming: [], outgoing: [] };
-    return {
-      incoming: connectors.filter(c => c.to === node.id),
-      outgoing: connectors.filter(c => c.from === node.id),
-    };
-  }, [node, connectors]);
 
   const handleReconnectConnector = (oldFrom: string, oldTo: string, newFrom: string, newTo: string) => {
     // Remove old connector, add new one
@@ -501,19 +499,20 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px] w-[95vw] max-h-[85vh] flex flex-col glass-panel">
+    <aside className="absolute inset-y-0 right-0 z-40 w-full sm:w-[440px] xl:static xl:z-auto shrink-0 glass-panel border-l border-border/50 flex flex-col h-full shadow-2xl">
         {/* Fixed header */}
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="text-xl">Configure: {displayNode.name}</DialogTitle>
-          <DialogDescription>
-            Modify configurations, rules, and design specifications.
-          </DialogDescription>
-        </DialogHeader>
-        <Separator className="bg-border/50 flex-shrink-0" />
+        <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-3 border-b border-border/50 shrink-0">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold truncate">Configure: {displayNode.name}</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">The canvas stays live — changes apply on save.</p>
+          </div>
+          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={onClose} aria-label="Close configuration panel">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
 
         {/* Scrollable content area */}
-        <div className="flex-1 overflow-y-auto px-1 py-4 min-h-0">
+        <div className="flex-1 overflow-y-auto px-4 py-4 min-h-0">
           <div className="space-y-6 pb-4">
             {/* Name & Status */}
             <div className="grid grid-cols-2 gap-4">
@@ -576,11 +575,11 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
         </div>
 
         {/* Fixed footer */}
-        <DialogFooter className="flex-shrink-0 mt-0 border-t border-border pt-4">
-            <div className="flex justify-between w-full">
+        <div className="flex-shrink-0 border-t border-border p-3">
+            <div className="flex justify-between w-full items-center">
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button variant="ghost" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4"/> Delete Node</Button>
+                        <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10" aria-label="Delete node"><Trash2 className="h-4 w-4"/></Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent className="glass-panel border-border">
                         <AlertDialogHeader>
@@ -598,13 +597,12 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
                 </AlertDialog>
 
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={onClose} className="border-border bg-muted/20">Cancel</Button>
-                    <Button onClick={handleSave} className="bg-primary text-primary-foreground shadow-lg shadow-primary/20">Save Changes</Button>
+                    <Button variant="outline" size="sm" onClick={onClose} className="border-border bg-muted/20">Cancel</Button>
+                    <Button size="sm" onClick={handleSave} className="bg-primary text-primary-foreground shadow-lg shadow-primary/20">Save Changes</Button>
                 </div>
             </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+    </aside>
   );
 };
 
