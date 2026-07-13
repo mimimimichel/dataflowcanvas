@@ -91,7 +91,7 @@ function childNodeNames(nodeId: string, nodes: PipelineNode[], connectors: Conne
 function addModeDemploiSheet(wb: ExcelJS.Workbook) {
   const ws = wb.addWorksheet('Mode demploi');
   styleTitle(ws.getCell('A1'), 'SPÉCIFICATION DE PIPELINE — PALANTIR FOUNDRY');
-  styleSubtitle(ws.getCell('A2'), 'Généré depuis DataFlow Canvas · un classeur = un pipeline');
+  styleSubtitle(ws.getCell('A2'), 'Généré depuis Theseus · un classeur = un pipeline');
   const rows: [string, string][] = [
     ['PRINCIPE', "Ce document ne contient que ce que la plateforme ne peut pas dire : les contrats, les règles métier, les décisions et les modes de défaillance. Les onglets Sources / Destinations / Mapping / Étapes / Qualité sont pré-remplis depuis le canvas visuel ; complétez le reste (Carte d'identité, ADR, Runbook, Versions) avant livraison."],
     ["1. Carte d'identité", 'Qui possède, pour qui, avec quel engagement. À compléter en premier, obligatoire.'],
@@ -275,7 +275,7 @@ export async function generateMissionSpecWorkbook(
   metadata: MissionSpecMetadata,
 ): Promise<ExcelJS.Buffer> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'DataFlow Canvas';
+  wb.creator = 'Theseus';
   wb.created = new Date();
 
   addModeDemploiSheet(wb);

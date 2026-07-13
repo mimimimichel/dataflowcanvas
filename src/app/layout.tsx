@@ -5,7 +5,7 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { ThemeProvider } from '@/components/theme-provider';
 
 export const metadata: Metadata = {
-  title: 'DataFlow Canvas',
+  title: 'Theseus',
   description: 'Interactive data pipeline visualization and management tool.',
 };
 

@@ -123,7 +123,13 @@ export default function MainApp() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [isDrawMode, setIsDrawMode] = useState(false);
-  
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setIsSidebarCollapsed(true);
+    }
+  }, []);
+
   const activeLineage = useMemo(() => 
     lineages.find(l => l.id === activeLineageId) || lineages[0], 
   [lineages, activeLineageId]);

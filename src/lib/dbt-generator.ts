@@ -44,7 +44,7 @@ export function generateDbtProject(nodes: PipelineNode[] = [], connectors: Conne
   };
 
   let out = `-- ============================================================\n`;
-  out += `-- dbt project generated from the DataFlow Canvas pipeline\n`;
+  out += `-- dbt project generated from the Theseus pipeline\n`;
   out += `-- ============================================================\n\n`;
 
   // --- models/sources.yml ---

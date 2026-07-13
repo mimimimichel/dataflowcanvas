@@ -154,7 +154,7 @@ const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-3 md:gap-4 min-w-0">
           <div className="flex items-center gap-2 shrink-0">
             <GitBranch className="h-5 w-5 text-primary" />
-            <h1 className="text-base font-bold tracking-tight hidden lg:block">DataFlow Canvas</h1>
+            <h1 className="text-base font-bold tracking-tight hidden xl:block">Theseus</h1>
           </div>
 
           <Tabs value={activeView} onValueChange={(v) => onViewChange(v as 'dashboard' | 'editor')} className="w-[160px] md:w-[220px] shrink-0">
@@ -193,7 +193,7 @@ const Header: React.FC<HeaderProps> = ({
           {activeView === 'editor' && (
             <>
               {/* Desktop: clean toolbar */}
-              <div className="hidden lg:flex items-center gap-1.5">
+              <div className="hidden xl:flex items-center gap-1.5">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm" className="h-8 px-2.5 hover:bg-amber-500/10">
@@ -235,7 +235,7 @@ const Header: React.FC<HeaderProps> = ({
               </div>
 
               {/* Tablet: icons only */}
-              <div className="hidden md:flex lg:hidden items-center gap-1">
+              <div className="hidden md:flex xl:hidden items-center gap-1">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="AI Spec">

@@ -27,7 +27,7 @@ export default function LandingView({ onEnterDemo }: LandingViewProps) {
 
     if (isSignUp) {
       initiateEmailSignUp(auth, email, password);
-      toast({ title: "Account created", description: "Welcome to DataFlow Canvas!" });
+      toast({ title: "Account created", description: "Welcome to Theseus!" });
     } else {
       initiateEmailSignIn(auth, email, password);
       toast({ title: "Welcome back", description: "Signing you in..." });
@@ -39,7 +39,7 @@ export default function LandingView({ onEnterDemo }: LandingViewProps) {
       <nav className="flex items-center justify-between p-6 border-b">
         <div className="flex items-center gap-2">
           <GitBranch className="h-6 w-6 text-primary" />
-          <span className="text-xl font-bold tracking-tight">DataFlow</span>
+          <span className="text-xl font-bold tracking-tight">Theseus</span>
         </div>
         <div className="flex gap-4">
           <Button variant="ghost" onClick={onEnterDemo}>Demo Mode</Button>
@@ -136,7 +136,7 @@ export default function LandingView({ onEnterDemo }: LandingViewProps) {
       </main>
 
       <footer className="p-8 border-t text-center text-sm text-muted-foreground">
-        &copy; {new Date().getFullYear()} DataFlow Designer. Built for high-scale data engineering.
+        &copy; {new Date().getFullYear()} Theseus. Built for high-scale data engineering.
       </footer>
     </div>
   );
