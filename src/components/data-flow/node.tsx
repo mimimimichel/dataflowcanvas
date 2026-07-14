@@ -200,6 +200,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
                         variant="ghost" 
                         size="icon" 
                         className="h-6 w-6 hover:bg-primary/10 hover:text-primary transition-all duration-150 rounded-md p-0 min-h-0 min-w-0"
+                        onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => { e.stopPropagation(); onUploadData?.(id); }}
                         title="Upload Data"
                     >
@@ -210,6 +211,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
                     variant="ghost" 
                     size="icon" 
                     className="h-6 w-6 hover:bg-primary/10 hover:text-primary transition-all duration-150 rounded-md p-0 min-h-0 min-w-0"
+                    onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => { e.stopPropagation(); onPreview?.(id); }}
                     title="Preview Data"
                 >
@@ -275,6 +277,7 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
                 variant="ghost" 
                 size="icon" 
                 className="h-6 w-6 hover:bg-muted/50 rounded-sm p-0 min-h-0 min-w-0"
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={handleConfigClick}
                 title="Configure"
             >

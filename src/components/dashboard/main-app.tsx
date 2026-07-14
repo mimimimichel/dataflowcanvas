@@ -1203,7 +1203,7 @@ export default function MainApp() {
               <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none p-4">
                 <div
                   className="pointer-events-auto bg-card/95 backdrop-blur-md border rounded-2xl p-6 sm:p-8 max-w-md w-full text-center space-y-5 shadow-xl"
-                  onMouseDown={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
                 >
                   <div className="mx-auto w-fit p-3 rounded-2xl bg-primary/10 ring-1 ring-primary/20">
                     <Workflow className="h-6 w-6 text-primary" />
@@ -1278,7 +1278,10 @@ export default function MainApp() {
 
             <ShortcutLegend isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
             <div className="absolute bottom-6 left-4 right-4 z-50 flex justify-end pointer-events-none">
-              <div className="glass-panel rounded-2xl flex items-center p-1.5 gap-1 border border-border shadow-2xl max-w-full overflow-x-auto pointer-events-auto [&>*]:shrink-0">
+              <div
+                className="glass-panel rounded-2xl flex items-center p-1.5 gap-1 border border-border shadow-2xl max-w-full overflow-x-auto pointer-events-auto [&>*]:shrink-0"
+                onPointerDown={(e) => e.stopPropagation()}
+              >
                   <TooltipProvider>
                       <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" onClick={() => setIsDrawMode(!isDrawMode)} className={cn("h-9 w-9 rounded-xl", isDrawMode ? "bg-primary text-primary-foreground" : "hover:bg-muted")}><Square className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Dessiner Zone</TooltipContent></Tooltip>
                       <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" onClick={handleCreateGroup} className="h-9 w-9 rounded-xl hover:bg-muted"><Boxes className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Grouper (Ctrl+G)</TooltipContent></Tooltip>

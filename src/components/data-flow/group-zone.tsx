@@ -90,6 +90,7 @@ const GroupZone: React.FC<GroupZoneProps> = ({
           variant="ghost"
           size="icon"
           className="h-6 w-6 pointer-events-auto hover:bg-muted"
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
             onToggleCollapse();
@@ -128,6 +129,7 @@ const GroupZone: React.FC<GroupZoneProps> = ({
           variant="ghost" 
           size="icon" 
           className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive text-muted-foreground pointer-events-auto"
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
             onDelete();
