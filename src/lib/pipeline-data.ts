@@ -206,7 +206,27 @@ export interface LineageInfo {
   lastEdited: string;
   description: string;
   versions: PipelineVersion[];
-  missionSpec?: MissionSpecMetadata;
+}
+
+/** A Data Product groups one or more pipelines (Lineages) under a shared, canvas-independent documentation space. */
+export interface DataProduct {
+  id: string;
+  name: string;
+  description: string;
+  owner: string;
+  lastEdited: string;
+  lineageIds: string[];
+  documentation: DataProductDocumentation;
+}
+
+/** A Project is a client engagement or initiative; it groups Data Products. */
+export interface Project {
+  id: string;
+  name: string;
+  description: string;
+  owner: string;
+  lastEdited: string;
+  dataProducts: DataProduct[];
 }
 
 export function getDefaultOperation(type: OperationType): Operation {
@@ -429,6 +449,54 @@ export const mockLineages: LineageInfo[] = [
   }
 ];
 
+export const mockProjects: Project[] = [
+  {
+    id: 'project-1',
+    name: 'Retail Analytics Platform',
+    description: 'Data products powering merchandising and customer analytics.',
+    owner: 'Me',
+    lastEdited: '2 hours ago',
+    dataProducts: [
+      {
+        id: 'dp-1',
+        name: 'Customer 360',
+        description: 'Unified customer revenue and activity view for the planning apps.',
+        owner: 'Jane Doe',
+        lastEdited: '2 hours ago',
+        lineageIds: ['lineage-1'],
+        documentation: createEmptyDataProductDocumentation(),
+      },
+      {
+        id: 'dp-2',
+        name: 'Inventory Intelligence',
+        description: 'Warehouse stock levels synced with the external marketplace.',
+        owner: 'John Smith',
+        lastEdited: '3 days ago',
+        lineageIds: ['lineage-2'],
+        documentation: createEmptyDataProductDocumentation(),
+      },
+    ],
+  },
+  {
+    id: 'project-2',
+    name: 'Marketing Growth',
+    description: 'Lead scoring and campaign attribution data products.',
+    owner: 'Sarah Connor',
+    lastEdited: 'Yesterday',
+    dataProducts: [
+      {
+        id: 'dp-3',
+        name: 'Lead Scoring',
+        description: 'Normalized inbound leads from CRM, prepared for campaign scoring.',
+        owner: 'Sarah Connor',
+        lastEdited: 'Yesterday',
+        lineageIds: ['lineage-3'],
+        documentation: createEmptyDataProductDocumentation(),
+      },
+    ],
+  },
+];
+
 export interface TransformationItem {
     name: string;
     icon: LucideIcon;
@@ -517,15 +585,23 @@ export interface DocVersionEntry {
   validatedBy: string;
 }
 
-export interface MissionSpecMetadata {
+export interface DocLink {
+  label: string;
+  url: string;
+}
+
+/** A Data Product's documentation space: exists independently of any pipeline design. */
+export interface DataProductDocumentation {
+  overview: string;
   identityCard: PipelineIdentityCard;
+  links: DocLink[];
   adrs: AdrEntry[];
   runbook: RunbookEntry[];
   versions: DocVersionEntry[];
 }
 
-export function createEmptyMissionSpec(): MissionSpecMetadata {
-  return { identityCard: {}, adrs: [], runbook: [], versions: [] };
+export function createEmptyDataProductDocumentation(): DataProductDocumentation {
+  return { overview: '', identityCard: {}, links: [], adrs: [], runbook: [], versions: [] };
 }
 
 // --- Compliance Audit ---

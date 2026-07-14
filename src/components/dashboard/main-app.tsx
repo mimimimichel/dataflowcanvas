@@ -18,12 +18,15 @@ import {
   OperationType,
   PipelineVersion,
   mockLineages,
+  mockProjects,
   LineageInfo,
+  Project,
+  DataProduct,
   NodeGroup,
   getDefaultOperation,
   ComplianceAuditResult,
-  MissionSpecMetadata,
-  createEmptyMissionSpec
+  DataProductDocumentation,
+  createEmptyDataProductDocumentation
 } from '@/lib/pipeline-data';
 import { computeComplianceAudit } from '@/lib/compliance-audit';
 import { layoutPipeline, findFreePosition } from '@/lib/canvas-layout';
@@ -49,7 +52,9 @@ import { Input } from '@/components/ui/input';
 import { Copy, Check } from 'lucide-react';
 import DataPreviewPanel from '@/components/panels/data-preview-panel';
 import { generatePipelineSpec, generateDataProductSpec } from '@/ai/flows/generate-spec-flow';
-import LineageDashboard from '@/components/dashboard/lineage-dashboard';
+import ProjectsView from '@/components/dashboard/projects-view';
+import DataProductsView from '@/components/dashboard/data-products-view';
+import DataProductDetail from '@/components/dashboard/data-product-detail';
 import { useToast } from '@/hooks/use-toast';
 import {
   ZoomIn, ZoomOut, RotateCcw, Crosshair, Keyboard,
@@ -119,9 +124,14 @@ const ShortcutLegend = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
   );
 };
 
+type ActiveView = 'projects' | 'dataProducts' | 'dataProductDoc' | 'editor';
+
 export default function MainApp() {
   const { toast } = useToast();
-  const [activeView, setActiveView] = useState<'dashboard' | 'editor'>('dashboard');
+  const [activeView, setActiveView] = useState<ActiveView>('projects');
+  const [projects, setProjects] = useState<Project[]>(mockProjects);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [activeDataProductId, setActiveDataProductId] = useState<string | null>(null);
   const [lineages, setLineages] = useState<LineageInfo[]>(mockLineages);
   const [activeLineageId, setActiveLineageId] = useState<string>('lineage-1');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -134,8 +144,25 @@ export default function MainApp() {
     }
   }, []);
 
-  const activeLineage = useMemo(() => 
-    lineages.find(l => l.id === activeLineageId) || lineages[0], 
+  const activeProject = useMemo(() =>
+    projects.find(p => p.id === activeProjectId),
+  [projects, activeProjectId]);
+
+  const activeDataProduct = useMemo(() =>
+    activeProject?.dataProducts.find(dp => dp.id === activeDataProductId),
+  [activeProject, activeDataProductId]);
+
+  // Updates the currently active Data Product (documentation, lineage references) in place.
+  const updateActiveDataProduct = useCallback((updater: (dp: DataProduct) => DataProduct) => {
+    setProjects(prev => prev.map(p =>
+      p.id === activeProjectId
+        ? { ...p, dataProducts: p.dataProducts.map(dp => dp.id === activeDataProductId ? updater(dp) : dp) }
+        : p
+    ));
+  }, [activeProjectId, activeDataProductId]);
+
+  const activeLineage = useMemo(() =>
+    lineages.find(l => l.id === activeLineageId) || lineages[0],
   [lineages, activeLineageId]);
 
   const [activeVersionId, setActiveVersionId] = useState<string>(activeLineage.versions[0].id);
@@ -1028,9 +1055,9 @@ export default function MainApp() {
     }
   };
 
-  const handleMissionSpecChange = useCallback((metadata: MissionSpecMetadata) => {
-    setLineages(prev => prev.map(l => l.id === activeLineageId ? { ...l, missionSpec: metadata } : l));
-  }, [activeLineageId, setLineages]);
+  const handleDocumentationChange = useCallback((documentation: DataProductDocumentation) => {
+    updateActiveDataProduct(dp => ({ ...dp, documentation }));
+  }, [updateActiveDataProduct]);
 
   // Find all source nodes (category === 'source') and their downstream nodes via connectors
   function handleUploadNode(sourceNodeId: string) {
@@ -1112,12 +1139,60 @@ export default function MainApp() {
     return 1 + getGroupDepth(group.parentGroupId);
   }, [groups]);
 
+  // --- Projects / Data Products navigation ---
+  const handleSelectProject = (id: string) => { setActiveProjectId(id); setActiveView('dataProducts'); };
+
+  const handleCreateProject = (name: string, description: string) => {
+    const id = `project-${Date.now()}`;
+    setProjects(prev => [{ id, name, description, owner: 'Me', lastEdited: 'Just now', dataProducts: [] }, ...prev]);
+    setActiveProjectId(id);
+    setActiveView('dataProducts');
+  };
+
+  const handleSelectDataProduct = (id: string) => { setActiveDataProductId(id); setActiveView('dataProductDoc'); };
+
+  const handleCreateDataProduct = (name: string, description: string) => {
+    const id = `dp-${Date.now()}`;
+    const newDataProduct: DataProduct = { id, name, description, owner: 'Me', lastEdited: 'Just now', lineageIds: [], documentation: createEmptyDataProductDocumentation() };
+    setProjects(prev => prev.map(p => p.id === activeProjectId ? { ...p, dataProducts: [newDataProduct, ...p.dataProducts] } : p));
+    setActiveDataProductId(id);
+    setActiveView('dataProductDoc');
+  };
+
+  const handleSelectLineageInDataProduct = (id: string) => { setActiveLineageId(id); setActiveView('editor'); };
+
+  const handleCreateLineageInDataProduct = (name: string, description: string) => {
+    const id = `lineage-${Date.now()}`;
+    setLineages(prev => [{ id, name, description, owner: 'Me', lastEdited: 'Just now', versions: [{ id: 'v1', name: 'Initial Design', nodes: [], connectors: [], groups: [] }] }, ...prev]);
+    updateActiveDataProduct(dp => ({ ...dp, lineageIds: [id, ...dp.lineageIds] }));
+    setActiveLineageId(id);
+    setActiveVersionId('v1');
+    setActiveView('editor');
+  };
+
   return (
     <div className="flex h-dvh w-full flex-col bg-background font-body overflow-hidden">
       <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage.versions} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onDeliverables={() => setIsDeliverablesHubOpen(true)} onAudit={handleAudit} auditGrade={liveAudit?.grade} auditScore={liveAudit?.score} isArchitectOpen={isArchitectOpen} onArchitectOpenChange={setIsArchitectOpen} onImportPipeline={handleImportPipeline} onApplyScaffold={handleApplyScaffold} onAccountSettings={() => setIsAccountOpen(true)} onShare={() => setIsShareOpen(true)} onTemplates={() => setIsTemplateMarketplaceOpen(true)} activeView={activeView} onViewChange={setActiveView} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onZoomFit={handleResetCanvas} zoom={zoom} />
       
-      {activeView === 'dashboard' ? (
-        <LineageDashboard lineages={lineages} onSelectLineage={(id) => { setActiveLineageId(id); setActiveView('editor'); }} onCreateLineage={(name, description) => { const id = `lineage-${Date.now()}`; setLineages(prev => [{ id, name, description, owner: 'Me', lastEdited: 'Just now', versions: [{ id: 'v1', name: 'Initial Design', nodes: [], connectors: [], groups: [] }] }, ...prev]); setActiveLineageId(id); setActiveVersionId('v1'); setActiveView('editor'); }} />
+      {activeView === 'projects' ? (
+        <ProjectsView projects={projects} onSelectProject={handleSelectProject} onCreateProject={handleCreateProject} />
+      ) : activeView === 'dataProducts' && activeProject ? (
+        <DataProductsView
+          project={activeProject}
+          onBack={() => { setActiveProjectId(null); setActiveView('projects'); }}
+          onSelectDataProduct={handleSelectDataProduct}
+          onCreateDataProduct={handleCreateDataProduct}
+        />
+      ) : activeView === 'dataProductDoc' && activeProject && activeDataProduct ? (
+        <DataProductDetail
+          project={activeProject}
+          dataProduct={activeDataProduct}
+          lineages={lineages}
+          onBack={() => { setActiveDataProductId(null); setActiveView('dataProducts'); }}
+          onDocumentationChange={handleDocumentationChange}
+          onSelectLineage={handleSelectLineageInDataProduct}
+          onCreateLineage={handleCreateLineageInDataProduct}
+        />
       ) : (
         <div className="flex flex-1 overflow-hidden relative">
           <TransformationsCatalogue isCollapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} onAddItem={handleAddItemTap} />
@@ -1236,8 +1311,8 @@ export default function MainApp() {
         pipelineName={activeLineage.name}
         nodes={nodes}
         connectors={connectors}
-        metadata={activeLineage.missionSpec || createEmptyMissionSpec()}
-        onMetadataChange={handleMissionSpecChange}
+        metadata={activeDataProduct?.documentation || createEmptyDataProductDocumentation()}
+        onMetadataChange={handleDocumentationChange}
       />
       <TemplateMarketplace open={isTemplateMarketplaceOpen} onOpenChange={setIsTemplateMarketplaceOpen} onSelectTemplate={handleApplyTemplate} />
       {/* Share Dialog */}

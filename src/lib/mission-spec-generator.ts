@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs';
 import {
-  PipelineNode, Connector, MissionSpecMetadata, Field, PipelineSensitivity,
+  PipelineNode, Connector, DataProductDocumentation, Field, PipelineSensitivity,
 } from './pipeline-data';
 import {
   describeOperationRule, describeNullHandling, describeDedupRule, isQualityOperation, operationControlType,
@@ -114,7 +114,7 @@ function addModeDemploiSheet(wb: ExcelJS.Workbook) {
   setColumnWidths(ws, [28, 100]);
 }
 
-function addIdentityCardSheet(wb: ExcelJS.Workbook, pipelineName: string, metadata: MissionSpecMetadata) {
+function addIdentityCardSheet(wb: ExcelJS.Workbook, pipelineName: string, metadata: DataProductDocumentation) {
   const ws = wb.addWorksheet("1. Carte didentité");
   styleTitle(ws.getCell('A1'), "CARTE D'IDENTITÉ DU PIPELINE");
   styleSubtitle(ws.getCell('A2'), 'Une page, tout le monde la lit. Si un champ est vide ici, le document n\'est pas livrable.');
@@ -244,7 +244,7 @@ function addQualitySheet(wb: ExcelJS.Workbook, nodes: PipelineNode[]) {
   addListValidation(ws, 'F', 5, 45, ['Bloquant (stoppe le build)', 'Alerte (non bloquant)', 'Journalisé uniquement']);
 }
 
-function addAdrSheet(wb: ExcelJS.Workbook, metadata: MissionSpecMetadata) {
+function addAdrSheet(wb: ExcelJS.Workbook, metadata: DataProductDocumentation) {
   const rows = metadata.adrs.map(a => [a.id, a.date, a.decision, a.context, a.alternatives, a.deciders, a.impact]);
   const headers = ['ADR-#', 'Date', 'Décision', 'Contexte (pourquoi la question se posait)', 'Alternative(s) écartée(s) et pourquoi', 'Décideur(s)', 'Impact si remise en cause'];
   addTableSheet(wb, '7. Décisions (ADR)', 'REGISTRE DES DÉCISIONS',
@@ -252,7 +252,7 @@ function addAdrSheet(wb: ExcelJS.Workbook, metadata: MissionSpecMetadata) {
     headers, rows, [8, 12, 36, 40, 40, 26, 40], 20);
 }
 
-function addRunbookSheet(wb: ExcelJS.Workbook, metadata: MissionSpecMetadata) {
+function addRunbookSheet(wb: ExcelJS.Workbook, metadata: DataProductDocumentation) {
   const rows = metadata.runbook.map(r => [r.id, r.scenario, r.symptom, r.diagnosis, r.procedure, r.backfill, r.recoveryDuration, r.escalation]);
   const headers = ['#', 'Scénario de défaillance', "Symptôme observable (comment on s'en aperçoit)", 'Diagnostic (comment confirmer)', 'Procédure de reprise (étapes numérotées)', 'Comment backfiller si besoin', 'Durée de reprise estimée', 'Escalade (qui appeler si ça ne suffit pas)'];
   addTableSheet(wb, '8. Runbook', 'MODES DE DÉFAILLANCE ET PROCÉDURES DE REPRISE',
@@ -260,7 +260,7 @@ function addRunbookSheet(wb: ExcelJS.Workbook, metadata: MissionSpecMetadata) {
     headers, rows, [4, 26, 28, 30, 44, 30, 14, 22], 20);
 }
 
-function addVersionsSheet(wb: ExcelJS.Workbook, metadata: MissionSpecMetadata) {
+function addVersionsSheet(wb: ExcelJS.Workbook, metadata: DataProductDocumentation) {
   const rows = metadata.versions.map(v => [v.version, v.date, v.author, v.changes, v.validatedBy]);
   const headers = ['Version', 'Date', 'Auteur', 'Changements', 'Validé par (métier / tech)'];
   addTableSheet(wb, '9. Versions', 'HISTORIQUE DU DOCUMENT',
@@ -272,7 +272,7 @@ export async function generateMissionSpecWorkbook(
   pipelineName: string,
   nodes: PipelineNode[],
   connectors: Connector[],
-  metadata: MissionSpecMetadata,
+  metadata: DataProductDocumentation,
 ): Promise<ExcelJS.Buffer> {
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Theseus';

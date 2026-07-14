@@ -18,6 +18,8 @@ interface LineageDashboardProps {
   lineages: LineageInfo[];
   onSelectLineage: (id: string) => void;
   onCreateLineage: (name: string, description: string) => void;
+  /** Renders without the page-level heading/padding when embedded inside another page (e.g. a Data Product's Pipelines tab). */
+  compact?: boolean;
 }
 
 const CreateLineageDialog: React.FC<{
@@ -77,36 +79,38 @@ const CreateLineageDialog: React.FC<{
   );
 };
 
-export default function LineageDashboard({ lineages, onSelectLineage, onCreateLineage }: LineageDashboardProps) {
+export default function LineageDashboard({ lineages, onSelectLineage, onCreateLineage, compact = false }: LineageDashboardProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const filteredLineages = useMemo(() => {
-    return lineages.filter(l => 
+    return lineages.filter(l =>
       l.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       l.description.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [lineages, searchTerm]);
 
   return (
-    <div className="flex-1 p-8 overflow-y-auto bg-background">
-      <div className="max-w-7xl mx-auto space-y-12">
-        <div className="flex justify-between items-end">
-          <div className="space-y-1">
-            <h2 className="text-4xl font-extrabold tracking-tight text-foreground">Design Library</h2>
-            <p className="text-muted-foreground text-lg">Architect and manage your enterprise data lineages.</p>
+    <div className={compact ? '' : 'flex-1 p-8 overflow-y-auto bg-background'}>
+      <div className={compact ? 'space-y-6' : 'max-w-7xl mx-auto space-y-12'}>
+        {!compact && (
+          <div className="flex justify-between items-end">
+            <div className="space-y-1">
+              <h2 className="text-4xl font-extrabold tracking-tight text-foreground">Design Library</h2>
+              <p className="text-muted-foreground text-lg">Architect and manage your enterprise data lineages.</p>
+            </div>
+            <Button className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground h-11 px-6 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105" onClick={() => setIsCreateOpen(true)}>
+              <Plus className="h-5 w-5" /> New Design
+            </Button>
           </div>
-          <Button className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground h-11 px-6 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105" onClick={() => setIsCreateOpen(true)}>
-            <Plus className="h-5 w-5" /> New Design
-          </Button>
-        </div>
+        )}
 
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Filter designs..." 
-              className="pl-11 h-12 bg-muted/30 border-border focus:border-primary/50 rounded-xl" 
+            <Input
+              placeholder="Filter pipelines..."
+              className="pl-11 h-12 bg-muted/30 border-border focus:border-primary/50 rounded-xl"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -114,13 +118,20 @@ export default function LineageDashboard({ lineages, onSelectLineage, onCreateLi
           <Button variant="outline" size="icon" className="h-12 w-12 border-border hover:bg-muted rounded-xl">
             <Filter className="h-5 w-5" />
           </Button>
+          {compact && (
+            <Button className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground h-12 px-6 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105 shrink-0" onClick={() => setIsCreateOpen(true)}>
+              <Plus className="h-5 w-5" /> New Pipeline
+            </Button>
+          )}
         </div>
 
         <Card className="apple-card overflow-hidden">
-          <CardHeader className="bg-muted/10 border-b border-border p-8">
-            <CardTitle className="text-foreground">Active Projects</CardTitle>
-            <CardDescription>Select a project to open it in the visual designer workspace.</CardDescription>
-          </CardHeader>
+          {!compact && (
+            <CardHeader className="bg-muted/10 border-b border-border p-8">
+              <CardTitle className="text-foreground">Active Projects</CardTitle>
+              <CardDescription>Select a project to open it in the visual designer workspace.</CardDescription>
+            </CardHeader>
+          )}
           <CardContent className="p-0">
             <Table>
               <TableHeader>

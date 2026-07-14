@@ -40,8 +40,8 @@ interface HeaderProps {
   onTemplates: () => void;
   onImportPipeline: (data: any) => void;
   onApplyScaffold: (scaffold: any) => void;
-  activeView: 'dashboard' | 'editor';
-  onViewChange: (view: 'dashboard' | 'editor') => void;
+  activeView: 'projects' | 'dataProducts' | 'dataProductDoc' | 'editor';
+  onViewChange: (view: 'dataProductDoc' | 'editor') => void;
   onZoomIn?: () => void;
   onZoomOut?: () => void;
   onZoomFit?: () => void;
@@ -167,16 +167,18 @@ const Header: React.FC<HeaderProps> = ({
             <h1 className="text-base font-bold tracking-tight hidden xl:block">Theseus</h1>
           </div>
 
-          <Tabs value={activeView} onValueChange={(v) => onViewChange(v as 'dashboard' | 'editor')} className="w-[160px] md:w-[220px] shrink-0">
-            <TabsList className="grid w-full grid-cols-2 bg-muted/50 h-8">
-              <TabsTrigger value="dashboard" className="text-xs">
-                <Library className="h-3.5 w-3.5 mr-1 hidden sm:block" /> Library
-              </TabsTrigger>
-              <TabsTrigger value="editor" className="text-xs">
-                <Settings2 className="h-3.5 w-3.5 mr-1 hidden sm:block" /> Designer
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          {(activeView === 'dataProductDoc' || activeView === 'editor') && (
+            <Tabs value={activeView} onValueChange={(v) => onViewChange(v as 'dataProductDoc' | 'editor')} className="w-[160px] md:w-[220px] shrink-0">
+              <TabsList className="grid w-full grid-cols-2 bg-muted/50 h-8">
+                <TabsTrigger value="dataProductDoc" className="text-xs">
+                  <Library className="h-3.5 w-3.5 mr-1 hidden sm:block" /> Overview
+                </TabsTrigger>
+                <TabsTrigger value="editor" className="text-xs">
+                  <Settings2 className="h-3.5 w-3.5 mr-1 hidden sm:block" /> Designer
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
 
           {/* Version selector - desktop only */}
           {activeView === 'editor' && (
