@@ -1202,8 +1202,8 @@ export default function MainApp() {
             </div>
 
             <ShortcutLegend isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
-            <div className="absolute bottom-6 right-6 z-50">
-              <div className="glass-panel rounded-2xl flex items-center p-1.5 gap-1 border border-border shadow-2xl">
+            <div className="absolute bottom-6 left-4 right-4 z-50 flex justify-end pointer-events-none">
+              <div className="glass-panel rounded-2xl flex items-center p-1.5 gap-1 border border-border shadow-2xl max-w-full overflow-x-auto pointer-events-auto [&>*]:shrink-0">
                   <TooltipProvider>
                       <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" onClick={() => setIsDrawMode(!isDrawMode)} className={cn("h-9 w-9 rounded-xl", isDrawMode ? "bg-primary text-primary-foreground" : "hover:bg-muted")}><Square className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Dessiner Zone</TooltipContent></Tooltip>
                       <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" onClick={handleCreateGroup} className="h-9 w-9 rounded-xl hover:bg-muted"><Boxes className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Grouper (Ctrl+G)</TooltipContent></Tooltip>
