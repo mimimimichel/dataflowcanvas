@@ -35,7 +35,7 @@ export default function LandingView({ onEnterDemo }: LandingViewProps) {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-background">
+    <div className="min-h-dvh w-full flex flex-col bg-background">
       <nav className="flex items-center justify-between p-6 border-b">
         <div className="flex items-center gap-2">
           <GitBranch className="h-6 w-6 text-primary" />

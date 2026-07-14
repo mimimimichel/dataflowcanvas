@@ -12,7 +12,7 @@ export default function EntryPoint() {
 
   if (isUserLoading) {
     return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-background gap-4">
+      <div className="h-dvh w-full flex flex-col items-center justify-center bg-background gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p className="text-muted-foreground animate-pulse">Initializing designer workspace...</p>
       </div>

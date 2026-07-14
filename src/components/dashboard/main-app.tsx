@@ -1113,7 +1113,7 @@ export default function MainApp() {
   }, [groups]);
 
   return (
-    <div className="flex h-screen w-full flex-col bg-background font-body overflow-hidden">
+    <div className="flex h-dvh w-full flex-col bg-background font-body overflow-hidden">
       <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage.versions} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onDeliverables={() => setIsDeliverablesHubOpen(true)} onAudit={handleAudit} auditGrade={liveAudit?.grade} auditScore={liveAudit?.score} isArchitectOpen={isArchitectOpen} onArchitectOpenChange={setIsArchitectOpen} onImportPipeline={handleImportPipeline} onApplyScaffold={handleApplyScaffold} onAccountSettings={() => setIsAccountOpen(true)} onShare={() => setIsShareOpen(true)} onTemplates={() => setIsTemplateMarketplaceOpen(true)} activeView={activeView} onViewChange={setActiveView} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onZoomFit={handleResetCanvas} zoom={zoom} />
       
       {activeView === 'dashboard' ? (
