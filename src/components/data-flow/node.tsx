@@ -207,15 +207,28 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
                         <Upload className="w-4 h-4" />
                     </Button>
                 )}
-                <Button 
-                    variant="ghost" 
-                    size="icon" 
+                <Button
+                    variant="ghost"
+                    size="icon"
                     className="h-6 w-6 hover:bg-primary/10 hover:text-primary transition-all duration-150 rounded-md p-0 min-h-0 min-w-0"
                     onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => { e.stopPropagation(); onPreview?.(id); }}
                     title="Preview Data"
                 >
                     <Eye className="w-4 h-4" />
+                </Button>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "h-6 w-6 hover:bg-primary/10 hover:text-primary transition-all duration-150 rounded-md p-0 min-h-0 min-w-0",
+                      isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                    )}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={handleConfigClick}
+                    title="Configure"
+                >
+                    <SlidersHorizontal className="w-4 h-4" />
                 </Button>
             </div>
         </div>
@@ -266,24 +279,11 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
         )}
 
         {type !== 'destination' && (
-          <Port 
+          <Port
             type="out"
             onPointerDown={onPortMouseDown}
           />
         )}
-        
-        <div className={cn("absolute right-1.5 top-1 transition-opacity", isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
-            <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-6 w-6 hover:bg-muted/50 rounded-sm p-0 min-h-0 min-w-0"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={handleConfigClick}
-                title="Configure"
-            >
-                <SlidersHorizontal className="w-4 h-4" />
-            </Button>
-        </div>
       </Card>
     </div>
   );
