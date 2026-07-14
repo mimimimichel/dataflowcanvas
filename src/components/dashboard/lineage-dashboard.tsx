@@ -94,19 +94,19 @@ export default function LineageDashboard({ lineages, onSelectLineage, onCreateLi
     <div className={compact ? '' : 'flex-1 p-8 overflow-y-auto bg-background'}>
       <div className={compact ? 'space-y-6' : 'max-w-7xl mx-auto space-y-12'}>
         {!compact && (
-          <div className="flex justify-between items-end">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
             <div className="space-y-1">
               <h2 className="text-4xl font-extrabold tracking-tight text-foreground">Design Library</h2>
               <p className="text-muted-foreground text-lg">Architect and manage your enterprise data lineages.</p>
             </div>
-            <Button className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground h-11 px-6 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105" onClick={() => setIsCreateOpen(true)}>
+            <Button className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground h-11 px-6 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105 shrink-0 self-start sm:self-auto" onClick={() => setIsCreateOpen(true)}>
               <Plus className="h-5 w-5" /> New Design
             </Button>
           </div>
         )}
 
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-sm">
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="relative flex-1 min-w-[160px] max-w-sm">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Filter pipelines..."
@@ -115,7 +115,7 @@ export default function LineageDashboard({ lineages, onSelectLineage, onCreateLi
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button variant="outline" size="icon" className="h-12 w-12 border-border hover:bg-muted rounded-xl">
+          <Button variant="outline" size="icon" className="h-12 w-12 border-border hover:bg-muted rounded-xl shrink-0">
             <Filter className="h-5 w-5" />
           </Button>
           {compact && (
@@ -133,7 +133,7 @@ export default function LineageDashboard({ lineages, onSelectLineage, onCreateLi
             </CardHeader>
           )}
           <CardContent className="p-0">
-            <Table>
+            <Table className="min-w-[560px]">
               <TableHeader>
                 <TableRow className="border-border hover:bg-transparent">
                   <TableHead className="px-8 h-14 text-muted-foreground uppercase text-[11px] font-bold tracking-widest">Project Name</TableHead>

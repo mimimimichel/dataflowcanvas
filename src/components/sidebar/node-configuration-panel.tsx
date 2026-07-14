@@ -499,7 +499,7 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
   }
 
   return (
-    <aside className="absolute inset-y-0 right-0 z-40 w-full sm:w-[440px] xl:static xl:z-auto shrink-0 glass-panel border-l border-border/50 flex flex-col h-full shadow-2xl">
+    <aside className="absolute inset-y-0 right-0 z-[60] w-full sm:w-[440px] xl:static xl:z-auto shrink-0 glass-panel border-l border-border/50 flex flex-col h-full shadow-2xl">
         {/* Fixed header */}
         <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-3 border-b border-border/50 shrink-0">
           <div className="min-w-0">

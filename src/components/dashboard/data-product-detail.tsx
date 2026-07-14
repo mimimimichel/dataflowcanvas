@@ -73,7 +73,7 @@ export default function DataProductDetail({
 
             <section className="space-y-4">
               <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Identity Card</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="grid gap-1.5">
                   <Label className="text-xs">Owner (ONE person)</Label>
                   <Input className="h-9 text-sm" value={doc.identityCard.owner || ''} onChange={(e) => updateCard({ owner: e.target.value })} />
@@ -125,9 +125,9 @@ export default function DataProductDetail({
               <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Links</h3>
               <div className="space-y-2">
                 {doc.links.map((link, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
+                  <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-2">
                     <Input
-                      className="h-9 text-sm w-40"
+                      className="h-9 text-sm sm:w-40 shrink-0"
                       placeholder="Label"
                       value={link.label}
                       onChange={(e) => {
@@ -136,27 +136,29 @@ export default function DataProductDetail({
                         onDocumentationChange({ ...doc, links: next });
                       }}
                     />
-                    <Input
-                      className="h-9 text-sm flex-1"
-                      placeholder="https://..."
-                      value={link.url}
-                      onChange={(e) => {
-                        const next = doc.links.slice();
-                        next[idx] = { ...next[idx], url: e.target.value };
-                        onDocumentationChange({ ...doc, links: next });
-                      }}
-                    />
-                    {link.url && (
-                      <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" asChild>
-                        <a href={link.url} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3.5 w-3.5" /></a>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        className="h-9 text-sm flex-1 min-w-0"
+                        placeholder="https://..."
+                        value={link.url}
+                        onChange={(e) => {
+                          const next = doc.links.slice();
+                          next[idx] = { ...next[idx], url: e.target.value };
+                          onDocumentationChange({ ...doc, links: next });
+                        }}
+                      />
+                      {link.url && (
+                        <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" asChild>
+                          <a href={link.url} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3.5 w-3.5" /></a>
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => onDocumentationChange({ ...doc, links: doc.links.filter((_, i) => i !== idx) })}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
-                    )}
-                    <Button
-                      variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
-                      onClick={() => onDocumentationChange({ ...doc, links: doc.links.filter((_, i) => i !== idx) })}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    </div>
                   </div>
                 ))}
                 <Button

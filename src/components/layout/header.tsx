@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Download, Share2, GitBranch, PlusCircle,
   Library, Settings2, Wand2,
-  Menu, Layers, ZoomIn, ZoomOut, Scan, User, ShieldCheck, Package
+  Menu, Layers, User, ShieldCheck, Package
 } from 'lucide-react';
 import { PipelineVersion, LineageInfo } from '@/lib/pipeline-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -42,10 +42,6 @@ interface HeaderProps {
   onApplyScaffold: (scaffold: any) => void;
   activeView: 'projects' | 'dataProducts' | 'dataProductDoc' | 'editor';
   onViewChange: (view: 'dataProductDoc' | 'editor') => void;
-  onZoomIn?: () => void;
-  onZoomOut?: () => void;
-  onZoomFit?: () => void;
-  zoom?: number;
   onShare?: () => void;
   onAccountSettings?: () => void;
 }
@@ -121,10 +117,6 @@ const Header: React.FC<HeaderProps> = ({
   onApplyScaffold,
   activeView,
   onViewChange,
-  onZoomIn,
-  onZoomOut,
-  onZoomFit,
-  zoom,
   onAccountSettings,
   onShare,
 }) => {
@@ -181,7 +173,7 @@ const Header: React.FC<HeaderProps> = ({
 
           {/* Version selector - desktop only */}
           {activeView === 'editor' && (
-            <div className="hidden md:flex items-center gap-1.5">
+            <div className="hidden lg:flex items-center gap-1.5">
               <Select value={activeVersionId} onValueChange={onVersionChange}>
                 <SelectTrigger className="w-36 h-8 bg-background/50 border-border text-xs">
                   <SelectValue placeholder="Version" />
@@ -303,27 +295,6 @@ const Header: React.FC<HeaderProps> = ({
         {/* Hidden file input */}
         <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={handleImportChange} />
       </header>
-
-      {/* Zoom Controls - Floating (Figma-style) */}
-      {activeView === 'editor' && onZoomIn && onZoomOut && (
-        <div className="fixed bottom-4 left-4 z-20 flex items-center gap-1 p-1 rounded-lg bg-card/90 backdrop-blur-xl border shadow-sm">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onZoomOut}>
-            <ZoomOut className="h-3.5 w-3.5" />
-          </Button>
-          <span className="text-xs tabular-nums w-10 text-center">{zoom ? `${Math.round(zoom * 100)}%` : '100%'}</span>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onZoomIn}>
-            <ZoomIn className="h-3.5 w-3.5" />
-          </Button>
-          {onZoomFit && (
-            <>
-              <div className="w-px h-4 bg-border/50" />
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onZoomFit}>
-                <Scan className="h-3.5 w-3.5" />
-              </Button>
-            </>
-          )}
-        </div>
-      )}
 
       {/* Version dialog */}
       {activeVersion && (

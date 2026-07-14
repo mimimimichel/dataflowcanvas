@@ -88,12 +88,12 @@ export default function ProjectsView({ projects, onSelectProject, onCreateProjec
   return (
     <div className="flex-1 p-8 overflow-y-auto bg-background">
       <div className="max-w-7xl mx-auto space-y-12">
-        <div className="flex justify-between items-end">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
           <div className="space-y-1">
             <h2 className="text-4xl font-extrabold tracking-tight text-foreground">Projects</h2>
             <p className="text-muted-foreground text-lg">Client engagements and initiatives, each grouping one or more data products.</p>
           </div>
-          <Button className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground h-11 px-6 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105" onClick={() => setIsCreateOpen(true)}>
+          <Button className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground h-11 px-6 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105 shrink-0 self-start sm:self-auto" onClick={() => setIsCreateOpen(true)}>
             <Plus className="h-5 w-5" /> New Project
           </Button>
         </div>
@@ -114,7 +114,7 @@ export default function ProjectsView({ projects, onSelectProject, onCreateProjec
             <CardDescription>Select a project to see its data products.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
+            <Table className="min-w-[640px]">
               <TableHeader>
                 <TableRow className="border-border hover:bg-transparent">
                   <TableHead className="px-8 h-14 text-muted-foreground uppercase text-[11px] font-bold tracking-widest">Project</TableHead>

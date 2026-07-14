@@ -295,9 +295,9 @@ export const initialNodes: PipelineNode[] = [
   },
   { 
     id: 'source-2', 
-    name: 'Orders DB', 
-    type: 'source' as NodeType, 
-    position: { x: 100, y: 450 },
+    name: 'Orders DB',
+    type: 'source' as NodeType,
+    position: { x: 100, y: 510 },
     system: 'PostgreSQL',
     location: 'prod-orders-db',
     status: 'ready',
@@ -390,7 +390,7 @@ export const initialGroups: NodeGroup[] = [
     color: 'blue',
     position: { x: 50, y: 100 },
     width: 350,
-    height: 600,
+    height: 660,
     isCollapsed: false
   },
   {

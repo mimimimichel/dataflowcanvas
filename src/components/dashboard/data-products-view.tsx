@@ -93,12 +93,12 @@ export default function DataProductsView({ project, onBack, onSelectDataProduct,
           <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground -ml-2" onClick={onBack}>
             <ChevronLeft className="h-4 w-4" /> Projects
           </Button>
-          <div className="flex justify-between items-end">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
             <div className="space-y-1">
               <h2 className="text-4xl font-extrabold tracking-tight text-foreground">{project.name}</h2>
               <p className="text-muted-foreground text-lg">{project.description}</p>
             </div>
-            <Button className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground h-11 px-6 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105" onClick={() => setIsCreateOpen(true)}>
+            <Button className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground h-11 px-6 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105 shrink-0 self-start sm:self-auto" onClick={() => setIsCreateOpen(true)}>
               <Plus className="h-5 w-5" /> New Data Product
             </Button>
           </div>
@@ -120,7 +120,7 @@ export default function DataProductsView({ project, onBack, onSelectDataProduct,
             <CardDescription>Each one holds its own documentation and pipeline designs.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
+            <Table className="min-w-[640px]">
               <TableHeader>
                 <TableRow className="border-border hover:bg-transparent">
                   <TableHead className="px-8 h-14 text-muted-foreground uppercase text-[11px] font-bold tracking-widest">Data Product</TableHead>
