@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Download, Share2, GitBranch, PlusCircle,
   Library, Settings2, Wand2,
-  Menu, Sun, Moon, Laptop, Layers, ZoomIn, ZoomOut, Scan, User, ShieldCheck, Package
+  Menu, Layers, ZoomIn, ZoomOut, Scan, User, ShieldCheck, Package
 } from 'lucide-react';
 import { PipelineVersion, LineageInfo } from '@/lib/pipeline-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -14,8 +14,8 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { useTheme } from '@/components/theme-provider';
 import AIArchitectModal from '@/components/modals/ai-architect-modal';
+import { ThemeToggle } from '@/components/shared/theme-toggle';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -129,7 +129,6 @@ const Header: React.FC<HeaderProps> = ({
   onShare,
 }) => {
   const [isCreateVersionOpen, setIsCreateVersionOpen] = useState(false);
-  const { theme, setTheme } = useTheme();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleImportClick = () => {
@@ -250,24 +249,7 @@ const Header: React.FC<HeaderProps> = ({
           )}
 
           {/* Theme selector */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                {theme === 'light' ? <Sun className="h-4 w-4" /> : theme === 'dark' ? <Moon className="h-4 w-4" /> : <Laptop className="h-4 w-4" />}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setTheme('light')}>
-                <Sun className="mr-2 h-4 w-4" /> Light
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme('dark')}>
-                <Moon className="mr-2 h-4 w-4" /> Dark
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme('system')}>
-                <Laptop className="mr-2 h-4 w-4" /> System
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <ThemeToggle />
 
           {/* Mobile menu */}
           <div className="md:hidden">
