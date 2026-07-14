@@ -13,8 +13,9 @@ import {
   PipelineNode, 
   TransformationItem, 
   Connector as ConnectorType, 
-  Field, 
-  Operation, 
+  Field,
+  Operation,
+  OperationType,
   PipelineVersion,
   mockLineages,
   LineageInfo,
@@ -25,6 +26,8 @@ import {
   createEmptyMissionSpec
 } from '@/lib/pipeline-data';
 import { computeComplianceAudit } from '@/lib/compliance-audit';
+import { layoutPipeline, findFreePosition } from '@/lib/canvas-layout';
+import type { ArchitectOutput } from '@/ai/flows/architect-pipeline-flow';
 import { executePipelinePreview, PipelinePreviewResult } from '@/lib/pipeline-executor';
 import { cn } from '@/lib/utils';
 import ConnectionFieldsModal from '@/components/data-flow/connection-fields-modal';
@@ -231,7 +234,8 @@ export default function MainApp() {
   const { user } = useUser();
 
   const handleApplyTemplate = (template: PipelineTemplate) => {
-    const { nodes, connectors } = template;
+    const { connectors } = template;
+    const nodes = layoutPipeline(template.nodes, connectors);
     setLineages(prev => prev.map(l =>
       l.id === activeLineageId
         ? { ...l, versions: l.versions.map(v =>
@@ -245,10 +249,8 @@ export default function MainApp() {
   // Import pipeline from JSON file
   const handleImportPipeline = useCallback((data: any) => {
     if (!data?.nodes?.length) return;
-    const importedNodes = data.nodes.map((n: any, i: number) => ({
-      ...n,
-      position: n.position || { x: 100 + (i % 4) * 280, y: 100 + Math.floor(i / 4) * 180 }
-    }));
+    const hasPositions = data.nodes.every((n: any) => n.position);
+    const importedNodes = hasPositions ? data.nodes : layoutPipeline(data.nodes, data.connectors || []);
     const importedConnectors = data.connectors || [];
     const importedGroups = data.groups || [];
     setLineages(prev => prev.map(l =>
@@ -263,23 +265,47 @@ export default function MainApp() {
     handleResetCanvas();
   }, [activeLineageId, activeVersionId]);
 
-  // Apply scaffold: creates a basic 3-node pipeline (source -> transform -> output)
-  const handleApplyScaffold = useCallback(() => {
+  // Apply the AI Architect's proposed scaffold (falls back to a bare 3-node
+  // stub if called without one, e.g. from a stale caller).
+  const handleApplyScaffold = useCallback((scaffold?: ArchitectOutput) => {
     const scaffoldId = Date.now().toString(36);
-    const scaffoldNodes = [
-      { id: `${scaffoldId}-src`, name: "Source", type: "source" as const, position: { x: 100, y: 200 }, outputFields: [], inputFields: [], description: "Data source" },
-      { id: `${scaffoldId}-xfm`, name: "Transform", type: "transformation" as const, position: { x: 400, y: 200 }, outputFields: [], inputFields: [], operation: { type: "filter", settings: {} }, description: "Data transformation" },
-      { id: `${scaffoldId}-out`, name: "Output", type: "destination" as const, position: { x: 700, y: 200 }, outputFields: [], inputFields: [], description: "Destination" },
-    ];
-    const scaffoldConnectors = [
-      { from: `${scaffoldId}-src`, to: `${scaffoldId}-xfm` },
-      { from: `${scaffoldId}-xfm`, to: `${scaffoldId}-out` },
-    ];
+
+    let scaffoldNodes: PipelineNode[];
+    let scaffoldConnectors: ConnectorType[];
+
+    if (scaffold?.nodes?.length) {
+      scaffoldNodes = scaffold.nodes.map((n, i) => ({
+        id: `${scaffoldId}-${i}`,
+        name: n.name,
+        type: n.type,
+        position: { x: n.x, y: n.y },
+        description: n.description,
+        operation: n.operationType ? getDefaultOperation(n.operationType as OperationType) : undefined,
+        outputFields: [],
+        inputFields: [],
+      }));
+      scaffoldConnectors = (scaffold.connectors || [])
+        .filter(c => scaffoldNodes[c.fromIndex] && scaffoldNodes[c.toIndex])
+        .map(c => ({ from: scaffoldNodes[c.fromIndex].id, to: scaffoldNodes[c.toIndex].id }));
+    } else {
+      scaffoldNodes = [
+        { id: `${scaffoldId}-src`, name: "Source", type: "source" as const, position: { x: 100, y: 200 }, outputFields: [], inputFields: [], description: "Data source" },
+        { id: `${scaffoldId}-xfm`, name: "Transform", type: "transformation" as const, position: { x: 400, y: 200 }, outputFields: [], inputFields: [], operation: { type: "filter", settings: {} }, description: "Data transformation" },
+        { id: `${scaffoldId}-out`, name: "Output", type: "destination" as const, position: { x: 700, y: 200 }, outputFields: [], inputFields: [], description: "Destination" },
+      ];
+      scaffoldConnectors = [
+        { from: `${scaffoldId}-src`, to: `${scaffoldId}-xfm` },
+        { from: `${scaffoldId}-xfm`, to: `${scaffoldId}-out` },
+      ];
+    }
+
+    const laidOutNodes = layoutPipeline(scaffoldNodes, scaffoldConnectors);
+
     setLineages(prev => prev.map(l =>
       l.id === activeLineageId
         ? { ...l, versions: l.versions.map(v =>
             v.id === activeVersionId
-              ? { ...v, nodes: scaffoldNodes, connectors: scaffoldConnectors, groups: [] }
+              ? { ...v, nodes: laidOutNodes, connectors: scaffoldConnectors, groups: [] }
               : v
           )}
         : l
@@ -304,6 +330,8 @@ export default function MainApp() {
   const resizingGroupIdRef = useRef<string | null>(null);
   const lastMousePosRef = useRef({ x: 0, y: 0 });
   const isConnectingRef = useRef(false);
+  const activePointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const pinchStateRef = useRef<{ distance: number; zoom: number; midpoint: { x: number; y: number } } | null>(null);
 
   const [connectionForFields, setConnectionForFields] = useState<{fromNodeId: string, toNodeId: string} | null>(null);
   const [svgDimensions, setSvgDimensions] = useState<SvgDimensions>({ width: '100%', height: '100%', top: 0, left: 0 });
@@ -631,55 +659,9 @@ export default function MainApp() {
 
   const handleAutoLayout = useCallback(() => {
     if (nodes.length === 0) return;
-    
-    const HORIZONTAL_GAP = 450;
-    const VERTICAL_GAP = 320; 
+
     const PADDING = 100;
-
-    const levels: Record<string, number> = {};
-    const getLevel = (nodeId: string, visited = new Set<string>()): number => {
-      if (levels[nodeId] !== undefined) return levels[nodeId];
-      if (visited.has(nodeId)) return 0;
-      visited.add(nodeId);
-
-      const incoming = connectors.filter(c => c.to === nodeId);
-      if (incoming.length === 0) return 0;
-
-      const level = Math.max(...incoming.map(c => getLevel(c.from, visited))) + 1;
-      levels[nodeId] = level;
-      return level;
-    };
-
-    nodes.forEach(n => getLevel(n.id));
-
-    const levelGroups: Record<number, string[]> = {};
-    Object.entries(levels).forEach(([id, level]) => {
-      if (!levelGroups[level]) levelGroups[level] = [];
-      levelGroups[level].push(id);
-    });
-    
-    Object.keys(levelGroups).forEach(level => {
-      const l = parseInt(level);
-      levelGroups[l].sort((a, b) => {
-        const nodeA = nodes.find(n => n.id === a);
-        const nodeB = nodes.find(n => n.id === b);
-        const groupCompare = (nodeA?.groupId || '').localeCompare(nodeB?.groupId || '');
-        if (groupCompare !== 0) return groupCompare;
-        return (nodeA?.name || '').localeCompare(nodeB?.name || '');
-      });
-    });
-
-    const newNodes = nodes.map(node => {
-      const level = levels[node.id] || 0;
-      const indexInLevel = levelGroups[level]?.indexOf(node.id) || 0;
-      return {
-        ...node,
-        position: {
-          x: level * HORIZONTAL_GAP + 200,
-          y: indexInLevel * VERTICAL_GAP + 200
-        }
-      };
-    });
+    const newNodes = layoutPipeline(nodes, connectors);
 
     const getGroupHierarchyDepth = (groupId: string | undefined): number => {
       if (!groupId) return 0;
@@ -752,59 +734,96 @@ export default function MainApp() {
       operation.settings = { ...operation.settings, ...item.defaultSettings };
     }
 
+    const freePosition = findFreePosition(nodes, { x, y }, { type: item.type, operation, inputFields: [], outputFields: [] });
+
     const newNode: PipelineNode = {
       id: `${item.type}-${Date.now()}`,
       name: item.name,
       type: item.type,
       status: 'draft',
-      position: { x, y },
+      position: freePosition,
       groupId: groupUnder?.id,
       inputFields: [],
       outputFields: [],
       operation,
     };
     setNodes((prev) => [...prev, newNode]);
-  }, [pan.x, pan.y, zoom, groups, setNodes]);
+  }, [pan.x, pan.y, zoom, groups, nodes, setNodes]);
 
-  const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
+  // Tap-to-add from the catalogue (no HTML5 drag on touch devices): drops the
+  // node at the center of the currently visible canvas viewport.
+  const handleAddItemTap = useCallback((item: TransformationItem) => {
+    if (!canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    handleAddNode(item, { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+  }, [handleAddNode]);
+
+  const capturePointer = (e: React.PointerEvent) => {
+    try { canvasRef.current?.setPointerCapture(e.pointerId); } catch { /* not capturable (e.g. touch already released) */ }
+  };
+
+  const handleNodeMouseDown = (e: React.PointerEvent, nodeId: string) => {
     if (e.button !== 0) return;
     e.stopPropagation();
+    capturePointer(e);
     handleNodeSelect(nodeId, e.shiftKey);
     draggingNodeIdRef.current = nodeId;
     lastMousePosRef.current = { x: e.clientX, y: e.clientY };
   };
 
-  const handleGroupMouseDown = (e: React.MouseEvent, groupId: string) => {
+  const handleGroupMouseDown = (e: React.PointerEvent, groupId: string) => {
     if (e.button !== 0) return;
     e.stopPropagation();
+    capturePointer(e);
     handleGroupSelect(groupId, e.shiftKey);
     draggingGroupIdRef.current = groupId;
     lastMousePosRef.current = { x: e.clientX, y: e.clientY };
   };
 
-  const handleResizeMouseDown = (e: React.MouseEvent, groupId: string) => {
+  const handleResizeMouseDown = (e: React.PointerEvent, groupId: string) => {
     if (e.button !== 0) return;
     e.stopPropagation();
+    capturePointer(e);
     resizingGroupIdRef.current = groupId;
     lastMousePosRef.current = { x: e.clientX, y: e.clientY };
   };
 
-  const handlePortMouseDown = (e: React.MouseEvent, nodeId: string) => {
+  const handlePortMouseDown = (e: React.PointerEvent, nodeId: string) => {
     if (e.button !== 0) return;
     e.stopPropagation();
+    capturePointer(e);
     isConnectingRef.current = true;
     if (!canvasRef.current) return;
     const canvasRect = canvasRef.current.getBoundingClientRect();
-    setNewConnector({ 
-        from: nodeId, 
-        to: { 
+    setNewConnector({
+        from: nodeId,
+        to: {
             x: (e.clientX - canvasRect.left - pan.x) / zoom,
             y: (e.clientY - canvasRect.top - pan.y) / zoom,
-        } 
+        }
     });
   };
-  
-  const handleMouseDown = (e: React.MouseEvent) => {
+
+  const pinchDistance = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
+  const pinchMidpoint = (a: { x: number; y: number }, b: { x: number; y: number }) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+
+  const handleMouseDown = (e: React.PointerEvent) => {
+    if (e.pointerType === 'touch') {
+      activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (activePointersRef.current.size === 2) {
+        // A second finger landed: abort any single-finger gesture in progress and start a pinch instead.
+        isPanningRef.current = false; isSelectingRef.current = false; isDrawingZoneRef.current = false;
+        draggingNodeIdRef.current = null; draggingGroupIdRef.current = null; resizingGroupIdRef.current = null;
+        setSelectionRect(null); setDrawingZoneRect(null);
+        const [p1, p2] = [...activePointersRef.current.values()];
+        pinchStateRef.current = { distance: pinchDistance(p1, p2), zoom, midpoint: pinchMidpoint(p1, p2) };
+        return;
+      }
+      if (activePointersRef.current.size > 2) return;
+    }
+
+    capturePointer(e);
+
     if (e.button === 2) {
       isSelectingRef.current = true;
       const rect = canvasRef.current!.getBoundingClientRect();
@@ -812,7 +831,7 @@ export default function MainApp() {
       const y = (e.clientY - rect.top - pan.y) / zoom;
       setSelectionRect({ startX: x, startY: y, x, y, width: 0, height: 0 });
       if (!e.shiftKey) { setSelectedNodeIds([]); setSelectedGroupIds([]); }
-    } 
+    }
     else if (e.button === 0) {
       if (isDrawMode) {
         isDrawingZoneRef.current = true;
@@ -828,7 +847,23 @@ export default function MainApp() {
     setSelectedConnector(null);
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = (e: React.PointerEvent) => {
+    if (e.pointerType === 'touch' && activePointersRef.current.has(e.pointerId)) {
+      activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    }
+
+    if (pinchStateRef.current && activePointersRef.current.size === 2) {
+      const [p1, p2] = [...activePointersRef.current.values()];
+      const newDistance = pinchDistance(p1, p2);
+      const midpoint = pinchMidpoint(p1, p2);
+      const newZoom = Math.min(Math.max(pinchStateRef.current.zoom * (newDistance / pinchStateRef.current.distance), 0.1), 3);
+      const rect = canvasRef.current!.getBoundingClientRect();
+      const x = midpoint.x - rect.left, y = midpoint.y - rect.top;
+      setPan(prevPan => ({ x: prevPan.x - (x - prevPan.x) * (newZoom / zoom - 1), y: prevPan.y - (y - prevPan.y) * (newZoom / zoom - 1) }));
+      setZoom(newZoom);
+      return;
+    }
+
     const dx = (e.clientX - lastMousePosRef.current.x) / zoom;
     const dy = (e.clientY - lastMousePosRef.current.y) / zoom;
     lastMousePosRef.current = { x: e.clientX, y: e.clientY };
@@ -858,7 +893,7 @@ export default function MainApp() {
       setNodes(prevNodes => prevNodes.map(n => (n.id === draggingNodeIdRef.current || selectedNodeIds.includes(n.id)) ? { ...n, position: { x: n.position.x + dx, y: n.position.y + dy } } : n));
     } else if (draggingGroupIdRef.current) {
       const targetIds = [draggingGroupIdRef.current, ...selectedGroupIds];
-      
+
       let allGroupIds = new Set<string>();
       let allNodeIds = new Set<string>();
       targetIds.forEach(id => {
@@ -867,7 +902,7 @@ export default function MainApp() {
         descendants.groupIds.forEach(gid => allGroupIds.add(gid));
         descendants.nodeIds.forEach(nid => allNodeIds.add(nid));
       });
-      
+
       setGroups(prev => prev.map(g => allGroupIds.has(g.id) ? { ...g, position: { x: g.position.x + dx, y: g.position.y + dy } } : g));
       setNodes(prev => prev.map(n => allNodeIds.has(n.id) ? { ...n, position: { x: n.position.x + dx, y: n.position.y + dy } } : n));
     } else if (isPanningRef.current) {
@@ -875,7 +910,13 @@ export default function MainApp() {
     }
   };
 
-  const handleMouseUp = (e: React.MouseEvent) => {
+  const handleMouseUp = (e: React.PointerEvent) => {
+    if (e.pointerType === 'touch') {
+      activePointersRef.current.delete(e.pointerId);
+      if (activePointersRef.current.size < 2) pinchStateRef.current = null;
+      if (activePointersRef.current.size > 0) return; // other finger still down, gesture continues
+    }
+
     isPanningRef.current = false;
     if (isSelectingRef.current) { isSelectingRef.current = false; setSelectionRect(null); }
     if (isDrawingZoneRef.current) { isDrawingZoneRef.current = false; finalizeDrawingZone(); }
@@ -888,8 +929,8 @@ export default function MainApp() {
         isConnectingRef.current = false; setNewConnector(null);
     }
   };
-  
-  const handleNodeMouseUp = (e: React.MouseEvent, toNodeId: string) => {
+
+  const handleNodeMouseUp = (e: React.PointerEvent, toNodeId: string) => {
     if (isConnectingRef.current && newConnector && newConnector.from !== toNodeId) {
         setConnectionForFields({ fromNodeId: newConnector.from, toNodeId });
     }
@@ -1079,9 +1120,9 @@ export default function MainApp() {
         <LineageDashboard lineages={lineages} onSelectLineage={(id) => { setActiveLineageId(id); setActiveView('editor'); }} onCreateLineage={(name, description) => { const id = `lineage-${Date.now()}`; setLineages(prev => [{ id, name, description, owner: 'Me', lastEdited: 'Just now', versions: [{ id: 'v1', name: 'Initial Design', nodes: [], connectors: [], groups: [] }] }, ...prev]); setActiveLineageId(id); setActiveVersionId('v1'); setActiveView('editor'); }} />
       ) : (
         <div className="flex flex-1 overflow-hidden relative">
-          <TransformationsCatalogue isCollapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
+          <TransformationsCatalogue isCollapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} onAddItem={handleAddItemTap} />
           
-          <main className={cn("flex-1 relative overflow-hidden bg-background/95", isDrawMode ? "cursor-crosshair" : "cursor-grab")} onDrop={handleDrop} onDragOver={handleDragOver} onWheel={handleWheel} ref={canvasRef} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} onContextMenu={e => e.preventDefault()}>
+          <main className={cn("flex-1 relative overflow-hidden bg-background/95 touch-none", isDrawMode ? "cursor-crosshair" : "cursor-grab")} onDrop={handleDrop} onDragOver={handleDragOver} onWheel={handleWheel} ref={canvasRef} onPointerDown={handleMouseDown} onPointerMove={handleMouseMove} onPointerUp={handleMouseUp} onPointerCancel={handleMouseUp} onContextMenu={e => e.preventDefault()}>
             <div className="absolute inset-0 canvas-grid pointer-events-none" />
             {nodes.length === 0 && groups.length === 0 && (
               <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none p-4">

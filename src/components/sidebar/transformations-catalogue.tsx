@@ -14,18 +14,23 @@ import { Button } from '@/components/ui/button';
 interface TransformationsCatalogueProps {
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  onAddItem?: (item: TransformationItem) => void;
 }
 
-const DraggableItem: React.FC<{item: TransformationItem, isMini: boolean}> = ({ item, isMini }) => {
+const DraggableItem: React.FC<{item: TransformationItem, isMini: boolean, onAddItem?: (item: TransformationItem) => void}> = ({ item, isMini, onAddItem }) => {
     const handleDragStart = (e: React.DragEvent) => {
         e.dataTransfer.setData('application/json', JSON.stringify(item));
         e.dataTransfer.effectAllowed = 'move';
     };
 
     const content = (
-        <div 
-            draggable 
-            onDragStart={handleDragStart} 
+        <div
+            draggable
+            onDragStart={handleDragStart}
+            onClick={() => onAddItem?.(item)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAddItem?.(item); } }}
             className={cn(
                 "flex items-center gap-4 p-2.5 rounded-lg hover:bg-white/5 cursor-grab w-full text-left transition-all border border-transparent hover:border-white/5",
                 isMini ? "justify-center p-2" : "px-2.5"
@@ -56,14 +61,14 @@ const DraggableItem: React.FC<{item: TransformationItem, isMini: boolean}> = ({ 
     );
 };
 
-const CatalogueSection: React.FC<{title: string, items: TransformationItem[], itemType: TransformationItem['type'], isMini: boolean}> = ({title, items, itemType, isMini}) => {
+const CatalogueSection: React.FC<{title: string, items: TransformationItem[], itemType: TransformationItem['type'], isMini: boolean, onAddItem?: (item: TransformationItem) => void}> = ({title, items, itemType, isMini, onAddItem}) => {
   if (items.length === 0) return null;
   return (
       <div className="space-y-1.5">
           {!isMini && <h3 className="px-2.5 text-[10px] uppercase font-bold text-muted-foreground tracking-widest">{title}</h3>}
           <div className="space-y-0.5">
             {items.map((item) => (
-                <DraggableItem key={item.name || item.operationType} item={{...item, type: itemType}} isMini={isMini} />
+                <DraggableItem key={item.name || item.operationType} item={{...item, type: itemType}} isMini={isMini} onAddItem={onAddItem} />
             ))}
           </div>
       </div>
@@ -71,7 +76,7 @@ const CatalogueSection: React.FC<{title: string, items: TransformationItem[], it
 };
 
 
-const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ isCollapsed = false, onToggleCollapse }) => {
+const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ isCollapsed = false, onToggleCollapse, onAddItem }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const allAdvanced = useMemo(() => [...advancedTransformations, ...patternCatalogueCategories], []);
@@ -142,10 +147,10 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ isC
         </div>
         <ScrollArea className="flex-1">
             <div className={cn("p-4 space-y-8", isCollapsed && "p-2")}>
-                <CatalogueSection title="Sources" items={filteredTransformations.sources} itemType="source" isMini={isCollapsed} />
-                
+                <CatalogueSection title="Sources" items={filteredTransformations.sources} itemType="source" isMini={isCollapsed} onAddItem={onAddItem} />
+
                 <div className="space-y-4">
-                    <CatalogueSection title="Common" items={filteredTransformations.common} itemType="transformation" isMini={isCollapsed} />
+                    <CatalogueSection title="Common" items={filteredTransformations.common} itemType="transformation" isMini={isCollapsed} onAddItem={onAddItem} />
                     
                     {!isCollapsed && filteredTransformations.advanced.length > 0 && (
                         <Accordion type="single" collapsible className="w-full animate-in fade-in duration-500">
@@ -159,7 +164,7 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ isC
                                         <h4 className="px-2.5 text-[9px] uppercase font-semibold text-muted-foreground/60 tracking-wider">{category.category}</h4>
                                         <div className="space-y-0.5">
                                           {category.items.map(item => (
-                                            <DraggableItem key={item.name || item.operationType} item={{...item, type: 'transformation' as NodeType}} isMini={isCollapsed} />
+                                            <DraggableItem key={item.name || item.operationType} item={{...item, type: 'transformation' as NodeType}} isMini={isCollapsed} onAddItem={onAddItem} />
                                           ))}
                                         </div>
                                       </div>
@@ -171,11 +176,11 @@ const TransformationsCatalogue: React.FC<TransformationsCatalogueProps> = ({ isC
                 </div>
                
                 {filteredTransformations.dataset.name && (
-                    <CatalogueSection title="Datasets" items={[filteredTransformations.dataset as TransformationItem]} itemType="dataset" isMini={isCollapsed} />
+                    <CatalogueSection title="Datasets" items={[filteredTransformations.dataset as TransformationItem]} itemType="dataset" isMini={isCollapsed} onAddItem={onAddItem} />
                 )}
-                
+
                 {filteredTransformations.destination.name && (
-                    <CatalogueSection title="Destinations" items={[filteredTransformations.destination as TransformationItem]} itemType="destination" isMini={isCollapsed} />
+                    <CatalogueSection title="Destinations" items={[filteredTransformations.destination as TransformationItem]} itemType="destination" isMini={isCollapsed} onAddItem={onAddItem} />
                 )}
             </div>
         </ScrollArea>

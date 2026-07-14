@@ -8,8 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 interface GroupZoneProps extends NodeGroup {
-  onMouseDown: (e: React.MouseEvent) => void;
-  onResizeMouseDown: (e: React.MouseEvent) => void;
+  onMouseDown: (e: React.PointerEvent) => void;
+  onResizeMouseDown: (e: React.PointerEvent) => void;
   onDelete: () => void;
   onRename: (newName: string) => void;
   onToggleCollapse: () => void;
@@ -72,7 +72,7 @@ const GroupZone: React.FC<GroupZoneProps> = ({
   return (
     <div
       className={cn(
-        "absolute rounded-2xl border border-solid group/zone z-0 transition-[width,height] duration-0",
+        "absolute rounded-2xl border border-solid group/zone z-0 transition-[width,height] duration-0 touch-none",
         colorClass,
         isSelected && "border-primary/50 border-solid bg-primary/5",
         isCollapsed && "border-solid bg-card/40 backdrop-blur-sm"
@@ -83,7 +83,7 @@ const GroupZone: React.FC<GroupZoneProps> = ({
         width: currentWidth,
         height: currentHeight,
       }}
-      onMouseDown={onMouseDown}
+      onPointerDown={onMouseDown}
     >
       <div className="absolute top-4 left-6 flex items-center gap-3 select-none w-[calc(100%-100px)]">
         <Button
@@ -108,7 +108,7 @@ const GroupZone: React.FC<GroupZoneProps> = ({
             onChange={(e) => setTempName(e.target.value)}
             onBlur={handleRename}
             onKeyDown={handleKeyDown}
-            onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
           />
         ) : (
           <h3 
@@ -123,7 +123,7 @@ const GroupZone: React.FC<GroupZoneProps> = ({
         )}
       </div>
 
-      <div className="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover/zone:opacity-100 transition-opacity">
+      <div className={cn("absolute top-4 right-4 flex items-center gap-1 transition-opacity", isSelected ? "opacity-100" : "opacity-0 group-hover/zone:opacity-100")}>
         <Button 
           variant="ghost" 
           size="icon" 
@@ -138,9 +138,9 @@ const GroupZone: React.FC<GroupZoneProps> = ({
       </div>
 
       {!isCollapsed && (
-        <div 
-          className="absolute bottom-4 right-4 text-muted-foreground opacity-40 hover:opacity-100 transition-opacity cursor-nwse-resize pointer-events-auto p-1"
-          onMouseDown={(e) => {
+        <div
+          className="absolute bottom-4 right-4 text-muted-foreground opacity-40 hover:opacity-100 transition-opacity cursor-nwse-resize pointer-events-auto p-1 touch-none"
+          onPointerDown={(e) => {
             e.stopPropagation();
             onResizeMouseDown(e);
           }}

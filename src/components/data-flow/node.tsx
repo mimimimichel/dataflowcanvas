@@ -22,9 +22,9 @@ interface NodeProps extends PipelineNode {
   nodes: PipelineNode[];
   onSelect: (isShift: boolean) => void;
   onConfigOpen: () => void;
-  onMouseDown: (event: React.MouseEvent) => void;
-  onMouseUp: (event: React.MouseEvent) => void;
-  onPortMouseDown: (event: React.MouseEvent) => void;
+  onMouseDown: (event: React.PointerEvent) => void;
+  onMouseUp: (event: React.PointerEvent) => void;
+  onPortMouseDown: (event: React.PointerEvent) => void;
   onAddNode: (item: TransformationItem, position: { x: number; y: number }) => void;
   isSelected: boolean;
   onUpdateOperation: (nodeId: string, operation: Operation) => void;
@@ -152,10 +152,10 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
 
   return (
     <div
-      className="absolute group z-10"
+      className="absolute group z-10 touch-none"
       style={{ top: position.y, left: position.x }}
-      onMouseDown={onMouseDown}
-      onMouseUp={onMouseUp}
+      onPointerDown={onMouseDown}
+      onPointerUp={onMouseUp}
       data-node-id={id}
     >
       <Card
@@ -259,18 +259,18 @@ const Node: React.FC<NodeProps> = ({ id, name, type, position, operation, inputF
         {type !== 'source' && (
           <Port 
             type="in"
-            onMouseDown={onPortMouseDown}
+            onPointerDown={onPortMouseDown}
           />
         )}
 
         {type !== 'destination' && (
           <Port 
             type="out"
-            onMouseDown={onPortMouseDown}
+            onPointerDown={onPortMouseDown}
           />
         )}
         
-        <div className="absolute right-1.5 top-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className={cn("absolute right-1.5 top-1 transition-opacity", isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
             <Button 
                 variant="ghost" 
                 size="icon" 

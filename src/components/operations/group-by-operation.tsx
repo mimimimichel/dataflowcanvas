@@ -10,7 +10,8 @@ interface GroupByOperationProps {
 }
 
 const GroupByOperation: React.FC<GroupByOperationProps> = ({ operation }) => {
-  const { groupByFields, aggregations } = operation.settings;
+  const groupByFields = operation.settings.groupByFields || [];
+  const aggregations = operation.settings.aggregations || [];
   return (
     <div className="p-2 space-y-2 bg-muted rounded-md text-xs">
       <div>

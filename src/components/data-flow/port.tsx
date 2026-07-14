@@ -12,9 +12,9 @@ const Port: React.FC<PortProps> = ({ type, ...props }) => {
     <div
       {...props}
       data-port="true"
-      onMouseDown={(e) => {
+      onPointerDown={(e) => {
         e.stopPropagation();
-        if (props.onMouseDown) props.onMouseDown(e);
+        if (props.onPointerDown) props.onPointerDown(e);
       }}
       className={cn(
             "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
