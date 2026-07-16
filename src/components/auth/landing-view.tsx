@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -84,6 +84,17 @@ export default function LandingView({ onEnterDemo }: LandingViewProps) {
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const authCardRef = useRef<HTMLDivElement>(null);
+
+  // The auth form lives at the bottom of a long landing page — just flipping
+  // isSignUp is invisible from up here, so scroll it into view and focus it.
+  const goToAuthForm = (signUp: boolean) => {
+    setIsSignUp(signUp);
+    authCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => {
+      authCardRef.current?.querySelector('input')?.focus();
+    }, 400);
+  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,7 +132,7 @@ export default function LandingView({ onEnterDemo }: LandingViewProps) {
         <div className="flex items-center gap-2 sm:gap-3">
           <ThemeToggle className="h-9 w-9" />
           <Button variant="ghost" onClick={onEnterDemo}>Demo Mode</Button>
-          <Button variant="outline" onClick={() => setIsSignUp(!isSignUp)}>
+          <Button variant="outline" onClick={() => goToAuthForm(!isSignUp)}>
             {isSignUp ? 'Login' : 'Sign Up'}
           </Button>
         </div>
@@ -149,7 +160,7 @@ export default function LandingView({ onEnterDemo }: LandingViewProps) {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <Button size="lg" className="h-11 px-7 gap-2" onClick={() => setIsSignUp(true)}>
+            <Button size="lg" className="h-11 px-7 gap-2" onClick={() => goToAuthForm(true)}>
               Get Started Free <ArrowRight className="h-4 w-4" />
             </Button>
             <Button size="lg" variant="outline" className="h-11 px-7 gap-2" onClick={onEnterDemo}>
@@ -219,7 +230,7 @@ export default function LandingView({ onEnterDemo }: LandingViewProps) {
           ))}
         </div>
 
-        <div className="mt-20 w-full max-w-md">
+        <div ref={authCardRef} className="mt-20 w-full max-w-md scroll-mt-24">
           <Card className="border-border shadow-none text-left">
             <CardHeader>
               <CardTitle>{isSignUp ? 'Create an account' : 'Sign in to your design'}</CardTitle>
