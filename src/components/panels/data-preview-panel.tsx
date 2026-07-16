@@ -4,12 +4,11 @@ const MAX_PREVIEW_ROWS = 50;
 
 import React, { useMemo, useState } from 'react';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import {
@@ -112,17 +111,22 @@ export default function DataPreviewPanel({
   const hiddenColumnCount = preview.columns.length - visibleColumns.length;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[90vw] sm:max-h-[90vh] w-[95vw] max-h-[95vh] p-0 flex flex-col gap-0 overflow-hidden font-mono">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className="max-h-[85vh] p-0 gap-0 flex flex-col overflow-hidden font-mono rounded-t-xl border-t">
+        {/* Drag-handle affordance, Foundry/bottom-sheet convention */}
+        <div className="shrink-0 flex justify-center pt-2 pb-1">
+          <div className="h-1 w-10 rounded-full bg-muted-foreground/20" />
+        </div>
+
         {/* Header — flat, information-dense, Foundry-style dataset preview chrome */}
-        <DialogHeader className="shrink-0 px-5 pt-4 pb-3 border-b bg-muted/30 font-body">
+        <div className="shrink-0 px-5 pb-3 border-b bg-muted/30 font-body">
           <div className="flex items-center gap-3">
             <div className="p-1.5 rounded-md bg-primary/10 ring-1 ring-primary/20">
               <Table2 className="h-4 w-4 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <DialogTitle className="text-sm font-semibold truncate">{nodeName}</DialogTitle>
-              <DialogDescription className="text-xs mt-0">Data Sample Preview</DialogDescription>
+              <SheetTitle className="text-sm font-semibold truncate">{nodeName}</SheetTitle>
+              <SheetDescription className="text-xs mt-0">Data Sample Preview</SheetDescription>
             </div>
             <span className="text-[11px] font-mono text-muted-foreground border rounded-sm px-2 py-1 bg-background shrink-0">
               {filter ? `${filteredRows.length.toLocaleString()} matched` : preview.previewRowCount.toLocaleString()} / {preview.totalRows.toLocaleString()} rows · {preview.columns.length} cols
@@ -165,10 +169,10 @@ export default function DataPreviewPanel({
               className="h-8 pl-8 text-xs font-mono bg-background"
             />
           </div>
-        </DialogHeader>
+        </div>
 
         {/* Data grid */}
-        <ScrollArea className="flex-1 max-h-[60vh]">
+        <ScrollArea className="flex-1">
           <div className="px-4 pb-4 pt-3">
             <div className="rounded-md border overflow-hidden">
               <table className="w-full text-[11px] border-collapse">
@@ -245,7 +249,7 @@ export default function DataPreviewPanel({
             )}
           </div>
         </ScrollArea>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
