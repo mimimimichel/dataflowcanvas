@@ -45,23 +45,67 @@ const AT_A_GLANCE = [
   { value: 'Zero', label: 'Install required', caption: 'runs entirely in your browser' },
 ];
 
+function getAuthErrorMessage(error: unknown): string {
+  const code = (error as { code?: string } | null)?.code || '';
+  switch (code) {
+    case 'auth/email-already-in-use':
+      return 'An account with this email already exists — try signing in instead.';
+    case 'auth/weak-password':
+      return 'Password must be at least 6 characters.';
+    case 'auth/invalid-email':
+      return 'That email address looks invalid.';
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential':
+      return 'Incorrect email or password.';
+    case 'auth/unauthorized-domain':
+      return "This domain isn't authorized for sign-in yet — contact the site owner.";
+    case 'auth/too-many-requests':
+      return 'Too many attempts — please wait a moment and try again.';
+    case 'auth/network-request-failed':
+      return 'Network error — check your connection and try again.';
+    default:
+      return 'Something went wrong. Please try again.';
+  }
+}
+
+/** Firebase's auth SDK has no built-in timeout — a stalled request would otherwise leave the form stuck on "Please wait…" forever. */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject({ code: 'auth/network-request-failed' }), ms)),
+  ]);
+}
+
 export default function LandingView({ onEnterDemo }: LandingViewProps) {
   const auth = useAuth();
   const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleAuth = (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
+    if (!email || !password || isSubmitting) return;
 
-    if (isSignUp) {
-      initiateEmailSignUp(auth, email, password);
-      toast({ title: "Account created", description: "Welcome to Theseus!" });
-    } else {
-      initiateEmailSignIn(auth, email, password);
-      toast({ title: "Welcome back", description: "Signing you in..." });
+    setIsSubmitting(true);
+    try {
+      if (isSignUp) {
+        await withTimeout(initiateEmailSignUp(auth, email, password), 15000);
+        toast({ title: "Account created", description: "Welcome to Theseus!" });
+      } else {
+        await withTimeout(initiateEmailSignIn(auth, email, password), 15000);
+        toast({ title: "Welcome back", description: "Signing you in..." });
+      }
+    } catch (error) {
+      toast({
+        title: isSignUp ? "Couldn't create account" : "Couldn't sign in",
+        description: getAuthErrorMessage(error),
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -204,8 +248,8 @@ export default function LandingView({ onEnterDemo }: LandingViewProps) {
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full gap-2">
-                  {isSignUp ? 'Create Account' : 'Sign In'} <ArrowUpRight className="h-4 w-4" />
+                <Button type="submit" className="w-full gap-2" disabled={isSubmitting}>
+                  {isSubmitting ? 'Please wait…' : (isSignUp ? 'Create Account' : 'Sign In')} <ArrowUpRight className="h-4 w-4" />
                 </Button>
               </form>
             </CardContent>
