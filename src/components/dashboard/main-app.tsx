@@ -43,7 +43,7 @@ import MissionSpecModal from '@/components/modals/mission-spec-modal';
 import DeliverablesHub, { type DeliverableId } from '@/components/modals/deliverables-hub';
 import TemplateMarketplace from '@/components/modals/template-marketplace';
 import { type PipelineTemplate } from '@/lib/pipeline-templates';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, loadUserWorkspace, saveProject, saveLineage } from '@/firebase';
 import { signOut, getAuth } from 'firebase/auth';
 import AccountSettingsDialog from '@/components/modals/account-settings-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -128,11 +128,17 @@ type ActiveView = 'projects' | 'dataProducts' | 'dataProductDoc' | 'editor';
 
 export default function MainApp() {
   const { toast } = useToast();
+  // useUser() is settled before MainApp ever mounts (page.tsx gates rendering on
+  // isUserLoading), so it's safe to use it to pick the right initial dataset here —
+  // signed-in users start from an empty workspace (loaded from Firestore below),
+  // demo mode keeps the mock data.
+  const { user } = useUser();
+  const firestore = useFirestore();
   const [activeView, setActiveView] = useState<ActiveView>('projects');
-  const [projects, setProjects] = useState<Project[]>(mockProjects);
+  const [projects, setProjects] = useState<Project[]>(() => user ? [] : mockProjects);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [activeDataProductId, setActiveDataProductId] = useState<string | null>(null);
-  const [lineages, setLineages] = useState<LineageInfo[]>(mockLineages);
+  const [lineages, setLineages] = useState<LineageInfo[]>(() => user ? [] : mockLineages);
   const [activeLineageId, setActiveLineageId] = useState<string>('lineage-1');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -143,6 +149,69 @@ export default function MainApp() {
       setIsSidebarCollapsed(true);
     }
   }, []);
+
+  // Persistence: signed-in users get their own workspace loaded from Firestore once
+  // (a plain fetch, not a live subscription — this is a single-user tool, not
+  // realtime collaboration); demo mode always resets to the in-memory mock data.
+  // workspaceLoadedForUidRef both dedupes the load per session and gates the write
+  // effects below so they never fire before real data has replaced the initial
+  // placeholder state.
+  const workspaceLoadedForUidRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      workspaceLoadedForUidRef.current = null;
+      setProjects(mockProjects);
+      setLineages(mockLineages);
+      setActiveProjectId(null);
+      setActiveDataProductId(null);
+      setActiveView('projects');
+      return;
+    }
+
+    if (workspaceLoadedForUidRef.current === user.uid) return;
+
+    let cancelled = false;
+    loadUserWorkspace(firestore, user.uid)
+      .then(({ projects: loadedProjects, lineages: loadedLineages }) => {
+        if (cancelled) return;
+        workspaceLoadedForUidRef.current = user.uid;
+        setProjects(loadedProjects);
+        setLineages(loadedLineages);
+        setActiveProjectId(null);
+        setActiveDataProductId(null);
+        setActiveView('projects');
+      })
+      .catch((error) => {
+        console.error('Failed to load workspace from Firestore', error);
+        toast({
+          title: "Impossible de charger votre espace de travail",
+          description: "Vérifiez votre connexion et réessayez.",
+          variant: "destructive",
+        });
+      });
+
+    return () => { cancelled = true; };
+  }, [user, firestore, toast]);
+
+  // Autosave: debounced so a drag gesture or a documentation keystroke doesn't fire
+  // a write per frame/character — only the settled state after a short pause is
+  // persisted. No-ops until the initial load above has completed for this user.
+  useEffect(() => {
+    if (!user || workspaceLoadedForUidRef.current !== user.uid) return;
+    const timer = setTimeout(() => {
+      projects.forEach(project => saveProject(firestore, user.uid, project));
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [projects, user, firestore]);
+
+  useEffect(() => {
+    if (!user || workspaceLoadedForUidRef.current !== user.uid) return;
+    const timer = setTimeout(() => {
+      lineages.forEach(lineage => saveLineage(firestore, user.uid, lineage));
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [lineages, user, firestore]);
 
   const activeProject = useMemo(() =>
     projects.find(p => p.id === activeProjectId),
@@ -165,15 +234,15 @@ export default function MainApp() {
     lineages.find(l => l.id === activeLineageId) || lineages[0],
   [lineages, activeLineageId]);
 
-  const [activeVersionId, setActiveVersionId] = useState<string>(activeLineage.versions[0].id);
-  
-  const activeVersion = useMemo(() => 
-    activeLineage.versions.find(v => v.id === activeVersionId) || activeLineage.versions[0], 
+  const [activeVersionId, setActiveVersionId] = useState<string>(activeLineage?.versions[0]?.id || '');
+
+  const activeVersion = useMemo(() =>
+    activeLineage?.versions.find(v => v.id === activeVersionId) || activeLineage?.versions[0],
   [activeLineage, activeVersionId]);
-  
-  const nodes = activeVersion.nodes;
-  const connectors = activeVersion.connectors;
-  const groups = activeVersion.groups || [];
+
+  const nodes = activeVersion?.nodes || [];
+  const connectors = activeVersion?.connectors || [];
+  const groups = activeVersion?.groups || [];
 
   const setNodes = useCallback((updater: React.SetStateAction<PipelineNode[]>) => {
     setLineages(currentLineages => currentLineages.map(l => 
@@ -258,7 +327,6 @@ export default function MainApp() {
     setPreviewOpen(null);
   };
   const shareUrl = typeof window !== 'undefined' ? window.location.href : 'https://dataflowcanvas-deploy.vercel.app';
-  const { user } = useUser();
 
   const handleApplyTemplate = (template: PipelineTemplate) => {
     const { connectors } = template;
@@ -1110,6 +1178,7 @@ export default function MainApp() {
   }
 
   const handleCreateVersion = (name: string) => {
+    if (!activeLineage) return;
     const newVersion: PipelineVersion = { id: `v${activeLineage.versions.length + 1}`, name, nodes: [...nodes], connectors: [...connectors], groups: [...groups] };
     setLineages(prev => prev.map(l => l.id === activeLineageId ? { ...l, versions: [...l.versions, newVersion] } : l));
     setActiveVersionId(newVersion.id);
@@ -1172,7 +1241,7 @@ export default function MainApp() {
 
   return (
     <div className="flex h-dvh w-full flex-col bg-background font-body overflow-hidden">
-      <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage.versions} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onDeliverables={() => setIsDeliverablesHubOpen(true)} onAudit={handleAudit} auditGrade={liveAudit?.grade} auditScore={liveAudit?.score} isArchitectOpen={isArchitectOpen} onArchitectOpenChange={setIsArchitectOpen} onImportPipeline={handleImportPipeline} onApplyScaffold={handleApplyScaffold} onAccountSettings={() => setIsAccountOpen(true)} onShare={() => setIsShareOpen(true)} onTemplates={() => setIsTemplateMarketplaceOpen(true)} activeView={activeView} onViewChange={setActiveView} />
+      <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage?.versions || []} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onDeliverables={() => setIsDeliverablesHubOpen(true)} onAudit={handleAudit} auditGrade={liveAudit?.grade} auditScore={liveAudit?.score} isArchitectOpen={isArchitectOpen} onArchitectOpenChange={setIsArchitectOpen} onImportPipeline={handleImportPipeline} onApplyScaffold={handleApplyScaffold} onAccountSettings={() => setIsAccountOpen(true)} onShare={() => setIsShareOpen(true)} onTemplates={() => setIsTemplateMarketplaceOpen(true)} activeView={activeView} onViewChange={setActiveView} />
       
       {activeView === 'projects' ? (
         <ProjectsView projects={projects} onSelectProject={handleSelectProject} onCreateProject={handleCreateProject} />
@@ -1311,7 +1380,7 @@ export default function MainApp() {
       <MissionSpecModal
         isOpen={isMissionSpecModalOpen}
         onClose={() => setIsMissionSpecModalOpen(false)}
-        pipelineName={activeLineage.name}
+        pipelineName={activeLineage?.name || ''}
         nodes={nodes}
         connectors={connectors}
         metadata={activeDataProduct?.documentation || createEmptyDataProductDocumentation()}

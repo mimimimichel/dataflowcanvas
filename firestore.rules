@@ -67,6 +67,31 @@ service cloud.firestore {
     }
 
     /**
+     * @description Rules for a user's Projects (client engagements), each embedding its
+     * Data Products inline, and their Lineages (pipeline designs, embedding versions/nodes/
+     * connectors/groups inline). This is the actual persisted shape of the app's
+     * Project > Data Product > {Documentation, Pipelines} model.
+     * @path /users/{userId}/projects/{projectId}
+     * @path /users/{userId}/lineages/{lineageId}
+     * @allow Authenticated user matching {userId} (get, list, create, update, delete).
+     * @deny Any user accessing another user's projects or lineages.
+     * @principle Single-tenant ownership — no sharing/collaboration for this data.
+     */
+    match /users/{userId}/projects/{projectId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    match /users/{userId}/lineages/{lineageId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
      * @description Rules for top-level collaborative workspaces.
      * @path /workspaces/{workspaceId}
      * @allow Members or Owner to read. Only Owner to update or delete.

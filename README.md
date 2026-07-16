@@ -31,6 +31,8 @@ npm run dev                        # http://localhost:9002
 
 Les routes IA exigent un utilisateur Firebase connecté (le mode démo n'y a pas accès).
 
+Un utilisateur connecté a son propre espace persisté dans Firestore (`users/{uid}/projects`, `users/{uid}/lineages`) ; le mode démo reste entièrement en mémoire (données factices, jamais écrites). Avant la première connexion réelle, déployer les règles : `firebase deploy --only firestore:rules`, ou coller le contenu de `firestore.rules` dans Firebase Console → Firestore Database → Rules → Publish.
+
 ## Scripts
 
 ```bash
