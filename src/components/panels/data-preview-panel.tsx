@@ -2,35 +2,29 @@
 
 const MAX_PREVIEW_ROWS = 50;
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  X,
   Table2,
   ArrowRight,
   Filter,
   Layers,
-  CheckCircle2,
   AlertCircle,
-  Maximize2,
+  Search,
+  Hash,
+  CaseSensitive,
+  Calendar,
+  ToggleLeft,
+  Braces,
+  Brackets,
 } from 'lucide-react';
 import type { PipelinePreviewResult } from '@/lib/pipeline-executor';
 import { cn } from '@/lib/utils';
@@ -42,50 +36,57 @@ interface DataPreviewPanelProps {
   nodeName: string;
 }
 
+// Foundry-style column type glyphs — a quick visual scan of the schema without reading labels.
+const TYPE_META: Record<string, { icon: React.ElementType; label: string; numeric?: boolean }> = {
+  string: { icon: CaseSensitive, label: 'string' },
+  int: { icon: Hash, label: 'int', numeric: true },
+  integer: { icon: Hash, label: 'integer', numeric: true },
+  long: { icon: Hash, label: 'long', numeric: true },
+  double: { icon: Hash, label: 'double', numeric: true },
+  float: { icon: Hash, label: 'float', numeric: true },
+  boolean: { icon: ToggleLeft, label: 'boolean' },
+  date: { icon: Calendar, label: 'date' },
+  timestamp: { icon: Calendar, label: 'timestamp' },
+  array: { icon: Brackets, label: 'array' },
+  object: { icon: Braces, label: 'object' },
+};
+
+function typeMeta(type: string) {
+  return TYPE_META[type] || { icon: CaseSensitive, label: type };
+}
+
 function OperationBadge({ description }: { description: string }) {
   const isFilter = description.toLowerCase().includes('filter');
   return (
-    <Badge
-      variant="outline"
+    <span
       className={cn(
-        "text-[10px] font-mono px-2 py-0.5 flex items-center gap-1",
+        "text-[10px] font-mono px-1.5 py-0.5 rounded-sm border flex items-center gap-1",
         isFilter
           ? "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/5"
-          : "border-blue-500/30 text-blue-600 dark:text-blue-400 bg-blue-500/5"
+          : "border-primary/30 text-primary bg-primary/5"
       )}
     >
       {isFilter ? <Filter className="h-2.5 w-2.5" /> : <Layers className="h-2.5 w-2.5" />}
       {description}
-    </Badge>
+    </span>
   );
 }
 
 function formatCellValue(value: string | number | boolean | null | undefined): React.ReactNode {
   if (value == null || value === undefined) {
-    return <span className="text-muted-foreground/40 italic text-[10px]">null</span>;
+    return <span className="text-muted-foreground/40 italic">null</span>;
   }
   if (typeof value === 'boolean') {
     return (
-      <span className={cn(
-        "text-[10px] font-medium px-1 py-0.5 rounded",
-        value ? "text-emerald-600 bg-emerald-500/10" : "text-rose-600 bg-rose-500/10"
-      )}>
+      <span className={cn("font-medium", value ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
         {String(value)}
       </span>
     );
   }
   if (typeof value === 'number') {
-    return (
-      <span className="font-mono text-[11px] tabular-nums">
-        {Number.isInteger(value) ? value.toLocaleString() : value.toFixed(2)}
-      </span>
-    );
+    return <span className="tabular-nums">{Number.isInteger(value) ? value.toLocaleString() : value.toFixed(2)}</span>;
   }
-  return (
-    <span className="text-xs" title={String(value)}>
-      {String(value)}
-    </span>
-  );
+  return <span title={String(value)}>{String(value)}</span>;
 }
 
 export default function DataPreviewPanel({
@@ -94,117 +95,149 @@ export default function DataPreviewPanel({
   onOpenChange,
   nodeName,
 }: DataPreviewPanelProps) {
+  const [filter, setFilter] = useState('');
+
+  const filteredRows = useMemo(() => {
+    if (!preview) return [];
+    const q = filter.trim().toLowerCase();
+    if (!q) return preview.rows;
+    return preview.rows.filter(row =>
+      preview.columns.some(col => String(row[col.name] ?? '').toLowerCase().includes(q))
+    );
+  }, [preview, filter]);
+
   if (!preview) return null;
+
+  const visibleColumns = preview.columns.slice(0, 10);
+  const hiddenColumnCount = preview.columns.length - visibleColumns.length;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[90vw] sm:max-h-[90vh] w-[95vw] max-h-[95vh] p-0 flex flex-col gap-0 overflow-hidden">
-        {/* Header */}
-        <DialogHeader className="shrink-0 px-6 pt-5 pb-4 border-b bg-gradient-to-br from-primary/5 to-transparent">
+      <DialogContent className="sm:max-w-[90vw] sm:max-h-[90vh] w-[95vw] max-h-[95vh] p-0 flex flex-col gap-0 overflow-hidden font-mono">
+        {/* Header — flat, information-dense, Foundry-style dataset preview chrome */}
+        <DialogHeader className="shrink-0 px-5 pt-4 pb-3 border-b bg-muted/30 font-body">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10 ring-1 ring-primary/20">
-              <Table2 className="h-5 w-5 text-primary" />
+            <div className="p-1.5 rounded-md bg-primary/10 ring-1 ring-primary/20">
+              <Table2 className="h-4 w-4 text-primary" />
             </div>
-            <div className="flex-1">
-              <DialogTitle className="text-lg font-semibold">{nodeName}</DialogTitle>
-              <DialogDescription className="text-sm mt-0.5">
-                Data Sample Preview
-              </DialogDescription>
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="text-sm font-semibold truncate">{nodeName}</DialogTitle>
+              <DialogDescription className="text-xs mt-0">Data Sample Preview</DialogDescription>
             </div>
-            <Badge variant="secondary" className="text-xs px-2.5 py-1">
-              {preview.previewRowCount}/{preview.totalRows.toLocaleString()} rows
-            </Badge>
+            <span className="text-[11px] font-mono text-muted-foreground border rounded-sm px-2 py-1 bg-background shrink-0">
+              {filter ? `${filteredRows.length.toLocaleString()} matched` : preview.previewRowCount.toLocaleString()} / {preview.totalRows.toLocaleString()} rows · {preview.columns.length} cols
+            </span>
           </div>
 
-          {/* Operation chain */}
+          {/* Lineage chain */}
           {preview.appliedOperations.length > 0 && (
-            <div className="mt-3 flex flex-col items-start gap-1.5">
-              <span className="text-xs uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1.5">
-                <Layers className="h-3.5 w-3.5" /> Pipeline
-              </span>
-              <div className="flex items-center flex-wrap gap-1.5">
+            <div className="mt-2.5 flex flex-col items-start gap-1.5">
+              <div className="flex items-center flex-wrap gap-1">
                 {preview.nodeChain.map((name, i) => (
                   <React.Fragment key={name + i}>
                     {i > 0 && <ArrowRight className="h-3 w-3 text-muted-foreground/40" />}
                     <span className={cn(
-                      "text-xs px-2 py-1 rounded-md font-medium",
+                      "text-[11px] font-mono px-1.5 py-0.5 rounded-sm border",
                       i === preview.nodeChain.length - 1
-                        ? "bg-primary/10 text-primary font-semibold"
-                        : "bg-muted text-muted-foreground"
+                        ? "bg-primary/10 border-primary/30 text-primary font-semibold"
+                        : "bg-background border-border text-muted-foreground"
                     )}>
                       {name}
                     </span>
                   </React.Fragment>
                 ))}
               </div>
-              <div className="flex flex-wrap gap-1 mt-1">
+              <div className="flex flex-wrap gap-1">
                 {preview.appliedOperations.map((op, i) => (
                   <OperationBadge key={i} description={op} />
                 ))}
               </div>
             </div>
           )}
+
+          {/* Filter toolbar */}
+          <div className="relative mt-3 max-w-xs">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Filter rows..."
+              className="h-8 pl-8 text-xs font-mono bg-background"
+            />
+          </div>
         </DialogHeader>
 
-        {/* Data table */}
+        {/* Data grid */}
         <ScrollArea className="flex-1 max-h-[60vh]">
-          <div className="p-4">
-            <div className="rounded-lg border overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50 hover:bg-muted/50">
-                    <TableHead className="w-[50px] text-xs text-muted-foreground text-center py-2">#</TableHead>
-                    {preview.columns.slice(0, 10).map((col, i) => (
-                      <TableHead key={col.name + i} className="text-xs text-muted-foreground py-2">
-                        <div className="flex flex-col">
-                          <span className="font-medium">{col.name}</span>
-                          <span className="font-normal text-muted-foreground/60 font-mono text-[10px]">{col.type}</span>
-                        </div>
-                      </TableHead>
-                    ))}
-                    {preview.columns.length > 10 && (
-                      <TableHead className="text-xs text-muted-foreground py-2">
-                        +{preview.columns.length - 10} more
-                      </TableHead>
+          <div className="px-4 pb-4 pt-3">
+            <div className="rounded-md border overflow-hidden">
+              <table className="w-full text-[11px] border-collapse">
+                <thead className="sticky top-0 z-10">
+                  <tr className="bg-muted/60">
+                    <th className="w-[42px] text-muted-foreground text-center py-1.5 border-b border-r bg-muted/80 sticky left-0 font-normal">#</th>
+                    {visibleColumns.map((col, i) => {
+                      const meta = typeMeta(col.type);
+                      const Icon = meta.icon;
+                      return (
+                        <th
+                          key={col.name + i}
+                          className={cn("py-1.5 px-2.5 border-b font-normal", meta.numeric ? "text-right" : "text-left")}
+                        >
+                          <div className={cn("flex flex-col gap-0.5", meta.numeric && "items-end")}>
+                            <span className="font-semibold text-foreground">{col.name}</span>
+                            <span className="flex items-center gap-1 text-[10px] text-muted-foreground/70 uppercase tracking-wide">
+                              <Icon className="h-2.5 w-2.5" /> {meta.label}
+                            </span>
+                          </div>
+                        </th>
+                      );
+                    })}
+                    {hiddenColumnCount > 0 && (
+                      <th className="py-1.5 px-2.5 border-b text-left text-muted-foreground font-normal">+{hiddenColumnCount} more</th>
                     )}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {preview.rows.map((row, rowIdx) => (
-                    <TableRow key={rowIdx} className="hover:bg-muted/30">
-                      <TableCell className="text-xs text-muted-foreground text-center font-mono py-2 px-2 w-[50px]">
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRows.map((row, rowIdx) => (
+                    <tr key={rowIdx} className={cn("hover:bg-primary/5", rowIdx % 2 === 1 && "bg-muted/20")}>
+                      <td className="text-muted-foreground text-center py-1 border-r bg-muted/30 sticky left-0 tabular-nums">
                         {rowIdx + 1}
-                      </TableCell>
-                      {preview.columns.slice(0, 10).map((col, colIdx) => (
-                        <TableCell key={col.name + colIdx} className="py-2 px-3">
-                          {formatCellValue(row[col.name])}
-                        </TableCell>
-                      ))}
-                      {preview.columns.length > 10 && (
-                        <TableCell className="py-2 px-3 text-xs text-muted-foreground">—</TableCell>
+                      </td>
+                      {visibleColumns.map((col, colIdx) => {
+                        const meta = typeMeta(col.type);
+                        return (
+                          <td key={col.name + colIdx} className={cn("py-1 px-2.5", meta.numeric ? "text-right" : "text-left")}>
+                            {formatCellValue(row[col.name])}
+                          </td>
+                        );
+                      })}
+                      {hiddenColumnCount > 0 && (
+                        <td className="py-1 px-2.5 text-muted-foreground/50">—</td>
                       )}
-                    </TableRow>
+                    </tr>
                   ))}
-                  {preview.rows.length === 0 && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={Math.min(preview.columns.length, 10) + 2}
-                        className="py-12 text-center"
+                  {filteredRows.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={visibleColumns.length + 1 + (hiddenColumnCount > 0 ? 1 : 0)}
+                        className="py-12 text-center font-body"
                       >
                         <AlertCircle className="h-8 w-8 mx-auto mb-2 text-muted-foreground/40" />
-                        <p className="text-sm text-muted-foreground">No rows returned</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Check your filter criteria
+                        <p className="text-sm text-muted-foreground">
+                          {filter ? 'No rows match your filter' : 'No rows returned'}
                         </p>
-                      </TableCell>
-                    </TableRow>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {filter ? 'Try a different search term' : 'Check your filter criteria'}
+                        </p>
+                      </td>
+                    </tr>
                   )}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             </div>
 
             {preview.totalRows > MAX_PREVIEW_ROWS && (
-              <div className="mt-3 text-center">
+              <div className="mt-2.5 text-center font-body">
                 <p className="text-xs text-muted-foreground">
                   Showing first {MAX_PREVIEW_ROWS} of {preview.totalRows.toLocaleString()} rows
                 </p>
