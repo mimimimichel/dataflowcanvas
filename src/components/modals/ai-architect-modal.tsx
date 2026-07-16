@@ -34,7 +34,7 @@ export default function AIArchitectModal({ isOpen, onClose, onApplyScaffold }: A
       toast({
         variant: "destructive",
         title: "Architect Error",
-        description: "Failed to generate architecture. Please try a different requirement.",
+        description: error instanceof Error ? error.message : "Failed to generate architecture. Please try a different requirement.",
       });
     } finally {
       setIsLoading(false);
