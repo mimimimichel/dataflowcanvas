@@ -131,12 +131,20 @@ const SchemaEditor: React.FC<{ fields: Field[], onFieldsChange: (fields: Field[]
   
   if (!fields || fields.length === 0) {
     return (
-      <div className="p-3 text-center text-xs text-muted-foreground bg-muted/20 rounded border border-dashed">
-        No fields defined{isEditable && ' — Add one below'}
+      <div className="space-y-2">
+        <div className="p-3 text-center text-xs text-muted-foreground bg-muted/20 rounded border border-dashed">
+          No fields defined{isEditable && ' — Add one below'}
+        </div>
+        {isEditable && (
+          <Button variant="outline" size="sm" onClick={addField} className="w-full h-7 text-xs">
+            <PlusCircle className="mr-1 w-3 h-3" />
+            Add Field
+          </Button>
+        )}
       </div>
     );
   }
-  
+
   return (
     <div className="space-y-2">
       <UiTable>
