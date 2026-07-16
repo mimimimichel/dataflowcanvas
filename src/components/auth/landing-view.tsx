@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { GitBranch, Sparkles, Terminal, ShieldCheck, ArrowRight, Play, FileText, ArrowUpRight } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import { initiateEmailSignIn, initiateEmailSignUp } from '@/firebase/non-blocking-login';
@@ -84,16 +85,19 @@ export default function LandingView({ onEnterDemo }: LandingViewProps) {
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const authCardRef = useRef<HTMLDivElement>(null);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
 
-  // The auth form lives at the bottom of a long landing page — just flipping
-  // isSignUp is invisible from up here, so scroll it into view and focus it.
-  const goToAuthForm = (signUp: boolean) => {
+  const openAuth = (signUp: boolean) => {
     setIsSignUp(signUp);
-    authCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    window.setTimeout(() => {
-      authCardRef.current?.querySelector('input')?.focus();
-    }, 400);
+    setIsAuthOpen(true);
+  };
+
+  const handleAuthOpenChange = (open: boolean) => {
+    setIsAuthOpen(open);
+    if (!open) {
+      setEmail('');
+      setPassword('');
+    }
   };
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -109,6 +113,7 @@ export default function LandingView({ onEnterDemo }: LandingViewProps) {
         await withTimeout(initiateEmailSignIn(auth, email, password), 15000);
         toast({ title: "Welcome back", description: "Signing you in..." });
       }
+      setIsAuthOpen(false);
     } catch (error) {
       toast({
         title: isSignUp ? "Couldn't create account" : "Couldn't sign in",
@@ -132,9 +137,8 @@ export default function LandingView({ onEnterDemo }: LandingViewProps) {
         <div className="flex items-center gap-2 sm:gap-3">
           <ThemeToggle className="h-9 w-9" />
           <Button variant="ghost" onClick={onEnterDemo}>Demo Mode</Button>
-          <Button variant="outline" onClick={() => goToAuthForm(!isSignUp)}>
-            {isSignUp ? 'Login' : 'Sign Up'}
-          </Button>
+          <Button variant="outline" className="hidden sm:inline-flex" onClick={() => openAuth(false)}>Login</Button>
+          <Button onClick={() => openAuth(true)}>Sign Up</Button>
         </div>
       </nav>
 
@@ -160,7 +164,7 @@ export default function LandingView({ onEnterDemo }: LandingViewProps) {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <Button size="lg" className="h-11 px-7 gap-2" onClick={() => goToAuthForm(true)}>
+            <Button size="lg" className="h-11 px-7 gap-2" onClick={() => openAuth(true)}>
               Get Started Free <ArrowRight className="h-4 w-4" />
             </Button>
             <Button size="lg" variant="outline" className="h-11 px-7 gap-2" onClick={onEnterDemo}>
@@ -229,49 +233,55 @@ export default function LandingView({ onEnterDemo }: LandingViewProps) {
             </Card>
           ))}
         </div>
-
-        <div ref={authCardRef} className="mt-20 w-full max-w-md scroll-mt-24">
-          <Card className="border-border shadow-none text-left">
-            <CardHeader>
-              <CardTitle>{isSignUp ? 'Create an account' : 'Sign in to your design'}</CardTitle>
-              <CardDescription>Manage your pipeline lineages in one place.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleAuth} className="space-y-4 text-left">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="name@company.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full gap-2" disabled={isSubmitting}>
-                  {isSubmitting ? 'Please wait…' : (isSignUp ? 'Create Account' : 'Sign In')} <ArrowUpRight className="h-4 w-4" />
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
       </main>
 
       <footer className="border-t border-border px-6 sm:px-10 py-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
         <span>Theseus · Visual Pipeline Designer</span>
         <span>&copy; {new Date().getFullYear()} — Built for data teams</span>
       </footer>
+
+      <Dialog open={isAuthOpen} onOpenChange={handleAuthOpenChange}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>{isSignUp ? 'Create an account' : 'Sign in to your design'}</DialogTitle>
+            <DialogDescription>Manage your pipeline lineages in one place.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAuth} className="space-y-4 text-left">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="name@company.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoFocus
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full gap-2" disabled={isSubmitting}>
+              {isSubmitting ? 'Please wait…' : (isSignUp ? 'Create Account' : 'Sign In')} <ArrowUpRight className="h-4 w-4" />
+            </Button>
+            <button
+              type="button"
+              className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
+              onClick={() => setIsSignUp(!isSignUp)}
+            >
+              {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+            </button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
