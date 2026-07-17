@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,9 +11,10 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ShieldCheck, AlertTriangle, AlertOctagon, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { ComplianceAuditResult, ComplianceSeverity } from '@/lib/pipeline-data';
+import { COMPLIANCE_DIMENSION_LABELS, type ComplianceAuditResult, type ComplianceIssue, type ComplianceSeverity } from '@/lib/pipeline-data';
 
 interface ComplianceAuditPanelProps {
   open: boolean;
@@ -37,10 +38,45 @@ const SEVERITY_ICON: Record<ComplianceSeverity, React.ReactNode> = {
 
 const SEVERITY_ORDER: Record<ComplianceSeverity, number> = { critical: 0, warning: 1, info: 2 };
 
+const SEVERITY_TABS: { value: ComplianceSeverity | 'all'; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'critical', label: 'Critical' },
+  { value: 'warning', label: 'Warning' },
+  { value: 'info', label: 'Info' },
+];
+
+function IssueRow({ issue }: { issue: ComplianceIssue }) {
+  return (
+    <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-muted/20 border border-border/50 text-xs">
+      {SEVERITY_ICON[issue.severity]}
+      <span className="text-foreground/90 flex-1">{issue.message}</span>
+      <Badge variant="outline" className="text-[10px] shrink-0 font-normal">
+        {COMPLIANCE_DIMENSION_LABELS[issue.dimension]}
+      </Badge>
+    </div>
+  );
+}
+
 export default function ComplianceAuditPanel({ open, onOpenChange, result }: ComplianceAuditPanelProps) {
+  const [severityTab, setSeverityTab] = useState<ComplianceSeverity | 'all'>('all');
+
+  const sortedIssues = useMemo(() => {
+    if (!result) return [];
+    return [...result.issues].sort((a, b) =>
+      SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] ||
+      COMPLIANCE_DIMENSION_LABELS[a.dimension].localeCompare(COMPLIANCE_DIMENSION_LABELS[b.dimension])
+    );
+  }, [result]);
+
+  const countsBySeverity = useMemo(() => {
+    const counts: Record<ComplianceSeverity, number> = { critical: 0, warning: 0, info: 0 };
+    sortedIssues.forEach(issue => { counts[issue.severity]++; });
+    return counts;
+  }, [sortedIssues]);
+
   if (!result) return null;
 
-  const sortedIssues = [...result.issues].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
+  const visibleIssues = severityTab === 'all' ? sortedIssues : sortedIssues.filter(i => i.severity === severityTab);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -92,14 +128,22 @@ export default function ComplianceAuditPanel({ open, onOpenChange, result }: Com
                   <p className="text-sm text-emerald-600">No issues found — this pipeline is audit-clean.</p>
                 </div>
               ) : (
-                <div className="space-y-1.5">
-                  {sortedIssues.map((issue, idx) => (
-                    <div key={idx} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-muted/20 border border-border/50 text-xs">
-                      {SEVERITY_ICON[issue.severity]}
-                      <span className="text-foreground/90">{issue.message}</span>
-                    </div>
-                  ))}
-                </div>
+                <Tabs value={severityTab} onValueChange={(v) => setSeverityTab(v as ComplianceSeverity | 'all')}>
+                  <TabsList className="w-full justify-start h-9">
+                    {SEVERITY_TABS.map(tab => {
+                      const count = tab.value === 'all' ? sortedIssues.length : countsBySeverity[tab.value];
+                      return (
+                        <TabsTrigger key={tab.value} value={tab.value} disabled={count === 0} className="gap-1.5 text-xs">
+                          {tab.label}
+                          <span className="text-[10px] text-muted-foreground">{count}</span>
+                        </TabsTrigger>
+                      );
+                    })}
+                  </TabsList>
+                  <TabsContent value={severityTab} className="space-y-1.5">
+                    {visibleIssues.map((issue, idx) => <IssueRow key={idx} issue={issue} />)}
+                  </TabsContent>
+                </Tabs>
               )}
             </div>
           </div>
