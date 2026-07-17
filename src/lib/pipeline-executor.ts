@@ -178,7 +178,7 @@ function applyOperation(rows: MockRow[], operation: Operation | undefined): Mock
   }
 }
 
-const MAX_PREVIEW_ROWS = 50;
+export const MAX_PREVIEW_ROWS = 50;
 
 // A source's real uploaded rows (if any) are the ground truth for its preview —
 // only fall back to the keyword-matched demo dataset when nothing has been

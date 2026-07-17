@@ -27,10 +27,10 @@ export async function loadUserWorkspace(
 
 export function saveProject(firestore: Firestore, uid: string, project: Project) {
   const { id, ...data } = project;
-  setDocumentNonBlocking(doc(firestore, 'users', uid, 'projects', id), data, { merge: false });
+  return setDocumentNonBlocking(doc(firestore, 'users', uid, 'projects', id), data, { merge: false });
 }
 
 export function saveLineage(firestore: Firestore, uid: string, lineage: LineageInfo) {
   const { id, ...data } = lineage;
-  setDocumentNonBlocking(doc(firestore, 'users', uid, 'lineages', id), data, { merge: false });
+  return setDocumentNonBlocking(doc(firestore, 'users', uid, 'lineages', id), data, { merge: false });
 }

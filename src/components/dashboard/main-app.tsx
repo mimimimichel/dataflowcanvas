@@ -31,7 +31,7 @@ import {
 import { computeComplianceAudit } from '@/lib/compliance-audit';
 import { layoutPipeline, findFreePosition } from '@/lib/canvas-layout';
 import type { ArchitectOutput } from '@/ai/flows/architect-pipeline-flow';
-import { executePipelinePreview, PipelinePreviewResult, propagateSchema } from '@/lib/pipeline-executor';
+import { executePipelinePreview, PipelinePreviewResult, propagateSchema, MAX_PREVIEW_ROWS } from '@/lib/pipeline-executor';
 import { cn } from '@/lib/utils';
 import ConnectionFieldsModal from '@/components/data-flow/connection-fields-modal';
 import PythonCodeModal from '@/components/modals/python-code-modal';
@@ -197,21 +197,28 @@ export default function MainApp() {
   // Autosave: debounced so a drag gesture or a documentation keystroke doesn't fire
   // a write per frame/character — only the settled state after a short pause is
   // persisted. No-ops until the initial load above has completed for this user.
+  // Failures (e.g. a lineage that grew past Firestore's 1MB document size limit)
+  // are surfaced with a toast — silently swallowing them just reads as "nothing I
+  // do in the canvas actually saves".
   useEffect(() => {
     if (!user || workspaceLoadedForUidRef.current !== user.uid) return;
     const timer = setTimeout(() => {
-      projects.forEach(project => saveProject(firestore, user.uid, project));
+      Promise.all(projects.map(project => saveProject(firestore, user.uid, project))).catch(() => {
+        toast({ title: "Impossible d'enregistrer vos projets", description: "Vérifiez votre connexion et réessayez.", variant: "destructive" });
+      });
     }, 600);
     return () => clearTimeout(timer);
-  }, [projects, user, firestore]);
+  }, [projects, user, firestore, toast]);
 
   useEffect(() => {
     if (!user || workspaceLoadedForUidRef.current !== user.uid) return;
     const timer = setTimeout(() => {
-      lineages.forEach(lineage => saveLineage(firestore, user.uid, lineage));
+      Promise.all(lineages.map(lineage => saveLineage(firestore, user.uid, lineage))).catch(() => {
+        toast({ title: "Impossible d'enregistrer votre pipeline", description: "Vérifiez votre connexion et réessayez.", variant: "destructive" });
+      });
     }, 600);
     return () => clearTimeout(timer);
-  }, [lineages, user, firestore]);
+  }, [lineages, user, firestore, toast]);
 
   const activeProject = useMemo(() =>
     projects.find(p => p.id === activeProjectId),
@@ -1175,10 +1182,14 @@ export default function MainApp() {
   }
 
   function handleDataLoaded(parsedData: ParsedData) {
-    // Inject sampleData into ALL target nodes' corresponding source node first
+    // Inject sampleData into ALL target nodes' corresponding source node first.
+    // Capped to a sample, not the full upload — sampleData gets embedded inline
+    // into the lineage's Firestore document (single-user tool, no separate rows
+    // collection), which has a hard 1MB size limit; an uncapped multi-thousand-row
+    // CSV can blow past that and fail the autosave write silently.
     setNodes(prev => {
       const sourceNodeId = uploadTargetNodeIds[0];
-      return prev.map(n => n.id === sourceNodeId ? { ...n, sampleData: parsedData.rows, inputFields: parsedData.fields, outputFields: parsedData.fields } : n);
+      return prev.map(n => n.id === sourceNodeId ? { ...n, sampleData: parsedData.rows.slice(0, MAX_PREVIEW_ROWS), inputFields: parsedData.fields, outputFields: parsedData.fields } : n);
     });
 
     // Run pipeline transforms
