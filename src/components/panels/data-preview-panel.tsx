@@ -105,10 +105,8 @@ export default function DataPreviewPanel({
     );
   }, [preview, filter]);
 
-  if (!preview) return null;
-
-  const visibleColumns = preview.columns.slice(0, 10);
-  const hiddenColumnCount = preview.columns.length - visibleColumns.length;
+  const visibleColumns = preview ? preview.columns.slice(0, 10) : [];
+  const hiddenColumnCount = preview ? preview.columns.length - visibleColumns.length : 0;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -117,6 +115,16 @@ export default function DataPreviewPanel({
         <div className="shrink-0 flex justify-center pt-2 pb-1">
           <div className="h-1 w-10 rounded-full bg-muted-foreground/20" />
         </div>
+
+        {!preview ? (
+          <div className="px-6 py-10 text-center space-y-1.5 font-body">
+            <SheetTitle className="text-sm font-semibold">{nodeName}</SheetTitle>
+            <SheetDescription className="text-sm">
+              No sample data available for this node yet — upload sample data or define its schema to preview it.
+            </SheetDescription>
+          </div>
+        ) : (
+        <>
 
         {/* Header — flat, information-dense, Foundry-style dataset preview chrome */}
         <div className="shrink-0 px-5 pb-3 border-b bg-muted/30 font-body">
@@ -249,6 +257,8 @@ export default function DataPreviewPanel({
             )}
           </div>
         </ScrollArea>
+        </>
+        )}
       </SheetContent>
     </Sheet>
   );

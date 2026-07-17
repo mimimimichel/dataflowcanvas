@@ -31,7 +31,7 @@ import {
 import { computeComplianceAudit } from '@/lib/compliance-audit';
 import { layoutPipeline, findFreePosition } from '@/lib/canvas-layout';
 import type { ArchitectOutput } from '@/ai/flows/architect-pipeline-flow';
-import { executePipelinePreview, PipelinePreviewResult } from '@/lib/pipeline-executor';
+import { executePipelinePreview, PipelinePreviewResult, propagateSchema } from '@/lib/pipeline-executor';
 import { cn } from '@/lib/utils';
 import ConnectionFieldsModal from '@/components/data-flow/connection-fields-modal';
 import PythonCodeModal from '@/components/modals/python-code-modal';
@@ -346,7 +346,7 @@ export default function MainApp() {
 
   const handleApplyTemplate = (template: PipelineTemplate) => {
     const { connectors } = template;
-    const nodes = layoutPipeline(template.nodes, connectors);
+    const nodes = propagateSchema(layoutPipeline(template.nodes, connectors), connectors);
     setLineages(prev => prev.map(l =>
       l.id === activeLineageId
         ? { ...l, versions: l.versions.map(v =>
@@ -361,8 +361,9 @@ export default function MainApp() {
   const handleImportPipeline = useCallback((data: any) => {
     if (!data?.nodes?.length) return;
     const hasPositions = data.nodes.every((n: any) => n.position);
-    const importedNodes = hasPositions ? data.nodes : layoutPipeline(data.nodes, data.connectors || []);
+    const laidOutImportedNodes = hasPositions ? data.nodes : layoutPipeline(data.nodes, data.connectors || []);
     const importedConnectors = data.connectors || [];
+    const importedNodes = propagateSchema(laidOutImportedNodes, importedConnectors);
     const importedGroups = data.groups || [];
     setLineages(prev => prev.map(l =>
       l.id === activeLineageId
@@ -410,7 +411,7 @@ export default function MainApp() {
       ];
     }
 
-    const laidOutNodes = layoutPipeline(scaffoldNodes, scaffoldConnectors);
+    const laidOutNodes = propagateSchema(layoutPipeline(scaffoldNodes, scaffoldConnectors), scaffoldConnectors);
 
     setLineages(prev => prev.map(l =>
       l.id === activeLineageId

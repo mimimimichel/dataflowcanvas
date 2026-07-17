@@ -1,7 +1,31 @@
 // Simulate pipeline data flow — applies mock transformations to preview data
 import type { MockRow, MockDataset } from '@/lib/mock-data';
 import { getMockDataForNode } from '@/lib/mock-data';
-import type { PipelineNode, Connector, Operation } from '@/lib/pipeline-data';
+import type { PipelineNode, Connector, Operation, Field } from '@/lib/pipeline-data';
+
+// Fills in each node's inputFields from its upstream neighbors' outputFields, for
+// nodes that don't already have fields of their own (never overwrites an existing
+// schema — e.g. one a user built by hand with the SchemaEditor or the manual
+// connect-drag flow). Templates, imported pipelines and AI scaffolds only carry
+// outputFields per node (the schema a node produces); without this, every
+// downstream node whose overview reads inputFields (destinations, datasets,
+// pass-through transforms) renders as if it had no schema at all, even though its
+// upstream nodes clearly define one.
+export function propagateSchema(nodes: PipelineNode[], connectors: Connector[]): PipelineNode[] {
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
+  return nodes.map(node => {
+    if (node.inputFields?.length) return node;
+
+    const upstreamFields = new Map<string, Field>();
+    connectors.filter(c => c.to === node.id).forEach(c => {
+      nodeMap.get(c.from)?.outputFields?.forEach(f => upstreamFields.set(f.name, f));
+    });
+    if (upstreamFields.size === 0) return node;
+
+    const inputFields = Array.from(upstreamFields.values());
+    return { ...node, inputFields, outputFields: node.outputFields?.length ? node.outputFields : inputFields };
+  });
+}
 
 // Trace upstream to find source data for any node
 export function getUpstreamSource(nodeId: string, nodes: PipelineNode[], connectors: Connector[]): PipelineNode | null {

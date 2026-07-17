@@ -127,8 +127,10 @@ export function getMockDataForNode(nodeName: string, nodeType: string): MockData
     if (name.includes('flight') || name.includes('vol') || name.includes('aircraft') || name.includes('departure') || name.includes('delay')) return mockFlightOps;
     if (name.includes('maintenance') || name.includes('sensor') || name.includes('asset') || name.includes('engine') || name.includes('pump')) return mockMaintenanceData;
     if (name.includes('supply') || name.includes('shipment') || name.includes('warehouse') || name.includes('inventory') || name.includes('物流')) return mockSupplyChain;
-    // Generic source fallback
-    return mockCustomerDB;
+    // No mock dataset matches this source's name — better to show nothing than to
+    // silently pass off an unrelated dataset (e.g. customer records) as this node's
+    // sample data.
+    return null;
   }
 
   // For transformations/destinations — data comes from upstream (executor handles this)
