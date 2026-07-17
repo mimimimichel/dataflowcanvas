@@ -59,7 +59,8 @@ import { useToast } from '@/hooks/use-toast';
 import {
   ZoomIn, ZoomOut, RotateCcw, Crosshair, Keyboard,
   MousePointer2, BoxSelect, Trash2, Group, Square,
-  LayoutDashboard, Boxes, Workflow, Wand2, Layers
+  LayoutDashboard, Boxes, Workflow, Wand2, Layers,
+  Undo2, Redo2
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -117,6 +118,18 @@ const ShortcutLegend = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
               <Trash2 className="h-3 w-3" /> Suppr / Backspace
             </div>
             <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground border border-border">Supprimer</span>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+              <Undo2 className="h-3 w-3" /> Ctrl + Z
+            </div>
+            <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground border border-border">Annuler</span>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+              <Redo2 className="h-3 w-3" /> Ctrl + Maj + Z
+            </div>
+            <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground border border-border">Rétablir</span>
           </div>
         </div>
       </div>
@@ -303,16 +316,86 @@ export default function MainApp() {
   }, [nodes, connectors, setNodes]);
 
   const setGroups = useCallback((updater: React.SetStateAction<NodeGroup[]>) => {
-    setLineages(currentLineages => currentLineages.map(l => 
+    setLineages(currentLineages => currentLineages.map(l =>
       l.id === activeLineageId ? {
         ...l,
-        versions: l.versions.map(v => v.id === activeVersionId ? { 
-          ...v, 
-          groups: typeof updater === 'function' ? updater(v.groups || []) : updater 
+        versions: l.versions.map(v => v.id === activeVersionId ? {
+          ...v,
+          groups: typeof updater === 'function' ? updater(v.groups || []) : updater
         } : v)
       } : l
     ));
   }, [activeLineageId, activeVersionId]);
+
+  const setCanvasSnapshot = useCallback((snapshot: { nodes: PipelineNode[]; connectors: ConnectorType[]; groups: NodeGroup[] }) => {
+    setLineages(currentLineages => currentLineages.map(l =>
+      l.id === activeLineageId ? {
+        ...l,
+        versions: l.versions.map(v => v.id === activeVersionId ? { ...v, ...snapshot } : v)
+      } : l
+    ));
+  }, [activeLineageId, activeVersionId]);
+
+  // Undo/redo: past/future stacks of settled { nodes, connectors, groups } snapshots
+  // for the version currently being edited. Recording is debounced against a
+  // "last known settled snapshot" ref rather than wired into every individual
+  // mutation call site (drag, delete, connect, config save, template apply, ...) —
+  // a multi-step edit (e.g. a drag) becomes one undo step, and propagateSchema's
+  // own corrective re-render right after a real edit gets folded into the same
+  // settle instead of becoming a spurious extra step.
+  const [historyPast, setHistoryPast] = useState<{ nodes: PipelineNode[]; connectors: ConnectorType[]; groups: NodeGroup[] }[]>([]);
+  const [historyFuture, setHistoryFuture] = useState<{ nodes: PipelineNode[]; connectors: ConnectorType[]; groups: NodeGroup[] }[]>([]);
+  const lastSnapshotRef = useRef<{ nodes: PipelineNode[]; connectors: ConnectorType[]; groups: NodeGroup[] } | null>(null);
+  const isUndoRedoRef = useRef(false);
+  const MAX_HISTORY = 50;
+
+  // Switching to a different lineage/version is navigation, not an edit — undo
+  // must never reach back into an unrelated pipeline's history.
+  useEffect(() => {
+    setHistoryPast([]);
+    setHistoryFuture([]);
+    lastSnapshotRef.current = { nodes, connectors, groups };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeLineageId, activeVersionId]);
+
+  useEffect(() => {
+    if (isUndoRedoRef.current) {
+      isUndoRedoRef.current = false;
+      lastSnapshotRef.current = { nodes, connectors, groups };
+      return;
+    }
+    const timer = setTimeout(() => {
+      const prev = lastSnapshotRef.current;
+      if (prev && (prev.nodes !== nodes || prev.connectors !== connectors || prev.groups !== groups)) {
+        setHistoryPast(past => [...past.slice(-(MAX_HISTORY - 1)), prev]);
+        setHistoryFuture([]);
+      }
+      lastSnapshotRef.current = { nodes, connectors, groups };
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [nodes, connectors, groups]);
+
+  const handleUndo = useCallback(() => {
+    setHistoryPast(past => {
+      if (past.length === 0) return past;
+      const previous = past[past.length - 1];
+      setHistoryFuture(future => [...future, { nodes, connectors, groups }]);
+      isUndoRedoRef.current = true;
+      setCanvasSnapshot(previous);
+      return past.slice(0, -1);
+    });
+  }, [nodes, connectors, groups, setCanvasSnapshot]);
+
+  const handleRedo = useCallback(() => {
+    setHistoryFuture(future => {
+      if (future.length === 0) return future;
+      const next = future[future.length - 1];
+      setHistoryPast(past => [...past, { nodes, connectors, groups }]);
+      isUndoRedoRef.current = true;
+      setCanvasSnapshot(next);
+      return future.slice(0, -1);
+    });
+  }, [nodes, connectors, groups, setCanvasSnapshot]);
 
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
@@ -1234,11 +1317,16 @@ export default function MainApp() {
   
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.key === 'Delete' || e.key === 'Backspace') && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) handleDeleteSelected();
+      const isTyping = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+      if ((e.key === 'Delete' || e.key === 'Backspace') && !isTyping) handleDeleteSelected();
       if (e.key.toLowerCase() === 'g' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); handleCreateGroup(); }
+      if (e.key.toLowerCase() === 'z' && (e.metaKey || e.ctrlKey) && !isTyping) {
+        e.preventDefault();
+        if (e.shiftKey) handleRedo(); else handleUndo();
+      }
     };
     window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleDeleteSelected, handleCreateGroup]);
+  }, [handleDeleteSelected, handleCreateGroup, handleUndo, handleRedo]);
 
   const getGroupDepth = useCallback((groupId: string | undefined): number => {
     if (!groupId) return 0;
@@ -1391,6 +1479,9 @@ export default function MainApp() {
                 onPointerDown={(e) => e.stopPropagation()}
               >
                   <TooltipProvider>
+                      <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" disabled={historyPast.length === 0} onClick={handleUndo} className="h-9 w-9 rounded-xl hover:bg-muted disabled:opacity-30"><Undo2 className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Annuler (Ctrl+Z)</TooltipContent></Tooltip>
+                      <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" disabled={historyFuture.length === 0} onClick={handleRedo} className="h-9 w-9 rounded-xl hover:bg-muted disabled:opacity-30"><Redo2 className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Rétablir (Ctrl+Maj+Z)</TooltipContent></Tooltip>
+                      <div className="w-px h-4 bg-border mx-1" />
                       <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" onClick={() => setIsDrawMode(!isDrawMode)} className={cn("h-9 w-9 rounded-xl", isDrawMode ? "bg-primary text-primary-foreground" : "hover:bg-muted")}><Square className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Dessiner Zone</TooltipContent></Tooltip>
                       <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" onClick={handleCreateGroup} className="h-9 w-9 rounded-xl hover:bg-muted"><Boxes className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Grouper (Ctrl+G)</TooltipContent></Tooltip>
                       <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" onClick={handleAutoLayout} className="h-9 w-9 rounded-xl hover:bg-muted"><LayoutDashboard className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="top">Auto Layout</TooltipContent></Tooltip>

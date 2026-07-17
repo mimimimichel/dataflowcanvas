@@ -235,8 +235,19 @@ export default function LandingView({ onEnterDemo }: LandingViewProps) {
         </div>
       </main>
 
-      <footer className="border-t border-border px-6 sm:px-10 py-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+      <footer className="border-t border-border px-6 sm:px-10 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
         <span>Theseus · Visual Pipeline Designer</span>
+        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+          <span>Édité par Studio Initiative</span>
+          <a
+            href="https://studio-initiative.vercel.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 normal-case tracking-normal font-semibold text-foreground/70 hover:text-primary transition-colors"
+          >
+            Besoin d'un expert ? <ArrowUpRight className="h-3 w-3" />
+          </a>
+        </div>
         <span>&copy; {new Date().getFullYear()} — Built for data teams</span>
       </footer>
 
