@@ -210,56 +210,53 @@ export default function MainApp() {
   // Autosave: debounced so a drag gesture or a documentation keystroke doesn't fire
   // a write per frame/character — only the settled state after a short pause is
   // persisted. No-ops until the initial load above has completed for this user.
-  // Failures (e.g. a lineage that grew past Firestore's 1MB document size limit)
-  // are surfaced with a toast — silently swallowing them just reads as "nothing I
-  // do in the canvas actually saves".
-  useEffect(() => {
-    if (!user || workspaceLoadedForUidRef.current !== user.uid) return;
-    const timer = setTimeout(() => {
-      Promise.all(projects.map(project => saveProject(firestore, user.uid, project))).catch(() => {
-        toast({ title: "Impossible d'enregistrer vos projets", description: "Vérifiez votre connexion et réessayez.", variant: "destructive" });
-      });
-    }, 600);
-    return () => clearTimeout(timer);
-  }, [projects, user, firestore, toast]);
-
-  useEffect(() => {
-    if (!user || workspaceLoadedForUidRef.current !== user.uid) return;
-    const timer = setTimeout(() => {
-      Promise.all(lineages.map(lineage => saveLineage(firestore, user.uid, lineage))).catch(() => {
-        toast({ title: "Impossible d'enregistrer votre pipeline", description: "Vérifiez votre connexion et réessayez.", variant: "destructive" });
-      });
-    }, 600);
-    return () => clearTimeout(timer);
-  }, [lineages, user, firestore, toast]);
-
-  // The debounced autosave above only fires 600ms after edits settle — if the tab
-  // is closed, reloaded, or navigated away from before that timer runs, it never
-  // fires at all and the last burst of edits is silently lost (no crash, no error,
-  // it just reads as "my work is never saved" on the next visit). refs keep this
-  // listener seeing the latest projects/lineages without re-registering on every
-  // edit; visibilitychange fires reliably (including on mobile backgrounding)
-  // well before pagehide/unload, while there's still time left to fire the writes.
+  // saveStatus drives the header indicator; failures (e.g. a lineage that grew
+  // past Firestore's 1MB document size limit) are also surfaced with a toast —
+  // silently swallowing them just reads as "nothing I do in the canvas saves".
+  type SaveStatus = 'saved' | 'unsaved' | 'saving' | 'error';
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const projectsRef = useRef(projects);
   const lineagesRef = useRef(lineages);
   useEffect(() => { projectsRef.current = projects; }, [projects]);
   useEffect(() => { lineagesRef.current = lineages; }, [lineages]);
 
+  const persistWorkspace = useCallback(() => {
+    if (!user || workspaceLoadedForUidRef.current !== user.uid) return Promise.resolve();
+    setSaveStatus('saving');
+    return Promise.all([
+      ...projectsRef.current.map(project => saveProject(firestore, user.uid, project)),
+      ...lineagesRef.current.map(lineage => saveLineage(firestore, user.uid, lineage)),
+    ])
+      .then(() => setSaveStatus('saved'))
+      .catch(() => {
+        setSaveStatus('error');
+        toast({ title: "Impossible d'enregistrer", description: "Vérifiez votre connexion et réessayez.", variant: "destructive" });
+      });
+  }, [user, firestore, toast]);
+
+  useEffect(() => {
+    if (!user || workspaceLoadedForUidRef.current !== user.uid) return;
+    setSaveStatus('unsaved');
+    const timer = setTimeout(persistWorkspace, 600);
+    return () => clearTimeout(timer);
+  }, [projects, lineages, user, persistWorkspace]);
+
+  // The debounce above only fires 600ms after edits settle — if the tab is
+  // closed, reloaded, or navigated away from before that timer runs, it never
+  // fires at all and the last burst of edits is silently lost (no crash, no
+  // error, it just reads as "my work is never saved" on the next visit).
+  // visibilitychange fires reliably (including on mobile backgrounding) well
+  // before pagehide/unload, while there's still time left for the write to go out.
   useEffect(() => {
     if (!user) return;
-    const flush = () => {
-      if (workspaceLoadedForUidRef.current !== user.uid) return;
-      projectsRef.current.forEach(project => saveProject(firestore, user.uid, project));
-      lineagesRef.current.forEach(lineage => saveLineage(firestore, user.uid, lineage));
-    };
-    const handleVisibilityChange = () => { if (document.visibilityState === 'hidden') flush(); };
+    const handleVisibilityChange = () => { if (document.visibilityState === 'hidden') persistWorkspace(); };
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('pagehide', flush);
+    window.addEventListener('pagehide', persistWorkspace);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('pagehide', flush);
+      window.removeEventListener('pagehide', persistWorkspace);
     };
-  }, [user, firestore]);
+  }, [user, persistWorkspace]);
 
   const activeProject = useMemo(() =>
     projects.find(p => p.id === activeProjectId),
@@ -1427,7 +1424,7 @@ export default function MainApp() {
 
   return (
     <div className="flex h-dvh w-full flex-col bg-background font-body overflow-hidden">
-      <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage?.versions || []} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onDeliverables={() => setIsDeliverablesHubOpen(true)} onAudit={handleAudit} auditGrade={liveAudit?.grade} auditScore={liveAudit?.score} isArchitectOpen={isArchitectOpen} onArchitectOpenChange={setIsArchitectOpen} onImportPipeline={handleImportPipeline} onApplyScaffold={handleApplyScaffold} onAccountSettings={() => setIsAccountOpen(true)} onShare={() => setIsShareOpen(true)} onTemplates={() => setIsTemplateMarketplaceOpen(true)} activeView={activeView} onViewChange={setActiveView} />
+      <Header activeLineage={activeLineage} activeVersion={activeVersion} versions={activeLineage?.versions || []} activeVersionId={activeVersionId} onVersionChange={setActiveVersionId} onCreateVersion={handleCreateVersion} onDeliverables={() => setIsDeliverablesHubOpen(true)} onAudit={handleAudit} auditGrade={liveAudit?.grade} auditScore={liveAudit?.score} isArchitectOpen={isArchitectOpen} onArchitectOpenChange={setIsArchitectOpen} onImportPipeline={handleImportPipeline} onApplyScaffold={handleApplyScaffold} onAccountSettings={() => setIsAccountOpen(true)} onShare={() => setIsShareOpen(true)} onTemplates={() => setIsTemplateMarketplaceOpen(true)} activeView={activeView} onViewChange={setActiveView} saveStatus={user ? saveStatus : undefined} onForceSave={persistWorkspace} />
       
       {activeView === 'projects' ? (
         <ProjectsView projects={projects} onSelectProject={handleSelectProject} onCreateProject={handleCreateProject} />

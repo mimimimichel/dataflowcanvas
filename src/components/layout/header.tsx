@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Download, Share2, GitBranch, PlusCircle,
   Library, Settings2, Wand2,
-  Menu, Layers, User, ShieldCheck, Package
+  Menu, Layers, User, ShieldCheck, Package,
+  Check, Circle, Loader2, AlertCircle
 } from 'lucide-react';
 import { PipelineVersion, LineageInfo } from '@/lib/pipeline-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -44,6 +45,9 @@ interface HeaderProps {
   onViewChange: (view: 'dataProductDoc' | 'editor') => void;
   onShare?: () => void;
   onAccountSettings?: () => void;
+  /** Undefined in Demo Mode — there's nothing to save there, so no indicator at all. */
+  saveStatus?: 'saved' | 'unsaved' | 'saving' | 'error';
+  onForceSave?: () => void;
 }
 
 const CreateVersionDialog: React.FC<{
@@ -119,6 +123,8 @@ const Header: React.FC<HeaderProps> = ({
   onViewChange,
   onAccountSettings,
   onShare,
+  saveStatus,
+  onForceSave,
 }) => {
   const [isCreateVersionOpen, setIsCreateVersionOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -238,6 +244,39 @@ const Header: React.FC<HeaderProps> = ({
                 </Button>
               </div>
             </>
+          )}
+
+          {/* Save status */}
+          {saveStatus && activeView === 'editor' && (
+            <button
+              type="button"
+              onClick={saveStatus === 'unsaved' || saveStatus === 'error' ? onForceSave : undefined}
+              disabled={saveStatus === 'saving' || saveStatus === 'saved'}
+              className={cn(
+                "flex items-center gap-1.5 h-8 px-2 sm:px-2.5 rounded-md text-xs font-medium transition-colors shrink-0",
+                saveStatus === 'saved' && "text-muted-foreground",
+                saveStatus === 'unsaved' && "text-amber-600 hover:bg-amber-500/10 cursor-pointer",
+                saveStatus === 'saving' && "text-muted-foreground",
+                saveStatus === 'error' && "text-red-500 hover:bg-red-500/10 cursor-pointer"
+              )}
+              title={
+                saveStatus === 'saved' ? 'Toutes les modifications sont enregistrées'
+                  : saveStatus === 'unsaved' ? 'Modifications non enregistrées — cliquer pour enregistrer maintenant'
+                  : saveStatus === 'saving' ? 'Enregistrement en cours…'
+                  : "Échec de l'enregistrement — cliquer pour réessayer"
+              }
+            >
+              {saveStatus === 'saved' && <Check className="h-3.5 w-3.5" />}
+              {saveStatus === 'unsaved' && <Circle className="h-2 w-2 fill-current" />}
+              {saveStatus === 'saving' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              {saveStatus === 'error' && <AlertCircle className="h-3.5 w-3.5" />}
+              <span className="hidden sm:inline">
+                {saveStatus === 'saved' && 'Enregistré'}
+                {saveStatus === 'unsaved' && 'Non enregistré'}
+                {saveStatus === 'saving' && 'Enregistrement…'}
+                {saveStatus === 'error' && 'Erreur'}
+              </span>
+            </button>
           )}
 
           {/* Theme selector */}
