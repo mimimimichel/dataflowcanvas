@@ -1,30 +1,66 @@
 // Simulate pipeline data flow — applies mock transformations to preview data
 import type { MockRow, MockDataset } from '@/lib/mock-data';
 import { getMockDataForNode } from '@/lib/mock-data';
-import type { PipelineNode, Connector, Operation, Field } from '@/lib/pipeline-data';
+import { deriveOutputFields, type PipelineNode, type Connector, type Operation, type Field } from '@/lib/pipeline-data';
 
-// Fills in each node's inputFields from its upstream neighbors' outputFields, for
-// nodes that don't already have fields of their own (never overwrites an existing
-// schema — e.g. one a user built by hand with the SchemaEditor or the manual
-// connect-drag flow). Templates, imported pipelines and AI scaffolds only carry
-// outputFields per node (the schema a node produces); without this, every
-// downstream node whose overview reads inputFields (destinations, datasets,
-// pass-through transforms) renders as if it had no schema at all, even though its
-// upstream nodes clearly define one.
+function fieldsEqual(a: Field[] = [], b: Field[] = []): boolean {
+  return a.length === b.length && a.every((f, i) => f.name === b[i].name && f.type === b[i].type);
+}
+
+// Topological order (sources first) so each node's inputFields is derived after
+// every node feeding into it has already had its own outputFields resolved.
+// Falls back to array order for any node caught in a cycle, rather than looping.
+function topoOrder(nodes: PipelineNode[], connectors: Connector[]): PipelineNode[] {
+  const levels = new Map<string, number>();
+  const visiting = new Set<string>();
+
+  function levelOf(nodeId: string): number {
+    if (levels.has(nodeId)) return levels.get(nodeId)!;
+    if (visiting.has(nodeId)) return 0; // cycle guard
+    visiting.add(nodeId);
+    const incoming = connectors.filter(c => c.to === nodeId);
+    const level = incoming.length === 0 ? 0 : Math.max(...incoming.map(c => levelOf(c.from))) + 1;
+    visiting.delete(nodeId);
+    levels.set(nodeId, level);
+    return level;
+  }
+
+  return [...nodes].sort((a, b) => levelOf(a.id) - levelOf(b.id));
+}
+
+// Keeps every node's schema consistent with what actually flows into it: inputFields
+// is always the union of the upstream nodes' outputFields (via the connector graph),
+// and outputFields is re-derived from that using the node's own operation (pass-
+// through, filter, join, group by, select columns...). Source nodes are the one
+// exception — their outputFields is user-authored (SchemaEditor / sample upload),
+// never derived from anything upstream.
+//
+// This is meant to run after every nodes/connectors change so a schema edit
+// anywhere (renaming a field, uploading new sample data, reconfiguring an
+// operation) ripples through the whole downstream chain automatically, not just
+// at the moment two nodes get connected. Returns the same array reference when
+// nothing actually changed, so callers can cheaply no-op on convergence.
 export function propagateSchema(nodes: PipelineNode[], connectors: Connector[]): PipelineNode[] {
   const nodeMap = new Map(nodes.map(n => [n.id, n]));
-  return nodes.map(node => {
-    if (node.inputFields?.length) return node;
+  let changed = false;
+
+  for (const node of topoOrder(nodes, connectors)) {
+    if (node.type === 'source') continue;
 
     const upstreamFields = new Map<string, Field>();
     connectors.filter(c => c.to === node.id).forEach(c => {
       nodeMap.get(c.from)?.outputFields?.forEach(f => upstreamFields.set(f.name, f));
     });
-    if (upstreamFields.size === 0) return node;
-
     const inputFields = Array.from(upstreamFields.values());
-    return { ...node, inputFields, outputFields: node.outputFields?.length ? node.outputFields : inputFields };
-  });
+    const outputFields = deriveOutputFields(node.operation, inputFields, nodes);
+
+    if (!fieldsEqual(inputFields, node.inputFields) || !fieldsEqual(outputFields, node.outputFields)) {
+      nodeMap.set(node.id, { ...node, inputFields, outputFields });
+      changed = true;
+    }
+  }
+
+  return changed ? nodes.map(n => nodeMap.get(n.id)!) : nodes;
 }
 
 // Trace upstream to find source data for any node
@@ -132,6 +168,23 @@ function applyOperation(rows: MockRow[], operation: Operation | undefined): Mock
 
 const MAX_PREVIEW_ROWS = 50;
 
+// A source's real uploaded rows (if any) are the ground truth for its preview —
+// only fall back to the keyword-matched demo dataset when nothing has been
+// uploaded yet. Without this, uploading a CSV updated the node's own schema/row
+// count badge but the preview panel kept showing the unrelated canned dataset.
+function sourceDataFor(node: PipelineNode): MockDataset | null {
+  if (node.sampleData?.length) {
+    return {
+      columns: node.outputFields?.length
+        ? node.outputFields
+        : Object.keys(node.sampleData[0]).map(name => ({ name, type: typeof node.sampleData![0][name] })),
+      rows: node.sampleData as MockRow[],
+      rowCount: node.sampleData.length,
+    };
+  }
+  return getMockDataForNode(node.name, node.type);
+}
+
 export interface PipelinePreviewResult {
   columns: { name: string; type: string }[];
   rows: MockRow[];
@@ -146,9 +199,9 @@ export function executePipelinePreview(nodeId: string, nodes: PipelineNode[], co
   const targetNode = nodes.find(n => n.id === nodeId);
   if (!targetNode) return null;
 
-  // For sources, just show their mock data
+  // For sources, just show their (real or demo) data
   if (targetNode.type === 'source') {
-    const baseData = getMockDataForNode(targetNode.name, targetNode.type);
+    const baseData = sourceDataFor(targetNode);
     if (!baseData) return null;
     return {
       columns: baseData.columns,
@@ -164,8 +217,8 @@ export function executePipelinePreview(nodeId: string, nodes: PipelineNode[], co
   const upstreamSource = getUpstreamSource(nodeId, nodes, connectors);
   if (!upstreamSource) return null;
 
-  // Get mock data from source
-  const baseData = getMockDataForNode(upstreamSource.name, upstreamSource.type);
+  // Get data from source
+  const baseData = sourceDataFor(upstreamSource);
   if (!baseData) return null;
 
   // Build execution chain: source → ... → target

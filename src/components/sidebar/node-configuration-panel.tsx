@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { 
   PipelineNode, Field, Operation, FilterOperation, JoinOperation, 
   GroupByOperation, SortOperation, SelectColumnsOperation, UnionOperation, 
-  DeduplicationOperation, MissingValuesOperation, SqlPatternOperation, getJoinOutputFields, DesignStatus, DataQualityMetrics, Connector as ConnectorType
+  DeduplicationOperation, MissingValuesOperation, SqlPatternOperation, deriveOutputFields, DesignStatus, DataQualityMetrics, Connector as ConnectorType
 } from '@/lib/pipeline-data';
 import { Trash2, PlusCircle, Activity, ShieldCheck, Clock3, ArrowRightLeft, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -270,42 +270,11 @@ const NodeConfigurationPanel: React.FC<NodeConfigurationPanelProps> = ({ node, n
   }
   
   const handleOperationUpdate = (updatedOperation: Operation) => {
-    const newConfig: Partial<PipelineNode> = { operation: updatedOperation };
     const effectiveOperation = { ...displayNode.operation, ...updatedOperation } as Operation;
     const effectiveInputFields = displayNode.inputFields || [];
+    const outputFields = deriveOutputFields(effectiveOperation, effectiveInputFields, nodes);
 
-    // Auto-propagate schema based on operation type
-    const passThroughTypes = ['filter', 'sort', 'union', 'deduplication', 'handle_missing_values', 'no_op', 'normalize_formats', 'fix_typos', 'quality_control', 'standardize_strings'];
-    
-    if (passThroughTypes.includes(effectiveOperation.type)) {
-      newConfig.outputFields = effectiveInputFields;
-    } else if (effectiveOperation.type === 'join') {
-      const joinOp = effectiveOperation as JoinOperation;
-      const leftNode = nodes.find(n => n.id === joinOp.settings.leftNodeId);
-      const rightNode = nodes.find(n => n.id === joinOp.settings.rightNodeId);
-      if (leftNode && rightNode) {
-        newConfig.outputFields = getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType);
-      }
-    } else if (effectiveOperation.type === 'group_by') {
-      const groupOp = effectiveOperation as GroupByOperation;
-      const newOutputFields: Field[] = [];
-      (groupOp.settings.groupByFields || []).forEach(fieldName => {
-          const field = effectiveInputFields.find(f => f.name === fieldName);
-          if(field) newOutputFields.push(field);
-      });
-      (groupOp.settings.aggregations || []).forEach(agg => {
-          const originalField = effectiveInputFields.find(f => f.name === agg.field);
-          newOutputFields.push({ name: agg.newName, type: originalField?.type || 'unknown' });
-      });
-      newConfig.outputFields = newOutputFields;
-    } else if (effectiveOperation.type === 'select_columns') {
-      const selectOp = effectiveOperation as SelectColumnsOperation;
-      newConfig.outputFields = effectiveInputFields.filter(f => selectOp.settings.selectedFields?.includes(f.name));
-    } else {
-        newConfig.outputFields = effectiveInputFields;
-    }
-    
-    setDraftNode(prev => ({ ...prev, ...newConfig }));
+    setDraftNode(prev => ({ ...prev, operation: updatedOperation, outputFields }));
   }
   
   const renderOperationEditor = () => {

@@ -173,6 +173,8 @@ export interface PipelineNode {
   outputFields?: Field[];
   operation?: Operation;
   groupId?: string;
+  /** Real rows uploaded for this source node — takes priority over the demo mock dataset in previews. */
+  sampleData?: Record<string, unknown>[];
 }
 
 export interface NodeGroup {
@@ -272,6 +274,46 @@ export function getJoinOutputFields(leftNode: PipelineNode, rightNode: PipelineN
         default:
              return [...leftFields, ...rightFields];
     }
+}
+
+const SCHEMA_PASSTHROUGH_OPERATION_TYPES = [
+  'filter', 'sort', 'union', 'deduplication', 'handle_missing_values',
+  'no_op', 'normalize_formats', 'fix_typos', 'quality_control', 'standardize_strings',
+];
+
+/** What a node emits, given what flows into it and how its operation (if any) reshapes it. */
+export function deriveOutputFields(operation: Operation | undefined, inputFields: Field[], nodes: PipelineNode[]): Field[] {
+    if (!operation) return inputFields;
+
+    if (SCHEMA_PASSTHROUGH_OPERATION_TYPES.includes(operation.type)) return inputFields;
+
+    if (operation.type === 'join') {
+        const joinOp = operation as JoinOperation;
+        const leftNode = nodes.find(n => n.id === joinOp.settings.leftNodeId);
+        const rightNode = nodes.find(n => n.id === joinOp.settings.rightNodeId);
+        return leftNode && rightNode ? getJoinOutputFields(leftNode, rightNode, joinOp.settings.joinType) : inputFields;
+    }
+
+    if (operation.type === 'group_by') {
+        const groupOp = operation as GroupByOperation;
+        const outputFields: Field[] = [];
+        (groupOp.settings.groupByFields || []).forEach(fieldName => {
+            const field = inputFields.find(f => f.name === fieldName);
+            if (field) outputFields.push(field);
+        });
+        (groupOp.settings.aggregations || []).forEach(agg => {
+            const originalField = inputFields.find(f => f.name === agg.field);
+            outputFields.push({ name: agg.newName, type: originalField?.type || 'unknown' });
+        });
+        return outputFields;
+    }
+
+    if (operation.type === 'select_columns') {
+        const selectOp = operation as SelectColumnsOperation;
+        return inputFields.filter(f => selectOp.settings.selectedFields?.includes(f.name));
+    }
+
+    return inputFields;
 }
 
 export const initialNodes: PipelineNode[] = [

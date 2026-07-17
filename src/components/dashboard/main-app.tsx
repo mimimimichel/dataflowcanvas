@@ -273,16 +273,27 @@ export default function MainApp() {
   }, [activeLineageId, activeVersionId]);
   
   const setConnectors = useCallback((updater: React.SetStateAction<ConnectorType[]>) => {
-    setLineages(currentLineages => currentLineages.map(l => 
+    setLineages(currentLineages => currentLineages.map(l =>
       l.id === activeLineageId ? {
         ...l,
-        versions: l.versions.map(v => v.id === activeVersionId ? { 
-          ...v, 
-          connectors: typeof updater === 'function' ? updater(v.connectors) : updater 
+        versions: l.versions.map(v => v.id === activeVersionId ? {
+          ...v,
+          connectors: typeof updater === 'function' ? updater(v.connectors) : updater
         } : v)
       } : l
     ));
   }, [activeLineageId, activeVersionId]);
+
+  // Keeps every node's schema in sync with its upstream neighbors: renaming a
+  // field, re-uploading sample data, or reconfiguring an operation anywhere in the
+  // pipeline ripples downstream automatically instead of leaving stale fields on
+  // every node after the one that changed. propagateSchema returns the same array
+  // reference when nothing actually changed, so this converges after one
+  // corrective render instead of looping.
+  useEffect(() => {
+    const propagated = propagateSchema(nodes, connectors);
+    if (propagated !== nodes) setNodes(propagated);
+  }, [nodes, connectors, setNodes]);
 
   const setGroups = useCallback((updater: React.SetStateAction<NodeGroup[]>) => {
     setLineages(currentLineages => currentLineages.map(l => 
