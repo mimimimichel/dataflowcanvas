@@ -233,6 +233,34 @@ export default function MainApp() {
     return () => clearTimeout(timer);
   }, [lineages, user, firestore, toast]);
 
+  // The debounced autosave above only fires 600ms after edits settle — if the tab
+  // is closed, reloaded, or navigated away from before that timer runs, it never
+  // fires at all and the last burst of edits is silently lost (no crash, no error,
+  // it just reads as "my work is never saved" on the next visit). refs keep this
+  // listener seeing the latest projects/lineages without re-registering on every
+  // edit; visibilitychange fires reliably (including on mobile backgrounding)
+  // well before pagehide/unload, while there's still time left to fire the writes.
+  const projectsRef = useRef(projects);
+  const lineagesRef = useRef(lineages);
+  useEffect(() => { projectsRef.current = projects; }, [projects]);
+  useEffect(() => { lineagesRef.current = lineages; }, [lineages]);
+
+  useEffect(() => {
+    if (!user) return;
+    const flush = () => {
+      if (workspaceLoadedForUidRef.current !== user.uid) return;
+      projectsRef.current.forEach(project => saveProject(firestore, user.uid, project));
+      lineagesRef.current.forEach(lineage => saveLineage(firestore, user.uid, lineage));
+    };
+    const handleVisibilityChange = () => { if (document.visibilityState === 'hidden') flush(); };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', flush);
+    };
+  }, [user, firestore]);
+
   const activeProject = useMemo(() =>
     projects.find(p => p.id === activeProjectId),
   [projects, activeProjectId]);
