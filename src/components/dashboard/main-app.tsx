@@ -240,6 +240,22 @@ export default function MainApp() {
     activeLineage?.versions.find(v => v.id === activeVersionId) || activeLineage?.versions[0],
   [activeLineage, activeVersionId]);
 
+  // activeLineage/activeVersion silently fall back to the first lineage/version whenever
+  // the id state doesn't match anything (e.g. right after a Firestore reload, whose loaded
+  // lineages never have 'lineage-1' — the id state's initial value — among their ids; or
+  // after jumping straight to the editor tab without going through lineage selection).
+  // Every mutation below is keyed on the raw id state, not the resolved fallback, so
+  // without this the canvas can display and let you interact with a lineage/version while
+  // every edit (including the AI Architect's scaffold) silently writes to an id that
+  // doesn't exist in `lineages` and is dropped — the UI still shows a success toast.
+  useEffect(() => {
+    if (activeLineage && activeLineage.id !== activeLineageId) setActiveLineageId(activeLineage.id);
+  }, [activeLineage, activeLineageId]);
+
+  useEffect(() => {
+    if (activeVersion && activeVersion.id !== activeVersionId) setActiveVersionId(activeVersion.id);
+  }, [activeVersion, activeVersionId]);
+
   const nodes = activeVersion?.nodes || [];
   const connectors = activeVersion?.connectors || [];
   const groups = activeVersion?.groups || [];
