@@ -1,7 +1,7 @@
 // Simulate pipeline data flow — applies mock transformations to preview data
 import type { MockRow, MockDataset } from '@/lib/mock-data';
 import { getMockDataForNode } from '@/lib/mock-data';
-import { deriveOutputFields, type PipelineNode, type Connector, type Operation, type Field } from '@/lib/pipeline-data';
+import { deriveOutputFields, type PipelineNode, type Connector, type Operation, type Field, type JoinOperation } from '@/lib/pipeline-data';
 
 function fieldsEqual(a: Field[] = [], b: Field[] = []): boolean {
   return a.length === b.length && a.every((f, i) => f.name === b[i].name && f.type === b[i].type);
@@ -59,15 +59,45 @@ export function propagateSchema(nodes: PipelineNode[], connectors: Connector[]):
       continue;
     }
 
+    const incoming = connectors.filter(c => c.to === node.id);
     const upstreamFields = new Map<string, Field>();
-    connectors.filter(c => c.to === node.id).forEach(c => {
+    incoming.forEach(c => {
       nodeMap.get(c.from)?.outputFields?.forEach(f => upstreamFields.set(f.name, f));
     });
     const inputFields = Array.from(upstreamFields.values());
-    const outputFields = deriveOutputFields(node.operation, inputFields, nodes);
 
-    if (!fieldsEqual(inputFields, node.inputFields) || !fieldsEqual(outputFields, node.outputFields)) {
-      nodeMap.set(node.id, { ...node, inputFields, outputFields });
+    // A join's left/right side is never set by any UI control — the operation
+    // editor only lets you pick the join type and the field condition, given
+    // leftNode/rightNode as already-resolved props. Nothing else in the app ever
+    // assigns leftNodeId/rightNodeId, so connecting two sources to a manually
+    // added Join left it permanently stuck on "Connect two sources to this node
+    // to configure the join parameters." even after they were connected. Derive
+    // them from the node's own incoming connectors instead, keeping whichever
+    // side is already validly connected so reconfiguring one side doesn't flip
+    // the other.
+    let operation = node.operation;
+    if (operation?.type === 'join') {
+      const joinOp = operation as JoinOperation;
+      const incomingIds = incoming.map(c => c.from);
+      const usedIds = new Set<string>();
+      let leftNodeId = incomingIds.includes(joinOp.settings.leftNodeId) ? joinOp.settings.leftNodeId : undefined;
+      if (leftNodeId) usedIds.add(leftNodeId);
+      let rightNodeId = incomingIds.includes(joinOp.settings.rightNodeId) && !usedIds.has(joinOp.settings.rightNodeId)
+        ? joinOp.settings.rightNodeId : undefined;
+      if (rightNodeId) usedIds.add(rightNodeId);
+      const remaining = incomingIds.filter(id => !usedIds.has(id));
+      if (!leftNodeId) leftNodeId = remaining.shift();
+      if (!rightNodeId) rightNodeId = remaining.shift();
+
+      if ((leftNodeId || '') !== joinOp.settings.leftNodeId || (rightNodeId || '') !== joinOp.settings.rightNodeId) {
+        operation = { ...joinOp, settings: { ...joinOp.settings, leftNodeId: leftNodeId || '', rightNodeId: rightNodeId || '' } };
+      }
+    }
+
+    const outputFields = deriveOutputFields(operation, inputFields, nodes);
+
+    if (!fieldsEqual(inputFields, node.inputFields) || !fieldsEqual(outputFields, node.outputFields) || operation !== node.operation) {
+      nodeMap.set(node.id, { ...node, operation, inputFields, outputFields });
       changed = true;
     }
   }
