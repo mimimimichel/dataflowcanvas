@@ -45,7 +45,19 @@ export function propagateSchema(nodes: PipelineNode[], connectors: Connector[]):
   let changed = false;
 
   for (const node of topoOrder(nodes, connectors)) {
+    // Sources' outputFields and datasets' inputFields ("Dataset Schema" in the
+    // config panel) are the two user-authored schemas in the app — never derive
+    // over them, or a manual edit gets silently reverted on the next render.
     if (node.type === 'source') continue;
+
+    if (node.type === 'dataset') {
+      const inputFields = node.inputFields || [];
+      if (!fieldsEqual(inputFields, node.outputFields)) {
+        nodeMap.set(node.id, { ...node, outputFields: inputFields });
+        changed = true;
+      }
+      continue;
+    }
 
     const upstreamFields = new Map<string, Field>();
     connectors.filter(c => c.to === node.id).forEach(c => {
