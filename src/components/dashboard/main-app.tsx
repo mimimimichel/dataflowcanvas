@@ -43,7 +43,7 @@ import MissionSpecModal from '@/components/modals/mission-spec-modal';
 import DeliverablesHub, { type DeliverableId } from '@/components/modals/deliverables-hub';
 import TemplateMarketplace from '@/components/modals/template-marketplace';
 import { type PipelineTemplate } from '@/lib/pipeline-templates';
-import { useUser, useFirestore, loadUserWorkspace, saveProject, saveLineage } from '@/firebase';
+import { useUser, useFirestore, loadUserWorkspace, saveProject, saveLineage, publishSharedLineage } from '@/firebase';
 import { signOut, getAuth } from 'firebase/auth';
 import AccountSettingsDialog from '@/components/modals/account-settings-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -60,7 +60,7 @@ import {
   ZoomIn, ZoomOut, RotateCcw, Crosshair, Keyboard,
   MousePointer2, BoxSelect, Trash2, Group, Square,
   LayoutDashboard, Boxes, Workflow, Wand2, Layers,
-  Undo2, Redo2
+  Undo2, Redo2, Loader2, Share2
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -419,6 +419,8 @@ export default function MainApp() {
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isPublishingShare, setIsPublishingShare] = useState(false);
+  const [sharePublishedAt, setSharePublishedAt] = useState<Date | null>(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [uploadTargetNodeIds, setUploadTargetNodeIds] = useState<string[]>([]);
   const [previewData, setPreviewData] = useState<Record<string, PipelinePreviewResult | null>>({});
@@ -443,7 +445,36 @@ export default function MainApp() {
   const handlePreviewClose = () => {
     setPreviewOpen(null);
   };
-  const shareUrl = typeof window !== 'undefined' ? window.location.href : 'https://dataflowcanvas-deploy.vercel.app';
+  const shareUrl = typeof window !== 'undefined' && activeLineage
+    ? `${window.location.origin}/shared/${activeLineage.id}`
+    : '';
+
+  // Publishes a read-only, point-in-time COPY of the active version to a public
+  // collection (shared_lineages) — the viewer never gets access to the owner's
+  // private users/{uid}/lineages data. Re-publishing overwrites the same link
+  // rather than minting a new one each time.
+  const handlePublishShare = async () => {
+    if (!user || !activeLineage) return;
+    setIsPublishingShare(true);
+    try {
+      await publishSharedLineage(firestore, user.uid, activeLineage.id, {
+        name: activeLineage.name,
+        description: activeLineage.description,
+        nodes,
+        connectors,
+        groups,
+      });
+      setSharePublishedAt(new Date());
+    } catch (error) {
+      toast({
+        title: "Impossible de partager",
+        description: "Vérifiez votre connexion et réessayez.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPublishingShare(false);
+    }
+  };
 
   const handleApplyTemplate = (template: PipelineTemplate) => {
     const { connectors } = template;
@@ -1522,21 +1553,41 @@ export default function MainApp() {
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
             <DialogTitle>Partager le pipeline</DialogTitle>
-            <DialogDescription>Copiez le lien pour partager cette vue.</DialogDescription>
+            <DialogDescription>
+              {user
+                ? "Publie un instantané en lecture seule de ce pipeline, consultable par n'importe qui via ce lien — sans compte."
+                : "La création d'un lien de partage nécessite un compte (indisponible en Demo Mode)."}
+            </DialogDescription>
           </DialogHeader>
-          <div className="flex items-center gap-2 pt-2">
-            <Input readOnly value={shareUrl} className="text-xs bg-muted" />
-            <Button
-              size="sm"
-              onClick={() => {
-                navigator.clipboard.writeText(shareUrl);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-              }}
-            >
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            </Button>
-          </div>
+          {user ? (
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center gap-2">
+                <Input readOnly value={shareUrl} className="text-xs bg-muted" />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(shareUrl);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                >
+                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+              <Button size="sm" className="w-full gap-2" onClick={handlePublishShare} disabled={isPublishingShare}>
+                {isPublishingShare ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
+                {isPublishingShare ? 'Publication…' : 'Publier / mettre à jour le lien'}
+              </Button>
+              <p className="text-[11px] text-muted-foreground">
+                {sharePublishedAt
+                  ? `Publié à ${sharePublishedAt.toLocaleTimeString()} — le lien montre cet instantané, pas les modifications faites depuis.`
+                  : "Le lien n'affiche que la dernière version publiée — republie après chaque changement que tu veux partager."}
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground pt-2">Connecte-toi avec un compte pour publier un lien de partage.</p>
+          )}
         </DialogContent>
       </Dialog>
 

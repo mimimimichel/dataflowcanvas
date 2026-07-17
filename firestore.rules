@@ -92,6 +92,21 @@ service cloud.firestore {
     }
 
     /**
+     * @description Read-only published snapshots of a lineage, for the "Share"
+     * link — a point-in-time copy, not a live view of the owner's private data,
+     * so anyone with the link can view it without an account or owner access.
+     * @path /shared_lineages/{lineageId}
+     * @allow Anyone (get). Only the owner (create, update, delete) — re-sharing
+     * overwrites the previous snapshot for that lineage.
+     * @principle Publish-a-copy, not grant-access-to-the-original.
+     */
+    match /shared_lineages/{lineageId} {
+      allow get: if true;
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isExistingOwner(resource.data.ownerId);
+    }
+
+    /**
      * @description Rules for top-level collaborative workspaces.
      * @path /workspaces/{workspaceId}
      * @allow Members or Owner to read. Only Owner to update or delete.
